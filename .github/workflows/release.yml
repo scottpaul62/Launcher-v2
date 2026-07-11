@@ -1,0 +1,42 @@
+name: Build & Release HEROES-WORLD
+
+on:
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Lire la version
+        id: v
+        shell: bash
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: La release existe deja ?
+        id: tag
+        shell: bash
+        run: |
+          if git ls-remote --tags origin "refs/tags/v${{ steps.v.outputs.version }}" | grep -q "v${{ steps.v.outputs.version }}"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install
+        if: steps.tag.outputs.exists == 'false'
+        run: npm install --no-audit --no-fund
+
+      - name: Build & Publish
+        if: steps.tag.outputs.exists == 'false'
+        run: npm run release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
