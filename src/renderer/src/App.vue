@@ -3,6 +3,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import logo from './assets/logo.png'
 import planet from './assets/planet.png'
 import sky from './assets/sky.jpg'
+import comet from './assets/comet.png'
 
 /* Cadre de conception fixe : tout est dessiné dedans, puis mis à l'échelle */
 const CW = 1280, CH = 800
@@ -47,7 +48,7 @@ const stageStyle = computed(() => ({ transform: `scale(${scale.value})` }))
 
 /* Tête qui suit le curseur */
 const headTilt = reactive({ rx: 0, ry: 0 })
-const headSrc = computed(() => `https://mc-heads.net/avatar/${CONFIG.uuid || CONFIG.pseudo}/256`)
+const headSrc = computed(() => `https://mc-heads.net/body/${CONFIG.uuid || CONFIG.pseudo}`)
 const headStyle = computed(() => ({ transform: `perspective(320px) rotateY(${headTilt.ry.toFixed(1)}deg) rotateX(${headTilt.rx.toFixed(1)}deg)` }))
 function pickColor (e) { nameColor.value = e.target.value; localStorage.setItem('hwNameColor', e.target.value) }
 
@@ -62,6 +63,22 @@ function starField (n, tile, r, op) {
 }
 const stars1 = starField(40, 300, 1.4, 0.9)
 const stars2 = starField(28, 520, 1.0, 0.6)
+
+/* Météorites : traversées discrètes au loin, DERRIÈRE la planète */
+const meteors = ref([])
+let meteorId = 0, meteorTimer = null
+function spawnMeteor () {
+  const id = ++meteorId
+  const fromLeft = Math.random() > 0.5
+  const sx = fromLeft ? -15 : 115, ex = fromLeft ? 115 : -15
+  const sy = 3 + Math.random() * 24, ey = sy + 20 + Math.random() * 22
+  const ang = Math.atan2(ey - sy, ex - sx) * 180 / Math.PI
+  const dur = 2.6 + Math.random() * 1.8, sc = 0.4 + Math.random() * 0.4
+  const style = { '--sx': sx + 'vw', '--sy': sy + 'vh', '--ex': ex + 'vw', '--ey': ey + 'vh', '--ang': ang + 'deg', '--sc': sc, animationDuration: dur + 's' }
+  meteors.value.push({ id, style })
+  setTimeout(() => { meteors.value = meteors.value.filter(m => m.id !== id) }, dur * 1000 + 400)
+}
+function scheduleMeteor () { meteorTimer = setTimeout(() => { if (!document.hidden) spawnMeteor(); scheduleMeteor() }, 11000 + Math.random() * 15000) }
 
 function launch () { toast('Lancement via XMCL — câblage en cours (utilise le launcher actuel pour jouer)') }
 
@@ -184,6 +201,7 @@ onMounted(() => {
   window.addEventListener('mouseup', onUp)
   window.addEventListener('wheel', onWheel, { passive: true })
   window.addEventListener('keydown', onKey)
+  meteorTimer = setTimeout(scheduleMeteor, 5000)
 })
 onUnmounted(() => {
   window.removeEventListener('resize', onResize)
@@ -191,6 +209,7 @@ onUnmounted(() => {
   window.removeEventListener('mouseup', onUp)
   window.removeEventListener('wheel', onWheel)
   window.removeEventListener('keydown', onKey)
+  clearTimeout(meteorTimer)
 })
 
 const dock = [
@@ -214,6 +233,7 @@ function winClose () { if (window.hw) window.hw.close() }
     <div class="sky" :style="{ backgroundImage: `url(${sky})` }"></div>
     <div class="stars" :style="stars1"></div>
     <div class="stars s2" :style="stars2"></div>
+    <img v-for="m in meteors" :key="m.id" class="meteor" :src="comet" :style="m.style" alt="" />
     <div class="planet-glow"></div>
     <img class="planet" :src="planet" alt="" />
     <div class="planet-veil"></div>
@@ -234,7 +254,7 @@ function winClose () { if (window.hw) window.hw.close() }
       <div class="account editable" data-ed="account" :style="styleFor('account')" @mousedown="startMove('account',$event)">
         <input type="color" class="name-color" :value="nameColor" @input="pickColor" title="Couleur du pseudo" />
         <span class="pseudo" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</span>
-        <div class="avatar"><img class="head" :src="headSrc" :style="headStyle" draggable="false" alt="" /></div>
+        <img class="body" :src="headSrc" :style="headStyle" draggable="false" alt="" />
         <span v-if="editMode" class="ed-h" @mousedown="startResize('account',$event)"></span>
       </div>
 
@@ -282,6 +302,7 @@ function winClose () { if (window.hw) window.hw.close() }
       <section v-else-if="page === 'mods'" class="page">
         <div class="page-head"><button class="back" @click="go('accueil')">‹ Accueil</button><h1>Mods</h1></div>
         <div class="page-body mods">
+          <button class="add-mod" @click="toast('Gestion des mods — arrive avec le lancement du jeu (XMCL)')">＋ Ajouter un mod</button>
           <div class="mod glass" v-for="m in CONFIG.mods" :key="m.nom">
             <div class="mod-top"><span class="d gold"></span><b>{{ m.nom }}</b><span class="mod-ver">v{{ m.version }} · {{ m.etat }}</span></div>
             <p>{{ m.desc }}</p><div class="mod-sub">{{ m.auteur }}</div>
@@ -396,14 +417,14 @@ function winClose () { if (window.hw) window.hw.close() }
 .account { position: absolute; top: 18px; right: 26px; display: flex; align-items: center; gap: 12px; }
 .name-color { width: 20px; height: 20px; border: none; background: none; padding: 0; border-radius: 5px; cursor: pointer; opacity: .55; } .name-color:hover { opacity: 1; }
 .pseudo { font-weight: 700; font-size: 16px; }
-.avatar { width: 62px; height: 62px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(212,175,55,.5); display: grid; place-items: center; background: rgba(0,0,0,.3); }
-.head { width: 78%; height: 78%; border-radius: 14%; image-rendering: pixelated; transition: transform .12s ease-out; filter: drop-shadow(0 4px 10px rgba(0,0,0,.5)); }
+.body { height: 122px; image-rendering: pixelated; transition: transform .12s ease-out; transform-origin: 50% 30%; filter: drop-shadow(0 6px 12px rgba(0,0,0,.55)); }
 
 .brand { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px; width: 470px; }
 .logo { width: 100%; filter: drop-shadow(0 12px 34px rgba(0,0,0,.55)); }
 .tagline { font-family: var(--serif); letter-spacing: 8px; font-size: 15px; color: #CFC7B2; }
-.launch { position: absolute; left: 50%; top: 486px; transform: translateX(-50%); font-family: var(--serif); font-weight: 900; letter-spacing: 8px; font-size: 24px; color: #1c1607; border: none; border-radius: 12px; padding: 17px 86px; cursor: pointer; background: linear-gradient(180deg,#FFE98A,#FFD700 30%,#D4AF37 75%,#8B6914); box-shadow: 0 6px 0 #6e5310, 0 12px 34px rgba(255,215,0,.35), inset 0 1px 0 rgba(255,255,255,.6); transition: filter .15s, transform .12s; }
-.launch:hover { filter: brightness(1.08); transform: translateX(-50%) translateY(-2px); }
+.launch { position: absolute; left: 50%; top: 486px; transform: translateX(-50%); font-family: var(--serif); font-weight: 700; letter-spacing: 11px; font-size: 25px; color: #F0D585; border: 2px solid #B9973F; border-radius: 14px; padding: 18px 90px; cursor: pointer; background: linear-gradient(180deg,#1a2338 0%,#0c1220 100%); box-shadow: inset 0 0 22px rgba(0,0,0,.6), 0 10px 30px rgba(0,0,0,.5); text-shadow: 0 1px 0 #000, 0 0 12px rgba(240,213,133,.5); transition: transform .14s ease, box-shadow .2s, color .2s; }
+.launch::before { content: ''; position: absolute; inset: 5px; border: 1px solid rgba(201,162,75,.5); border-radius: 9px; pointer-events: none; }
+.launch:hover { transform: translateX(-50%) scale(1.045); color: #FFE9A8; box-shadow: inset 0 0 20px rgba(0,0,0,.5), 0 0 26px rgba(240,213,133,.4), 0 12px 34px rgba(0,0,0,.55); border-color: #E9CC74; }
 .stage.edit .launch:hover { transform: translateX(-50%); }
 
 .widget { position: absolute; width: 300px; border-radius: 14px; padding: 15px 18px; color: #EDE8DA; box-shadow: 0 14px 36px rgba(0,0,0,.45); background: rgba(9,10,16,.82); border: 1px solid rgba(255,255,255,.07); }
@@ -450,13 +471,13 @@ function winClose () { if (window.hw) window.hw.close() }
 .dock button[data-tip=Amis] { color: #C792EA; } .dock button[data-tip=Amis]:hover .ic, .dock button[data-tip=Amis].active .ic { background: #C792EA; }
 .dock button[data-tip=Paramètres] { color: #FFB74D; } .dock button[data-tip=Paramètres]:hover .ic, .dock button[data-tip=Paramètres].active .ic { background: #FFB74D; }
 .dock button[data-tip=Aide] { color: #64B5F6; } .dock button[data-tip=Aide]:hover .ic, .dock button[data-tip=Aide].active .ic { background: #64B5F6; }
-.ic[data-i=accueil]{ -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E"); }
-.ic[data-i=mods]{ -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'/%3E%3C/svg%3E"); }
-.ic[data-i=boutique]{ -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M6 6h15l-2 9H8zM6 6 5 3H2'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M6 6h15l-2 9H8zM6 6 5 3H2'/%3E%3C/svg%3E"); }
-.ic[data-i=amis]{ -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Ccircle cx='9' cy='8' r='4'/%3E%3Cpath d='M2 21a7 7 0 0 1 14 0'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Ccircle cx='9' cy='8' r='4'/%3E%3Cpath d='M2 21a7 7 0 0 1 14 0'/%3E%3C/svg%3E"); }
-.ic[data-i=settings]{ -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Ccircle cx='12' cy='12' r='3.2'/%3E%3Cpath d='M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Ccircle cx='12' cy='12' r='3.2'/%3E%3Cpath d='M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2'/%3E%3C/svg%3E"); }
-.ic[data-i=aide]{ -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .7-1 1.7M12 17h.01'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .7-1 1.7M12 17h.01'/%3E%3C/svg%3E"); }
 
+.ic[data-i=accueil]{ -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'/%3E%3C/svg%3E"); }
+.ic[data-i=mods]{ -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'/%3E%3C/svg%3E"); }
+.ic[data-i=boutique]{ -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 20 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 20 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z'/%3E%3C/svg%3E"); }
+.ic[data-i=amis]{ -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E"); }
+.ic[data-i=settings]{ -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.48.48 0 0 0 14 2h-4a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.65 8.47a.49.49 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h4c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.48.48 0 0 0 14 2h-4a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.65 8.47a.49.49 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h4c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z'/%3E%3C/svg%3E"); }
+.ic[data-i=aide]{ -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z'/%3E%3C/svg%3E"); }
 .editbar { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 300; display: flex; align-items: center; gap: 10px; background: rgba(8,9,13,.96); border: 1px solid rgba(212,175,55,.45); border-radius: 14px; padding: 10px 14px; color: #EDE8DA; font-size: 13px; cursor: move; user-select: none; }
 .editbar .grip { color: #9A94A8; cursor: move; }
 .editbar button { border: none; border-radius: 8px; padding: 8px 15px; cursor: pointer; font-weight: 700; font-size: 13px; }
@@ -469,5 +490,8 @@ function winClose () { if (window.hw) window.hw.close() }
 .upd { position: fixed; top: 44px; left: 50%; transform: translateX(-50%); z-index: 250; display: flex; align-items: center; gap: 12px; background: rgba(9,10,16,.94); border: 1px solid rgba(212,175,55,.5); border-radius: 12px; padding: 9px 16px; font-size: 13px; color: #EDE8DA; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 .upd.ready { border-color: #7CCB6E; } .upd-ic { color: var(--gold); }
 .upd button { background: linear-gradient(180deg,var(--gold),#D4AF37); color: #1c1607; border: none; border-radius: 8px; padding: 6px 14px; font-weight: 800; cursor: pointer; }
+.meteor { position: absolute; top: 0; left: 0; width: 280px; pointer-events: none; opacity: 0; will-change: transform, opacity; animation-name: meteorGo; animation-timing-function: linear; animation-fill-mode: forwards; filter: brightness(1.1); }
+@keyframes meteorGo { 0% { transform: translate(var(--sx), var(--sy)) rotate(var(--ang)) scale(var(--sc)); opacity: 0 } 15% { opacity: .6 } 80% { opacity: .55 } 100% { transform: translate(var(--ex), var(--ey)) rotate(var(--ang)) scale(var(--sc)); opacity: 0 } }
+.add-mod { display: block; width: 100%; max-width: 820px; margin: 0 auto 12px; padding: 12px; border-radius: 12px; border: 1px dashed rgba(212,175,55,.5); background: rgba(212,175,55,.06); color: var(--gold); font-weight: 700; cursor: pointer; font-size: 14px; } .add-mod:hover { background: rgba(212,175,55,.14); }
 .toast { position: fixed; bottom: 78px; left: 50%; transform: translate(-50%,12px); z-index: 200; opacity: 0; pointer-events: none; transition: .2s; background: #0A0B11; color: #EDE8DA; border: 1px solid var(--gold); border-radius: 10px; padding: 11px 20px; font-size: 13px; } .toast.show { opacity: 1; transform: translate(-50%,0); }
 </style>
