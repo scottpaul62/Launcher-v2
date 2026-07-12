@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('hw', {
   onUpdate: (cb) => ipcRenderer.on('update:event', (_e, data) => cb(data)),
   installUpdate: () => ipcRenderer.send('update:install'),
   checkUpdate: () => ipcRenderer.send('update:check'),
-  openExternal: (url) => ipcRenderer.invoke('open:external', url)
-  // launch: (opts) => ipcRenderer.invoke('mc:launch', opts)   // TODO XMCL
+  openExternal: (url) => ipcRenderer.invoke('open:external', url),
+  launch: (opts) => ipcRenderer.invoke('mc:launch', opts),
+  onMcStatus: (cb) => ipcRenderer.on('mc:status', (_e, d) => cb(d))
 })

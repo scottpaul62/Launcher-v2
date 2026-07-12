@@ -48,7 +48,7 @@ const stageStyle = computed(() => ({ transform: `scale(${scale.value})` }))
 
 /* Tête qui suit le curseur */
 const headTilt = reactive({ rx: 0, ry: 0 })
-const headSrc = computed(() => `https://mc-heads.net/body/${CONFIG.uuid || CONFIG.pseudo}`)
+const headSrc = computed(() => `https://mc-heads.net/head/${CONFIG.uuid || CONFIG.pseudo}`)
 const headStyle = computed(() => ({ transform: `perspective(320px) rotateY(${headTilt.ry.toFixed(1)}deg) rotateX(${headTilt.rx.toFixed(1)}deg)` }))
 function pickColor (e) { nameColor.value = e.target.value; localStorage.setItem('hwNameColor', e.target.value) }
 
@@ -60,37 +60,6 @@ function switchAccount () { acctMenu.value = false; toast('Connexion Microsoft �
 function logout () { acctMenu.value = false; toast('Aucun compte connecté pour l\'instant') }
 function onDocDown (e) { if (acctMenu.value && !e.target.closest('.account')) acctMenu.value = false }
 
-/* Rendu 3D du personnage (tête qui suit le curseur, comme l'inventaire) */
-const skinCanvas = ref(null)
-const skin3dOk = ref(false)
-let viewer = null
-const skinLerp = { cur: 0, target: 0, raf: 0 }
-async function loadSkinFor (who) {
-  if (!viewer) return
-  try { await viewer.loadSkin(`https://mc-heads.net/skin/${who}`); console.log('[AVATAR] skin chargé:', who) }
-  catch (e) { console.log('[AVATAR] skin échec -> Steve', e); try { await viewer.loadSkin('https://mc-heads.net/skin/MHF_Steve') } catch (e2) {} }
-}
-function onVisibility () { if (viewer) { try { viewer.renderPaused = document.hidden } catch (e) {} } }
-async function initSkin () {
-  try {
-    const mod = await import('skinview3d')
-    viewer = new mod.SkinViewer({ canvas: skinCanvas.value, width: 150, height: 200 })
-    viewer.zoom = 0.92
-    viewer.fov = 38
-    try { viewer.animation = new mod.IdleAnimation(); viewer.animation.speed = 0.55 } catch (e) {}
-    if (viewer.controls) { viewer.controls.enableRotate = false; viewer.controls.enableZoom = false; viewer.controls.enablePan = false }
-    await loadSkinFor(CONFIG.uuid || CONFIG.pseudo)
-    skin3dOk.value = true
-    console.log('[AVATAR] rendu 3D initialisé')
-    const tick = () => {
-      skinLerp.raf = requestAnimationFrame(tick)
-      if (document.hidden || !viewer || !viewer.playerObject) return
-      skinLerp.cur += (skinLerp.target - skinLerp.cur) * 0.12
-      viewer.playerObject.rotation.y = skinLerp.cur
-    }
-    tick()
-  } catch (e) { skin3dOk.value = false; console.log('[AVATAR] init échec', e) }
-}
 
 function starField (n, tile, r, op) {
   const g = []
@@ -120,7 +89,23 @@ function spawnMeteor () {
 }
 function scheduleMeteor () { meteorTimer = setTimeout(() => { if (!document.hidden) spawnMeteor(); scheduleMeteor() }, 11000 + Math.random() * 15000) }
 
-function launch () { toast('Lancement via XMCL — câblage en cours (utilise le launcher actuel pour jouer)') }
+const launchInfo = reactive({ active: false, percent: 0, text: '' })
+function launch () {
+  if (launchInfo.active) return
+  if (!window.hw || !window.hw.launch) { toast('Lancement indisponible'); return }
+  launchInfo.active = true; launchInfo.percent = 0; launchInfo.text = 'Démarrage…'
+  window.hw.launch({ dir: settings.dir, ram: settings.ram, name: CONFIG.pseudo })
+    .then((r) => { if (!r || !r.ok) { launchInfo.active = false; toast('Échec : ' + ((r && r.error) || 'inconnu')) } })
+    .catch((e) => { launchInfo.active = false; toast('Erreur : ' + e) })
+}
+if (typeof window !== 'undefined' && window.hw && window.hw.onMcStatus) {
+  window.hw.onMcStatus((d) => {
+    if (d.text) launchInfo.text = d.text
+    if (typeof d.percent === 'number') launchInfo.percent = d.percent
+    if (d.phase === 'done') setTimeout(() => { launchInfo.active = false }, 2000)
+    else if (d.phase === 'error' || d.phase === 'exit') launchInfo.active = false
+  })
+}
 
 const toastMsg = ref('')
 let toastTimer = null
@@ -227,11 +212,6 @@ function onMouseMove (e) {
   headTilt.rx = Math.max(-18, Math.min(18, -(e.clientY - cy) / window.innerHeight * 60))
   if (drag.id) onMove(e)
   if (bar.on) { barPos.left = e.clientX - bar.ox; barPos.top = e.clientY - bar.oy }
-  if (viewer && skinCanvas.value) {
-    const r = skinCanvas.value.getBoundingClientRect()
-    const dx = (e.clientX - (r.left + r.width / 2)) / window.innerWidth
-    skinLerp.target = Math.max(-0.65, Math.min(0.65, dx * 1.3))
-  }
 }
 function onUp () {
   if (bar.on && barPos.left != null) localStorage.setItem('hwBarPos', JSON.stringify({ left: barPos.left, top: barPos.top }))
@@ -247,9 +227,7 @@ onMounted(() => {
   window.addEventListener('wheel', onWheel, { passive: true })
   window.addEventListener('keydown', onKey)
   meteorTimer = setTimeout(scheduleMeteor, 5000)
-  document.addEventListener('visibilitychange', onVisibility)
   document.addEventListener('mousedown', onDocDown)
-  nextTick(initSkin)
 })
 onUnmounted(() => {
   window.removeEventListener('resize', onResize)
@@ -258,10 +236,7 @@ onUnmounted(() => {
   window.removeEventListener('wheel', onWheel)
   window.removeEventListener('keydown', onKey)
   clearTimeout(meteorTimer)
-  document.removeEventListener('visibilitychange', onVisibility)
   document.removeEventListener('mousedown', onDocDown)
-  cancelAnimationFrame(skinLerp.raf)
-  if (viewer) { try { viewer.dispose() } catch (e) {} }
 })
 
 const dock = [
@@ -306,8 +281,7 @@ function winClose () { if (window.hw) window.hw.close() }
       <div class="account editable" data-ed="account" :style="styleFor('account')" @mousedown="startMove('account',$event)" @click="toggleAcct">
         <input type="color" class="name-color" :value="nameColor" @input="pickColor" @click.stop title="Couleur du pseudo" />
         <span class="pseudo" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</span>
-        <canvas v-show="skin3dOk" ref="skinCanvas" class="skin3d"></canvas>
-        <img v-if="!skin3dOk" class="body" :src="headSrc" :style="headStyle" draggable="false" alt="" />
+        <img class="head" :src="headSrc" :style="headStyle" draggable="false" alt="" />
         <span v-if="editMode" class="ed-h" @mousedown="startResize('account',$event)"></span>
         <transition name="pop">
           <div v-if="acctMenu" class="acct-menu" @click.stop @mousedown.stop>
@@ -327,8 +301,13 @@ function winClose () { if (window.hw) window.hw.close() }
           <div class="tagline">L'OLYMPE VOUS ATTEND</div>
           <span v-if="editMode" class="ed-h" @mousedown="startResize('brand',$event)"></span>
         </div>
-        <button class="launch editable" data-ed="launch" @click="launch" :style="styleFor('launch')" @mousedown="startMove('launch',$event)">
-          LANCER<span v-if="editMode" class="ed-h" @mousedown="startResize('launch',$event)"></span>
+        <button class="launch editable" data-ed="launch" @click="launch" :style="styleFor('launch')" @mousedown="startMove('launch',$event)" :class="{ busy: launchInfo.active }">
+          <template v-if="!launchInfo.active">LANCER</template>
+          <template v-else>
+            <span class="lp-text">{{ launchInfo.text }}</span>
+            <span class="lp-bar"><i :style="{ width: launchInfo.percent + '%' }"></i></span>
+          </template>
+          <span v-if="editMode" class="ed-h" @mousedown="startResize('launch',$event)"></span>
         </button>
         <div class="widget quest editable" data-ed="quest" :style="styleFor('quest')" @mousedown="startMove('quest',$event)">
           <div class="w-head"><span class="d gold"></span> OBJECTIF DU JOUR</div>
@@ -480,9 +459,9 @@ function winClose () { if (window.hw) window.hw.close() }
 .account { position: absolute; top: 18px; right: 26px; display: flex; align-items: center; gap: 12px; }
 .name-color { width: 20px; height: 20px; border: none; background: none; padding: 0; border-radius: 5px; cursor: pointer; opacity: .55; } .name-color:hover { opacity: 1; }
 .pseudo { font-weight: 700; font-size: 16px; }
-.skin3d { width: 84px; height: 112px; display: block; }
+.head { width: 66px; height: 66px; image-rendering: pixelated; transition: transform .12s ease-out; filter: drop-shadow(0 5px 12px rgba(0,0,0,.55)); }
 .account { cursor: pointer; }
-.acct-menu { position: absolute; top: 128px; right: 0; width: 236px; z-index: 90; background: rgba(10,11,17,.94); border: 1px solid rgba(212,175,55,.4); border-radius: 12px; padding: 8px; box-shadow: 0 18px 44px rgba(0,0,0,.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); cursor: default; }
+.acct-menu { position: absolute; top: 78px; right: 0; width: 236px; z-index: 90; background: rgba(10,11,17,.94); border: 1px solid rgba(212,175,55,.4); border-radius: 12px; padding: 8px; box-shadow: 0 18px 44px rgba(0,0,0,.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); cursor: default; }
 .am-head { padding: 8px 10px 10px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
 .am-name { font-family: var(--serif); font-weight: 700; font-size: 16px; }
 .am-status { font-size: 11px; color: #9A94A8; display: flex; align-items: center; gap: 6px; } .am-status i { width: 7px; height: 7px; border-radius: 50%; background: #6b6b78; }
@@ -491,7 +470,6 @@ function winClose () { if (window.hw) window.hw.close() }
 .am-item.danger { color: #E58A8A; } .am-item.danger:hover { background: rgba(224,85,85,.15); color: #ff9a9a; }
 .pop-enter-active, .pop-leave-active { transition: opacity .15s ease, transform .15s ease; }
 .pop-enter-from, .pop-leave-to { opacity: 0; transform: translateY(-6px); }
-.body { height: 122px; image-rendering: pixelated; transition: transform .12s ease-out; transform-origin: 50% 30%; filter: drop-shadow(0 6px 12px rgba(0,0,0,.55)); }
 
 .brand { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px; width: 470px; }
 .logo { width: 100%; filter: drop-shadow(0 12px 34px rgba(0,0,0,.55)); }
@@ -500,6 +478,10 @@ function winClose () { if (window.hw) window.hw.close() }
 .launch::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 46%); pointer-events: none; }
 .launch:hover { transform: translateX(-50%) scale(1.04); color: #FFE9A8; background: linear-gradient(180deg, rgba(255,255,255,.17), rgba(255,255,255,.05)); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 24px rgba(240,213,133,.3), 0 10px 30px rgba(0,0,0,.45); border-color: rgba(233,204,116,.6); }
 .stage.edit .launch:hover { transform: translateX(-50%); }
+.launch.busy { cursor: default; letter-spacing: 2px; }
+.launch .lp-text { display: block; font-size: 13px; letter-spacing: 1px; font-family: 'Segoe UI', sans-serif; font-weight: 600; color: #F0D585; margin-bottom: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
+.launch .lp-bar { display: block; height: 6px; width: 100%; background: rgba(255,255,255,.12); border-radius: 999px; overflow: hidden; }
+.launch .lp-bar i { display: block; height: 100%; background: linear-gradient(90deg,#4FC3F7,#FFD700); transition: width .25s ease; }
 
 .widget { position: absolute; width: 300px; border-radius: 14px; padding: 15px 18px; color: #EDE8DA; box-shadow: 0 14px 36px rgba(0,0,0,.45); background: rgba(9,10,16,.82); border: 1px solid rgba(255,255,255,.07); }
 .widget.quest { left: 26px; top: 612px; } .widget.announce { left: 26px; top: 452px; cursor: pointer; }

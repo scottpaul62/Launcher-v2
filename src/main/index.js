@@ -76,5 +76,91 @@ ipcMain.handle('open:external', (e, url) => {
   try { if (typeof url === 'string' && /^https?:\/\//.test(url)) shell.openExternal(url) } catch (err) {}
 })
 
-// TODO (prochaine étape) : IPC de lancement via XMCL Core
-//  ipcMain.handle('mc:launch', async (e, opts) => { ... @xmcl/core launch ... })
+// ============ LANCEMENT DU JEU via XMCL ============
+// Télécharge Minecraft 1.20.6 + Fabric 0.19.3 puis lance (hors ligne pour ce premier jet,
+// SANS auto-connexion : le jeu s'ouvre sur le menu). Le vrai login Microsoft viendra ensuite.
+let launching = false
+ipcMain.handle('mc:launch', async (event, opts = {}) => {
+  if (launching) return { ok: false, error: 'Lancement déjà en cours' }
+  launching = true
+  const send = (d) => { try { win && !win.isDestroyed() && win.webContents.send('mc:status', d) } catch (_) {} ; console.log('[MC]', d.text || JSON.stringify(d)) }
+  try {
+    const path = await import('path')
+    const fs = await import('fs')
+    const installer = await import('@xmcl/installer')
+    const core = await import('@xmcl/core')
+
+    const MC = '1.20.6'
+    const LOADER = '0.19.3'
+    const appData = process.env.APPDATA || app.getPath('appData')
+    let root = String(opts.dir || '').replace(/%APPDATA%/i, appData).trim()
+    if (!root) root = path.join(appData, '.heroesworld')
+    fs.mkdirSync(root, { recursive: true })
+    send({ phase: 'prepare', text: 'Préparation…', percent: 2 })
+
+    // 1) JSON vanilla 1.20.6 (nécessaire pour résoudre l'héritage Fabric)
+    const vDir = path.join(root, 'versions', MC)
+    const vJson = path.join(vDir, MC + '.json')
+    if (!fs.existsSync(vJson)) {
+      send({ phase: 'meta', text: 'Récupération de la version…', percent: 5 })
+      const list = await installer.getVersionList()
+      const meta = list.versions.find((v) => v.id === MC)
+      if (!meta) throw new Error('Version ' + MC + ' introuvable')
+      const res = await fetch(meta.url)
+      fs.mkdirSync(vDir, { recursive: true })
+      fs.writeFileSync(vJson, await res.text())
+    }
+
+    // 2) Fabric
+    send({ phase: 'fabric', text: 'Installation de Fabric…', percent: 10 })
+    let versionId = await installer.installFabric({ minecraft: MC, loader: LOADER }, root)
+    if (!versionId || typeof versionId !== 'string') versionId = 'fabric-loader-' + LOADER + '-' + MC
+    send({ phase: 'fabric', text: 'Fabric prêt', percent: 16 })
+
+    // 3) Téléchargement complet (jar + libs + assets)
+    const resolved = await core.Version.parse(root, versionId)
+    send({ phase: 'install', text: 'Téléchargement de Minecraft ' + MC + '…', percent: 20 })
+    await installer.completeInstallation(resolved, {
+      tracker: (ev) => {
+        try {
+          const dl = ev && ev.payload && ev.payload.download
+          if (dl && dl.total) {
+            const p = 20 + Math.round((dl.progress / dl.total) * 70)
+            send({ phase: ev.phase, text: 'Téléchargement en cours…', percent: Math.max(20, Math.min(92, p)) })
+          }
+        } catch (_) {}
+      }
+    })
+    send({ phase: 'ready', text: 'Fichiers prêts', percent: 93 })
+
+    // 4) Java
+    const jexe = process.platform === 'win32' ? 'javaw.exe' : 'java'
+    const javaPath = opts.java || (process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin', jexe) : (process.platform === 'win32' ? 'javaw' : 'java'))
+
+    // 5) Lancement (hors ligne, sans serveur -> menu custom)
+    const ram = Math.max(2, Math.min(16, Number(opts.ram) || 4))
+    send({ phase: 'launch', text: 'Lancement du jeu…', percent: 97 })
+    const proc = await core.launch({
+      gamePath: root,
+      javaPath,
+      version: versionId,
+      minMemory: 1024,
+      maxMemory: ram * 1024,
+      gameProfile: { name: String(opts.name || 'Player').slice(0, 16), id: '0'.repeat(32) },
+      accessToken: '0',
+      userType: 'msa',
+      launcherName: 'HEROES-WORLD',
+      launcherBrand: 'HeroesWorld',
+      extraExecOption: { detached: true }
+    })
+    send({ phase: 'done', text: 'Jeu lancé !', percent: 100 })
+    proc.on('error', (err) => { send({ phase: 'error', text: 'Erreur process : ' + err.message }); launching = false })
+    proc.on('exit', (code) => { send({ phase: 'exit', text: 'Jeu fermé (code ' + code + ')' }); launching = false })
+    return { ok: true }
+  } catch (err) {
+    console.error('[MC] échec', err)
+    send({ phase: 'error', text: 'Erreur : ' + (err && err.message ? err.message : String(err)) })
+    launching = false
+    return { ok: false, error: String(err && err.message ? err.message : err) }
+  }
+})
