@@ -131,6 +131,7 @@ ipcMain.handle('server:start', () => startLocalServer())
 ipcMain.handle('server:stop', () => stopLocalServer())
 ipcMain.handle('log:open', () => { try { if (LOG_PATH) shell.openPath(LOG_PATH) } catch (_) {} })
 ipcMain.handle('server:online', () => isPortOpen(25565))
+ipcMain.handle('log:read', () => { try { return readFileSync(LOG_PATH, 'utf8').slice(-16000) } catch (e) { return 'Journal vide ou illisible : ' + String(e) } })
 
 // ---- Tray : le launcher se cache pendant le jeu, revient à la fermeture ----
 let tray = null

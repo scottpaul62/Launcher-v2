@@ -73,7 +73,17 @@ async function login () {
 function switchAccount () { login() }
 async function logout () { acctMenu.value = false; try { if (window.hw && window.hw.logout) await window.hw.logout() } catch (_) {} ; account.online = false; CONFIG.uuid = null; toast('Déconnecté') }
 function onDocDown (e) { if (acctMenu.value && !e.target.closest('.account')) acctMenu.value = false }
-function openLog () { if (window.hw && window.hw.logOpen) window.hw.logOpen(); acctMenu.value = false }
+const showLog = ref(false)
+const logText = ref('')
+async function openLog () {
+  acctMenu.value = false
+  try { logText.value = (window.hw && window.hw.logRead) ? await window.hw.logRead() : 'indisponible' } catch (e) { logText.value = 'Erreur : ' + e }
+  showLog.value = true
+}
+async function copyLog () {
+  try { await navigator.clipboard.writeText(logText.value); toast('Journal copié — colle-le à Claude') }
+  catch (_) { toast('Copie impossible (sélectionne le texte à la main)') }
+}
 
 
 function starField (n, tile, r, op) {
@@ -575,5 +585,10 @@ function winClose () { if (window.hw) window.hw.close() }
 .meteor::after { content: ''; position: absolute; right: -1px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 9px 2px rgba(205,220,255,.9); }
 @keyframes meteorGo { 0% { transform: translate(var(--sx), var(--sy)) rotate(var(--ang)) scale(var(--sc)); opacity: 0 } 15% { opacity: .6 } 80% { opacity: .55 } 100% { transform: translate(var(--ex), var(--ey)) rotate(var(--ang)) scale(var(--sc)); opacity: 0 } }
 .add-mod { display: block; width: 100%; max-width: 820px; margin: 0 auto 12px; padding: 12px; border-radius: 12px; border: 1px dashed rgba(212,175,55,.5); background: rgba(212,175,55,.06); color: var(--gold); font-weight: 700; cursor: pointer; font-size: 14px; } .add-mod:hover { background: rgba(212,175,55,.14); }
+.logmodal { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.6); display: grid; place-items: center; }
+.logbox { width: min(90vw, 900px); height: min(80vh, 620px); background: #0A0B11; border: 1px solid rgba(212,175,55,.4); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+.logbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.08); color: #EDE8DA; font-size: 14px; } .logbar .logsp { flex: 1; }
+.logbar button { background: rgba(212,175,55,.16); color: var(--gold); border: 1px solid rgba(212,175,55,.35); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 700; font-size: 13px; } .logbar button:hover { background: rgba(212,175,55,.28); } .logbar .logx { background: rgba(224,85,85,.18); color: #E58A8A; border-color: rgba(224,85,85,.35); }
+.logpre { flex: 1; margin: 0; padding: 12px 14px; overflow: auto; font-family: Consolas, monospace; font-size: 12px; line-height: 1.5; color: #C9D2E0; white-space: pre-wrap; word-break: break-word; user-select: text; }
 .toast { position: fixed; bottom: 78px; left: 50%; transform: translate(-50%,12px); z-index: 200; opacity: 0; pointer-events: none; transition: .2s; background: #0A0B11; color: #EDE8DA; border: 1px solid var(--gold); border-radius: 10px; padding: 11px 20px; font-size: 13px; } .toast.show { opacity: 1; transform: translate(-50%,0); }
 </style>
