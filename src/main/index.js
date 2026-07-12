@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell, Tray, Menu } from 'electron'
 import { join } from 'path'
-import { readFileSync, writeFileSync, unlinkSync, existsSync, appendFileSync } from 'fs'
+import { readFileSync, writeFileSync, unlinkSync, existsSync, appendFileSync, mkdirSync, readdirSync, statSync } from 'fs'
 import { spawn } from 'child_process'
 import net from 'net'
 
@@ -220,9 +220,19 @@ ipcMain.handle('auth:login', async () => new Promise((resolve) => {
 // Télécharge Minecraft 1.20.6 + Fabric 0.19.3 puis lance (hors ligne pour ce premier jet,
 // SANS auto-connexion : le jeu s'ouvre sur le menu). Le vrai login Microsoft viendra ensuite.
 let launching = false
+let cancelRequested = false
+let activeTask = null
+function resolveRoot (dir) {
+  const appData = process.env.APPDATA || app.getPath('appData')
+  let root = String(dir || '').replace(/%APPDATA%/i, appData).trim()
+  if (!root) root = join(appData, '.heroesworld')
+  return root
+}
 ipcMain.handle('mc:launch', async (event, opts = {}) => {
   if (launching) return { ok: false, error: 'Lancement déjà en cours' }
   launching = true
+  cancelRequested = false
+  activeTask = null
   let lastLog = ''
   const send = (d) => { try { win && !win.isDestroyed() && win.webContents.send('mc:status', d) } catch (_) {} ; const t = d.text || JSON.stringify(d); if (t !== lastLog) { lastLog = t; console.log('[MC]', t) } }
   try {
@@ -248,6 +258,7 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     send({ phase: 'install', text: 'Téléchargement de Minecraft ' + MC + '…', percent: 8 })
     if (typeof installer.installTask === 'function') {
       const vTask = installer.installTask(meta, root)
+      activeTask = vTask
       let last = 0
       await vTask.startAndWait({
         onUpdate () {
@@ -262,6 +273,9 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     } else {
       await installer.install(meta, root)
     }
+
+    activeTask = null
+    if (cancelRequested) throw new Error('Lancement annulé')
 
     // 2) Fabric loader
     send({ phase: 'fabric', text: 'Installation de Fabric ' + LOADER + '…', percent: 72 })
@@ -282,6 +296,7 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     try {
       if (typeof installer.installDependenciesTask === 'function') {
         const dTask = installer.installDependenciesTask(resolved)
+        activeTask = dTask
         await dTask.startAndWait({
           onUpdate () {
             try { if (dTask.total > 0) { const p = 74 + Math.min(18, Math.round((dTask.progress / dTask.total) * 18)); send({ phase: 'deps', text: 'Finalisation des fichiers…', percent: p }) } } catch (_) {}
@@ -291,6 +306,8 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
         await installer.installDependencies(resolved)
       }
     } catch (e) { console.log('[MC] installDependencies', e) }
+    activeTask = null
+    if (cancelRequested) throw new Error('Lancement annulé')
     send({ phase: 'ready', text: 'Fichiers prêts', percent: 93 })
 
     // 3b) Mod HEROES-WORLD (menu custom) -> mods/
@@ -409,6 +426,34 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     console.error('[MC] échec', err)
     send({ phase: 'error', text: 'Erreur : ' + (err && err.message ? err.message : String(err)) })
     launching = false
+    activeTask = null
     return { ok: false, error: String(err && err.message ? err.message : err) }
   }
+})
+
+// Annuler un lancement en cours (pendant le téléchargement / la préparation)
+ipcMain.handle('mc:cancel', () => {
+  cancelRequested = true
+  try { if (activeTask && typeof activeTask.cancel === 'function') activeTask.cancel() } catch (_) {}
+  console.log('[MC] annulation demandée')
+  return { ok: true }
+})
+
+// Ouvrir le dossier du jeu dans l'explorateur Windows
+ipcMain.handle('game:open-folder', (e, dir) => {
+  try { const root = resolveRoot(dir); mkdirSync(root, { recursive: true }); shell.openPath(root) } catch (_) {}
+  return { ok: true }
+})
+
+// Lister les .jar présents dans le dossier mods/
+ipcMain.handle('mods:list', (e, dir) => {
+  try {
+    const root = resolveRoot(dir)
+    const modsDir = join(root, 'mods')
+    if (!existsSync(modsDir)) return []
+    return readdirSync(modsDir).filter((f) => /\.jar$/i.test(f)).map((f) => {
+      let size = 0; try { size = statSync(join(modsDir, f)).size } catch (_) {}
+      return { file: f, size }
+    })
+  } catch (_) { return [] }
 })
