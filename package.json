@@ -1,6 +1,6 @@
 {
   "name": "heroesworld-launcher",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "description": "Launcher officiel HEROES-WORLD (Electron + Vue 3 + XMCL)",
   "author": "Scott Paul (HEROES-WORLD)",
   "license": "UNLICENSED",
@@ -60,6 +60,12 @@
         "owner": "scottpaul62",
         "repo": "Launcher-v2",
         "releaseType": "release"
+      }
+    ],
+    "extraResources": [
+      {
+        "from": "resources/mods",
+        "to": "mods"
       }
     ]
   }

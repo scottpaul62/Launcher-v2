@@ -143,6 +143,22 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     } catch (e) { console.log('[MC] installDependencies', e) }
     send({ phase: 'ready', text: 'Fichiers prêts', percent: 93 })
 
+    // 3b) Mod HEROES-WORLD (menu custom) -> mods/
+    try {
+      const modsDir = path.join(root, 'mods')
+      fs.mkdirSync(modsDir, { recursive: true })
+      const modName = 'heroworld-titlescreen-1.0.0.jar'
+      const cands = [
+        path.join(process.resourcesPath || '', 'mods', modName),
+        path.join(app.getAppPath(), 'resources', 'mods', modName),
+        path.join(app.getAppPath(), '..', 'resources', 'mods', modName),
+        path.join(__dirname, '..', '..', 'resources', 'mods', modName)
+      ]
+      const src = cands.find((p) => { try { return p && fs.existsSync(p) } catch (_) { return false } })
+      if (src) { fs.copyFileSync(src, path.join(modsDir, modName)); console.log('[MC] mod copié depuis', src) }
+      else { console.log('[MC] mod introuvable, candidats:', cands) ; send({ phase: 'warn', text: 'Menu custom introuvable (jeu lancé sans le mod)', percent: 95 }) }
+    } catch (e) { console.log('[MC] copie mod', e) }
+
     // 4) Recherche robuste de Java (préférence Java 21)
     const jexe = process.platform === 'win32' ? 'javaw.exe' : 'java'
     function findJava () {
