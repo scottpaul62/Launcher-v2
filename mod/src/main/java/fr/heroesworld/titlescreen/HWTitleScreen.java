@@ -77,6 +77,9 @@ public class HWTitleScreen extends Screen {
         super.render(ctx, mouseX, mouseY, delta);
     }
 
+    // Supprime le fond vanilla de Minecraft (panorama + flou) : fond 100% custom.
+    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
+
     @Override public boolean shouldCloseOnEsc() { return false; }
     @Override public boolean shouldPause() { return false; }
 }

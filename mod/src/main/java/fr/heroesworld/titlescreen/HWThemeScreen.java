@@ -84,5 +84,7 @@ public class HWThemeScreen extends Screen {
         ctx.fill(x + w - 1, y, x + w, y + h, c);
     }
 
+    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
+
     @Override public boolean shouldPause() { return false; }
 }

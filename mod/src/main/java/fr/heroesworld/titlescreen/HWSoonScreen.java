@@ -33,5 +33,7 @@ public class HWSoonScreen extends Screen {
         super.render(ctx, mouseX, mouseY, delta);
     }
 
+    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
+
     @Override public boolean shouldPause() { return false; }
 }

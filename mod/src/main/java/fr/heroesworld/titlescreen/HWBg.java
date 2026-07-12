@@ -30,8 +30,10 @@ public final class HWBg {
                 MinecraftClient.getInstance().getTextureManager().registerTexture(ID, new NativeImageBackedTexture(img));
                 ok = true;
             }
+            System.out.println("[HWBG] background.png -> " + (ok ? (tw + "x" + th + " charge") : "ABSENT du jar"));
         } catch (Throwable t) {
             ok = false;
+            System.out.println("[HWBG] echec chargement background.png : " + t);
         }
     }
 
