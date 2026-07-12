@@ -52,6 +52,22 @@ const headSrc = computed(() => `https://mc-heads.net/body/${CONFIG.uuid || CONFI
 const headStyle = computed(() => ({ transform: `perspective(320px) rotateY(${headTilt.ry.toFixed(1)}deg) rotateX(${headTilt.rx.toFixed(1)}deg)` }))
 function pickColor (e) { nameColor.value = e.target.value; localStorage.setItem('hwNameColor', e.target.value) }
 
+/* Rendu 3D du personnage (tête qui suit le curseur, comme l'inventaire) */
+const skinCanvas = ref(null)
+const skin3dOk = ref(false)
+let viewer = null
+async function initSkin () {
+  try {
+    const mod = await import('skinview3d')
+    viewer = new mod.SkinViewer({ canvas: skinCanvas.value, width: 150, height: 200, skin: `https://mc-heads.net/skin/${CONFIG.uuid || CONFIG.pseudo}` })
+    viewer.animation = null
+    viewer.zoom = 0.92
+    viewer.fov = 38
+    if (viewer.controls) { viewer.controls.enableRotate = false; viewer.controls.enableZoom = false; viewer.controls.enablePan = false }
+    skin3dOk.value = true
+  } catch (e) { skin3dOk.value = false }
+}
+
 function starField (n, tile, r, op) {
   const g = []
   for (let i = 0; i < n; i++) {
@@ -187,6 +203,12 @@ function onMouseMove (e) {
   headTilt.rx = Math.max(-18, Math.min(18, -(e.clientY - cy) / window.innerHeight * 60))
   if (drag.id) onMove(e)
   if (bar.on) { barPos.left = e.clientX - bar.ox; barPos.top = e.clientY - bar.oy }
+  if (viewer && viewer.playerObject) {
+    const dx = e.clientX / window.innerWidth - 0.5, dy = e.clientY / window.innerHeight - 0.5
+    const head = viewer.playerObject.skin.head
+    head.rotation.y = Math.max(-0.9, Math.min(0.9, dx * 1.5))
+    head.rotation.x = Math.max(-0.5, Math.min(0.5, dy * 0.9))
+  }
 }
 function onUp () {
   if (bar.on && barPos.left != null) localStorage.setItem('hwBarPos', JSON.stringify({ left: barPos.left, top: barPos.top }))
@@ -202,6 +224,7 @@ onMounted(() => {
   window.addEventListener('wheel', onWheel, { passive: true })
   window.addEventListener('keydown', onKey)
   meteorTimer = setTimeout(scheduleMeteor, 5000)
+  nextTick(initSkin)
 })
 onUnmounted(() => {
   window.removeEventListener('resize', onResize)
@@ -210,6 +233,7 @@ onUnmounted(() => {
   window.removeEventListener('wheel', onWheel)
   window.removeEventListener('keydown', onKey)
   clearTimeout(meteorTimer)
+  if (viewer) { try { viewer.dispose() } catch (e) {} }
 })
 
 const dock = [
@@ -233,7 +257,7 @@ function winClose () { if (window.hw) window.hw.close() }
     <div class="sky" :style="{ backgroundImage: `url(${sky})` }"></div>
     <div class="stars" :style="stars1"></div>
     <div class="stars s2" :style="stars2"></div>
-    <img v-for="m in meteors" :key="m.id" class="meteor" :src="comet" :style="m.style" alt="" />
+    <div v-for="m in meteors" :key="m.id" class="meteor" :style="m.style"></div>
     <div class="planet-glow"></div>
     <img class="planet" :src="planet" alt="" />
     <div class="planet-veil"></div>
@@ -254,7 +278,8 @@ function winClose () { if (window.hw) window.hw.close() }
       <div class="account editable" data-ed="account" :style="styleFor('account')" @mousedown="startMove('account',$event)">
         <input type="color" class="name-color" :value="nameColor" @input="pickColor" title="Couleur du pseudo" />
         <span class="pseudo" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</span>
-        <img class="body" :src="headSrc" :style="headStyle" draggable="false" alt="" />
+        <canvas v-show="skin3dOk" ref="skinCanvas" class="skin3d"></canvas>
+        <img v-if="!skin3dOk" class="body" :src="headSrc" :style="headStyle" draggable="false" alt="" />
         <span v-if="editMode" class="ed-h" @mousedown="startResize('account',$event)"></span>
       </div>
 
@@ -417,14 +442,15 @@ function winClose () { if (window.hw) window.hw.close() }
 .account { position: absolute; top: 18px; right: 26px; display: flex; align-items: center; gap: 12px; }
 .name-color { width: 20px; height: 20px; border: none; background: none; padding: 0; border-radius: 5px; cursor: pointer; opacity: .55; } .name-color:hover { opacity: 1; }
 .pseudo { font-weight: 700; font-size: 16px; }
+.skin3d { width: 110px; height: 148px; display: block; }
 .body { height: 122px; image-rendering: pixelated; transition: transform .12s ease-out; transform-origin: 50% 30%; filter: drop-shadow(0 6px 12px rgba(0,0,0,.55)); }
 
 .brand { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px; width: 470px; }
 .logo { width: 100%; filter: drop-shadow(0 12px 34px rgba(0,0,0,.55)); }
 .tagline { font-family: var(--serif); letter-spacing: 8px; font-size: 15px; color: #CFC7B2; }
-.launch { position: absolute; left: 50%; top: 486px; transform: translateX(-50%); font-family: var(--serif); font-weight: 700; letter-spacing: 11px; font-size: 25px; color: #F0D585; border: 2px solid #B9973F; border-radius: 14px; padding: 18px 90px; cursor: pointer; background: linear-gradient(180deg,#1a2338 0%,#0c1220 100%); box-shadow: inset 0 0 22px rgba(0,0,0,.6), 0 10px 30px rgba(0,0,0,.5); text-shadow: 0 1px 0 #000, 0 0 12px rgba(240,213,133,.5); transition: transform .14s ease, box-shadow .2s, color .2s; }
-.launch::before { content: ''; position: absolute; inset: 5px; border: 1px solid rgba(201,162,75,.5); border-radius: 9px; pointer-events: none; }
-.launch:hover { transform: translateX(-50%) scale(1.045); color: #FFE9A8; box-shadow: inset 0 0 20px rgba(0,0,0,.5), 0 0 26px rgba(240,213,133,.4), 0 12px 34px rgba(0,0,0,.55); border-color: #E9CC74; }
+.launch { position: absolute; left: 50%; top: 494px; transform: translateX(-50%); font-family: var(--serif); font-weight: 700; letter-spacing: 10px; font-size: 23px; color: #F0D585; border: 1px solid rgba(233,204,116,.38); border-radius: 13px; padding: 15px 74px; cursor: pointer; background: linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.03)); backdrop-filter: blur(7px) saturate(1.2); -webkit-backdrop-filter: blur(7px) saturate(1.2); box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 8px 26px rgba(0,0,0,.4); text-shadow: 0 1px 8px rgba(0,0,0,.55); transition: transform .14s ease, box-shadow .2s, color .2s, background .2s; overflow: hidden; }
+.launch::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 46%); pointer-events: none; }
+.launch:hover { transform: translateX(-50%) scale(1.04); color: #FFE9A8; background: linear-gradient(180deg, rgba(255,255,255,.17), rgba(255,255,255,.05)); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 24px rgba(240,213,133,.3), 0 10px 30px rgba(0,0,0,.45); border-color: rgba(233,204,116,.6); }
 .stage.edit .launch:hover { transform: translateX(-50%); }
 
 .widget { position: absolute; width: 300px; border-radius: 14px; padding: 15px 18px; color: #EDE8DA; box-shadow: 0 14px 36px rgba(0,0,0,.45); background: rgba(9,10,16,.82); border: 1px solid rgba(255,255,255,.07); }
@@ -490,7 +516,8 @@ function winClose () { if (window.hw) window.hw.close() }
 .upd { position: fixed; top: 44px; left: 50%; transform: translateX(-50%); z-index: 250; display: flex; align-items: center; gap: 12px; background: rgba(9,10,16,.94); border: 1px solid rgba(212,175,55,.5); border-radius: 12px; padding: 9px 16px; font-size: 13px; color: #EDE8DA; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 .upd.ready { border-color: #7CCB6E; } .upd-ic { color: var(--gold); }
 .upd button { background: linear-gradient(180deg,var(--gold),#D4AF37); color: #1c1607; border: none; border-radius: 8px; padding: 6px 14px; font-weight: 800; cursor: pointer; }
-.meteor { position: absolute; top: 0; left: 0; width: 280px; pointer-events: none; opacity: 0; will-change: transform, opacity; animation-name: meteorGo; animation-timing-function: linear; animation-fill-mode: forwards; filter: brightness(1.1); }
+.meteor { position: absolute; top: 0; left: 0; width: 170px; height: 2px; border-radius: 3px; pointer-events: none; opacity: 0; will-change: transform, opacity; transform-origin: right center; background: linear-gradient(90deg, rgba(190,205,255,0), rgba(205,220,255,.5) 60%, rgba(255,255,255,.95)); animation-name: meteorGo; animation-timing-function: linear; animation-fill-mode: forwards; }
+.meteor::after { content: ''; position: absolute; right: -1px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 9px 2px rgba(205,220,255,.9); }
 @keyframes meteorGo { 0% { transform: translate(var(--sx), var(--sy)) rotate(var(--ang)) scale(var(--sc)); opacity: 0 } 15% { opacity: .6 } 80% { opacity: .55 } 100% { transform: translate(var(--ex), var(--ey)) rotate(var(--ang)) scale(var(--sc)); opacity: 0 } }
 .add-mod { display: block; width: 100%; max-width: 820px; margin: 0 auto 12px; padding: 12px; border-radius: 12px; border: 1px dashed rgba(212,175,55,.5); background: rgba(212,175,55,.06); color: var(--gold); font-weight: 700; cursor: pointer; font-size: 14px; } .add-mod:hover { background: rgba(212,175,55,.14); }
 .toast { position: fixed; bottom: 78px; left: 50%; transform: translate(-50%,12px); z-index: 200; opacity: 0; pointer-events: none; transition: .2s; background: #0A0B11; color: #EDE8DA; border: 1px solid var(--gold); border-radius: 10px; padding: 11px 20px; font-size: 13px; } .toast.show { opacity: 1; transform: translate(-50%,0); }
