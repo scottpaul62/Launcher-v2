@@ -17,5 +17,6 @@ contextBridge.exposeInMainWorld('hw', {
   logout: () => ipcRenderer.invoke('auth:logout'),
   logOpen: () => ipcRenderer.invoke('log:open'),
   serverOnline: () => ipcRenderer.invoke('server:online'),
-  logRead: () => ipcRenderer.invoke('log:read')
+  logRead: () => ipcRenderer.invoke('log:read'),
+  onLogLine: (cb) => ipcRenderer.on('log:line', (_e, s) => cb(s))
 })

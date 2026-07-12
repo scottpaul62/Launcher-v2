@@ -8,15 +8,13 @@ let win
 let LOG_PATH = null
 {
   const _log = console.log.bind(console)
-  const write = (a) => {
-    try {
-      if (!LOG_PATH) return
-      const line = '[' + new Date().toISOString() + '] ' + a.map((x) => typeof x === 'string' ? x : (() => { try { return JSON.stringify(x) } catch (_) { return String(x) } })()).join(' ') + '\n'
-      appendFileSync(LOG_PATH, line)
-    } catch (_) {}
+  const emit = (a) => {
+    const s = a.map((x) => typeof x === 'string' ? x : (() => { try { return JSON.stringify(x) } catch (_) { return String(x) } })()).join(' ')
+    try { if (LOG_PATH) appendFileSync(LOG_PATH, '[' + new Date().toISOString() + '] ' + s + '\n') } catch (_) {}
+    try { if (win && !win.isDestroyed()) win.webContents.send('log:line', s) } catch (_) {}
   }
-  console.log = (...a) => { _log(...a); write(a) }
-  console.error = (...a) => { _log(...a); write(a) }
+  console.log = (...a) => { _log(...a); emit(a) }
+  console.error = (...a) => { _log(...a); emit(a) }
 }
 
 function createWindow () {

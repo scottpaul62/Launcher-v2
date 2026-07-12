@@ -74,16 +74,23 @@ function switchAccount () { login() }
 async function logout () { acctMenu.value = false; try { if (window.hw && window.hw.logout) await window.hw.logout() } catch (_) {} ; account.online = false; CONFIG.uuid = null; toast('Déconnecté') }
 function onDocDown (e) { if (acctMenu.value && !e.target.closest('.account')) acctMenu.value = false }
 const showLog = ref(false)
-const logText = ref('')
+const logLines = ref([])
+function scrollLog () { nextTick(() => { const el = document.querySelector('.logpre'); if (el) el.scrollTop = el.scrollHeight }) }
+function pushLog (s) { logLines.value.push(s); if (logLines.value.length > 900) logLines.value.splice(0, logLines.value.length - 900); if (showLog.value) scrollLog() }
+function lineClass (s) {
+  const l = ('' + s).toLowerCase()
+  if (l.includes('error') || l.includes('exception') || l.includes('crash') || l.includes('caused by') || l.includes('échec') || l.includes('erreur') || l.includes('fatal') || l.includes('failed')) return 'lg-err'
+  if (l.includes('warn') || l.includes('avertiss') || l.includes('deprecat')) return 'lg-warn'
+  if (l.includes('[mc:game]') || l.includes('[game]')) return 'lg-game'
+  return ''
+}
 async function openLog () {
   acctMenu.value = false
-  try { logText.value = (window.hw && window.hw.logRead) ? await window.hw.logRead() : 'indisponible' } catch (e) { logText.value = 'Erreur : ' + e }
-  showLog.value = true
+  if (logLines.value.length === 0 && window.hw && window.hw.logRead) { try { const t = await window.hw.logRead(); logLines.value = (t || '').split('\n') } catch (_) {} }
+  showLog.value = true; scrollLog()
 }
-async function copyLog () {
-  try { await navigator.clipboard.writeText(logText.value); toast('Journal copié — colle-le à Claude') }
-  catch (_) { toast('Copie impossible (sélectionne le texte à la main)') }
-}
+function copyLog () { try { navigator.clipboard.writeText(logLines.value.join('\n')); toast('Journal copié — colle-le à Claude') } catch (_) { toast('Copie impossible') } }
+function clearLog () { logLines.value = [] }
 
 
 function starField (n, tile, r, op) {
@@ -118,7 +125,7 @@ const launchInfo = reactive({ active: false, percent: 0, text: '' })
 function launch () {
   if (launchInfo.active) return
   if (!window.hw || !window.hw.launch) { toast('Lancement indisponible'); return }
-  launchInfo.active = true; launchInfo.percent = 0; launchInfo.text = 'Démarrage…'
+  launchInfo.active = true; launchInfo.percent = 0; launchInfo.text = 'Démarrage…'; showLog.value = true; scrollLog()
   window.hw.launch({ dir: settings.dir, ram: settings.ram, name: CONFIG.pseudo })
     .then((r) => { if (!r || !r.ok) { launchInfo.active = false; toast('Échec : ' + ((r && r.error) || 'inconnu')) } })
     .catch((e) => { launchInfo.active = false; toast('Erreur : ' + e) })
@@ -255,6 +262,7 @@ onMounted(() => {
   meteorTimer = setTimeout(scheduleMeteor, 5000)
   document.addEventListener('mousedown', onDocDown)
   refreshAccount()
+  if (window.hw && window.hw.onLogLine) window.hw.onLogLine(pushLog)
   const pingSrv = async () => { try { if (window.hw && window.hw.serverOnline) serverOnline.value = await window.hw.serverOnline() } catch (_) {} }
   pingSrv(); srvTimer = setInterval(pingSrv, 5000)
 })
@@ -453,6 +461,16 @@ function winClose () { if (window.hw) window.hw.close() }
     <span v-if="upd.state === 'downloading'">Mise à jour en cours… {{ upd.percent }}%</span>
     <template v-else><span>Mise à jour {{ upd.version }} prête.</span><button @click="installUpdate">Installer &amp; redémarrer</button></template>
   </div>
+  <div v-if="showLog" class="logmodal" @click.self="showLog=false">
+    <div class="logbox">
+      <div class="logbar"><b>📋 Console — journal en direct</b><span class="logsp"></span><button @click="copyLog">Copier</button><button @click="clearLog">Vider</button><button class="logx" @click="showLog=false">Fermer</button></div>
+      <div class="logpre">
+        <div v-for="(l, i) in logLines" :key="i" :class="lineClass(l)">{{ l }}</div>
+        <div v-if="!logLines.length" class="lg-dim">En attente… clique LANCER, le démarrage du jeu s'affichera ici en direct.</div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" :class="{ show: toastMsg }">{{ toastMsg }}</div>
 </template>
 
@@ -589,6 +607,8 @@ function winClose () { if (window.hw) window.hw.close() }
 .logbox { width: min(90vw, 900px); height: min(80vh, 620px); background: #0A0B11; border: 1px solid rgba(212,175,55,.4); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
 .logbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.08); color: #EDE8DA; font-size: 14px; } .logbar .logsp { flex: 1; }
 .logbar button { background: rgba(212,175,55,.16); color: var(--gold); border: 1px solid rgba(212,175,55,.35); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 700; font-size: 13px; } .logbar button:hover { background: rgba(212,175,55,.28); } .logbar .logx { background: rgba(224,85,85,.18); color: #E58A8A; border-color: rgba(224,85,85,.35); }
-.logpre { flex: 1; margin: 0; padding: 12px 14px; overflow: auto; font-family: Consolas, monospace; font-size: 12px; line-height: 1.5; color: #C9D2E0; white-space: pre-wrap; word-break: break-word; user-select: text; }
+.logpre { flex: 1; margin: 0; padding: 12px 14px; overflow: auto; font-family: Consolas, monospace; font-size: 12px; line-height: 1.5; color: #9FB0C4; white-space: pre-wrap; word-break: break-word; user-select: text; }
+.logpre > div { padding: 1px 0; }
+.lg-err { color: #ff6b6b; } .lg-warn { color: #ffc04f; } .lg-game { color: #C9D2E0; } .lg-dim { color: #6b7180; font-style: italic; }
 .toast { position: fixed; bottom: 78px; left: 50%; transform: translate(-50%,12px); z-index: 200; opacity: 0; pointer-events: none; transition: .2s; background: #0A0B11; color: #EDE8DA; border: 1px solid var(--gold); border-radius: 10px; padding: 11px 20px; font-size: 13px; } .toast.show { opacity: 1; transform: translate(-50%,0); }
 </style>
