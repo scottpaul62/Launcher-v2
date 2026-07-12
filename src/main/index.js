@@ -346,7 +346,7 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     // 6) Lancement + capture des logs pour diagnostic
     const ram = Math.max(2, Math.min(16, Number(opts.ram) || 4))
     console.log('[MC] LANCEMENT version=' + versionId + ' java=' + javaPath + ' ram=' + ram + 'G name=' + launchName + ' online=' + (launchToken !== '0') + ' root=' + root)
-    const proc = await core.launch({
+    const launchOpt = {
       gamePath: root,
       javaPath,
       version: versionId,
@@ -356,8 +356,11 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
       accessToken: launchToken,
       userType: 'msa',
       launcherName: 'HEROES-WORLD',
-      launcherBrand: 'HeroesWorld'
-    })
+      launcherBrand: 'HeroesWorld',
+      extraExecOption: { cwd: root }
+    }
+    try { const args = await core.generateArguments(launchOpt); console.log('[MC] COMMANDE: ' + args.join(' ')) } catch (ge) { console.log('[MC] generateArguments: ' + String(ge)) }
+    const proc = await core.launch(launchOpt)
     let tail = ''
     const cap = (buf) => { try { tail = (tail + buf.toString()).slice(-4000); console.log('[MC:game]', buf.toString().trim()) } catch (_) {} }
     if (proc.stdout) proc.stdout.on('data', cap)
