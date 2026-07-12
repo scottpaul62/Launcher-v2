@@ -516,6 +516,9 @@ ipcMain.handle('game:open-folder', async (e, dir, sub) => {
 // Traçabilité : le renderer envoie ses interactions/erreurs -> journal de debug (+ diffusé au live log)
 ipcMain.handle('ui:log', (e, msg) => { try { console.log('[UI] ' + String(msg)) } catch (_) {} ; return { ok: true } })
 
+// Version réelle de l'application (pour l'afficher dans les Paramètres)
+ipcMain.handle('app:version', () => { try { return app.getVersion() } catch (_) { return '' } })
+
 // Lister les .jar présents dans le dossier mods/
 ipcMain.handle('mods:list', (e, dir) => {
   try {

@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('hw', {
   openGameFolder: (dir, sub) => ipcRenderer.invoke('game:open-folder', dir, sub),
   modsList: (dir) => ipcRenderer.invoke('mods:list', dir),
   uiLog: (msg) => ipcRenderer.invoke('ui:log', msg),
+  appVersion: () => ipcRenderer.invoke('app:version'),
   onMcStatus: (cb) => ipcRenderer.on('mc:status', (_e, d) => cb(d)),
   login: () => ipcRenderer.invoke('auth:login'),
   getAccount: () => ipcRenderer.invoke('auth:get'),

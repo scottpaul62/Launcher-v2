@@ -21,7 +21,7 @@ const CONFIG = reactive({
       texte: "Le launcher, le domaine play.heroesworld.fr et les derniers préparatifs avancent. L'Olympe ouvrira bientôt ses portes." }
   ]
 })
-const APP_VERSION = '2.5.1'
+const APP_VERSION = ref('…')
 const comet_ = comet // conserve l'import (utilisé comme sprite décoratif potentiel)
 
 /* ===================== Réglages persistés ===================== */
@@ -300,12 +300,13 @@ async function cancelLaunch () {
   launchInfo.active = false; launchInfo.phase = ''; launchInfo.percent = 0
 }
 function closeLaunchOverlay () { launchInfo.active = false; launchInfo.phase = '' }
+let _lastPhase = ''
 if (typeof window !== 'undefined' && window.hw && window.hw.onMcStatus) {
   window.hw.onMcStatus((d) => {
     if (d.phase) launchInfo.phase = d.phase
     if (d.text) launchInfo.text = d.text
     if (typeof d.percent === 'number') launchInfo.percent = d.percent
-    ulog('mc status -> ' + (d.phase || '') + (d.text ? (' ' + d.text) : ''))
+    if (d.phase && d.phase !== _lastPhase) { _lastPhase = d.phase; ulog('mc status -> ' + d.phase + (d.text ? (' ' + d.text) : '')) }
     if (d.phase === 'error' || d.phase === 'exit') launchInfo.error = d.text || 'Le lancement a été interrompu.'
     else if (d.phase === 'done') setTimeout(() => { launchInfo.active = false; launchInfo.phase = '' }, 1800)
   })
@@ -486,6 +487,7 @@ onMounted(() => {
     } catch (_) {}
   }
   pingSrv(); srvTimer = setInterval(pingSrv, 5000)
+  try { if (window.hw && window.hw.appVersion) window.hw.appVersion().then(v => { if (v) APP_VERSION.value = v }) } catch (_) {}
   ulog('App.vue monté')
 })
 onUnmounted(() => {
