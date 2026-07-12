@@ -4,7 +4,8 @@ import { readFileSync, writeFileSync, unlinkSync, existsSync, appendFileSync, mk
 import { spawn } from 'child_process'
 import net from 'net'
 
-try { app.disableHardwareAcceleration() } catch (_) {}
+// Accélération GPU RÉACTIVÉE (v2.6.1) : la désactiver rendait l'UI saccadée en plein écran.
+// (Si un jour l'UI est noire au démarrage sur une machine, remettre app.disableHardwareAcceleration().)
 let win
 let LOG_PATH = null
 {
@@ -439,11 +440,21 @@ ipcMain.handle('mc:cancel', () => {
   return { ok: true }
 })
 
-// Ouvrir le dossier du jeu dans l'explorateur Windows
-ipcMain.handle('game:open-folder', (e, dir) => {
-  try { const root = resolveRoot(dir); mkdirSync(root, { recursive: true }); shell.openPath(root) } catch (_) {}
-  return { ok: true }
+// Ouvrir un dossier du jeu (racine, mods, screenshots…) dans l'explorateur Windows
+ipcMain.handle('game:open-folder', async (e, dir, sub) => {
+  try {
+    const root = resolveRoot(dir)
+    const target = sub ? join(root, String(sub)) : root
+    mkdirSync(target, { recursive: true })
+    const err = await shell.openPath(target)
+    if (err) { console.log('[UI] ouverture dossier ÉCHEC (' + target + ') : ' + err); return { ok: false, error: err, path: target } }
+    console.log('[UI] dossier ouvert : ' + target)
+    return { ok: true, path: target }
+  } catch (ex) { console.log('[UI] ouverture dossier exception : ' + String(ex)); return { ok: false, error: String(ex) } }
 })
+
+// Traçabilité : le renderer envoie ses interactions/erreurs -> journal de debug (+ diffusé au live log)
+ipcMain.handle('ui:log', (e, msg) => { try { console.log('[UI] ' + String(msg)) } catch (_) {} ; return { ok: true } })
 
 // Lister les .jar présents dans le dossier mods/
 ipcMain.handle('mods:list', (e, dir) => {
