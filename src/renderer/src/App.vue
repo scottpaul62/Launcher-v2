@@ -81,7 +81,7 @@ function onKey (e) { if (e.key === 'Escape' && page.value !== 'accueil' && !edit
 
 /* ============ MODE ÉDITION : déplacer + redimensionner (sauvegarde en %) ============ */
 const editMode = ref(false)
-const layout = reactive(JSON.parse(localStorage.getItem('hwLayoutV2') || '{}'))
+const layout = reactive(JSON.parse(localStorage.getItem('hwLayoutV3') || '{}'))
 const drag = reactive({ id: null, mode: null, ox: 0, oy: 0, sx: 0, ow: 0 })
 const W = () => window.innerWidth, H = () => window.innerHeight
 
@@ -125,8 +125,8 @@ function onMove (e) {
 }
 function endDrag () { drag.id = null; drag.mode = null }
 function toggleEdit () { editMode.value = true; page.value = 'accueil'; nextTick(captureLayout) }
-function applyEdit () { localStorage.setItem('hwLayoutV2', JSON.stringify(layout)); editMode.value = false }
-function resetEdit () { Object.keys(layout).forEach(k => delete layout[k]); localStorage.removeItem('hwLayoutV2'); editMode.value = false }
+function applyEdit () { localStorage.setItem('hwLayoutV3', JSON.stringify(layout)); editMode.value = false }
+function resetEdit () { Object.keys(layout).forEach(k => delete layout[k]); localStorage.removeItem('hwLayoutV3'); editMode.value = false }
 function closeEdit () { editMode.value = false }
 
 let rzT = null
@@ -377,9 +377,9 @@ function winClose () { if (window.hw) window.hw.close() }
 .head { width: 78%; height: 78%; border-radius: 14%; image-rendering: pixelated; transition: transform .12s ease-out; filter: drop-shadow(0 4px 10px rgba(0,0,0,.5)); }
 
 /* Accueil : bloc centré, logo+tagline groupés, redimensionnables */
-.home { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(28px, 6vh, 74px); padding-bottom: 5vh; }
-.brand { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; width: clamp(240px, 30vw, 500px); }
-.logo { width: 100%; filter: drop-shadow(0 12px 34px rgba(0,0,0,.55)); }
+.home { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(14px, 3vh, 48px); padding: 58px 20px 88px; }
+.brand { position: relative; display: flex; flex-direction: column; align-items: center; gap: clamp(4px,1vh,10px); width: clamp(210px, 30vw, 460px); max-width: 88vw; }
+.logo { width: 100%; height: auto; max-height: 28vh; object-fit: contain; filter: drop-shadow(0 12px 34px rgba(0,0,0,.55)); }
 .tagline { font-family: var(--serif); letter-spacing: 7px; font-size: clamp(10px,.85vw,14px); color: #CFC7B2; }
 .launch { position: relative; font-family: var(--serif); font-weight: 900; letter-spacing: 8px; font-size: clamp(17px,1.5vw,23px); color: #1c1607; border: none; border-radius: 11px; padding: clamp(11px,1.3vh,17px) clamp(44px,5.5vw,86px); cursor: pointer; background: linear-gradient(180deg,#FFE98A,#FFD700 30%,#D4AF37 75%,#8B6914); box-shadow: 0 6px 0 #6e5310, 0 12px 34px rgba(255,215,0,.35), inset 0 1px 0 rgba(255,255,255,.6); transition: filter .15s, transform .12s; }
 .launch:hover { filter: brightness(1.08); transform: translateY(-2px); }

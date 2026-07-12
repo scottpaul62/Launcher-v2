@@ -1,12 +1,15 @@
 {
   "name": "heroesworld-launcher",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Launcher officiel HEROES-WORLD (Electron + Vue 3 + XMCL)",
   "author": "Scott Paul (HEROES-WORLD)",
   "license": "UNLICENSED",
   "private": true,
   "main": "./out/main/index.js",
-  "repository": { "type": "git", "url": "https://github.com/scottpaul62/Launcher-v2.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scottpaul62/Launcher-v2.git"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -30,10 +33,34 @@
   "build": {
     "appId": "fr.heroesworld.launcher",
     "productName": "HeroesWorld",
-    "directories": { "output": "dist", "buildResources": "build" },
-    "files": ["out/**/*"],
-    "win": { "target": "nsis", "icon": "build/icon.ico", "artifactName": "HeroesWorld-Setup-${version}.${ext}" },
-    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "shortcutName": "HeroesWorld", "createDesktopShortcut": "always", "installerIcon": "build/icon.ico", "uninstallerIcon": "build/icon.ico" },
-    "publish": [{ "provider": "github", "owner": "scottpaul62", "repo": "Launcher-v2", "releaseType": "release" }]
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico",
+      "artifactName": "HeroesWorld-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "HeroesWorld",
+      "createDesktopShortcut": "always",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "scottpaul62",
+        "repo": "Launcher-v2",
+        "releaseType": "release"
+      }
+    ]
   }
 }
