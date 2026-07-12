@@ -13,36 +13,35 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 /**
- * Écran titre HEROES-WORLD — thème Olympe, façon Lunar.
- * Le logo (bannière) est mis en avant ; un seul chemin : rejoindre l'Olympe.
+ * Écran titre HEROES-WORLD — épuré, façon Lunar/Badlion mais aux couleurs de l'Olympe.
+ * Logo mis en avant, un bouton principal JOUER, version en bas. Défensif : repli texte
+ * si la texture ne se charge pas (jamais de crash sur l'écran titre).
  */
 public class HWTitleScreen extends Screen {
 
     private static final Identifier BANNER = new Identifier("heroworld", "textures/gui/banner.png");
-    private static final int GOLD_DARK  = 0xFFD4AF37;
-    private static final int MARBLE_TOP = 0xFF0D0D12;
-    private static final int MARBLE_BOT = 0xFF1B1B26;
+    private static final int GOLD       = 0xFFE8C56A;
+    private static final int GOLD_DARK  = 0xFFB8912F;
+    private static final int BG_TOP     = 0xFF0A0A10;
+    private static final int BG_BOT     = 0xFF171722;
 
-    public HWTitleScreen() {
-        super(Text.literal("HEROES-WORLD"));
-    }
+    public HWTitleScreen() { super(Text.literal("HEROES-WORLD")); }
 
     @Override
     protected void init() {
         int cx = this.width / 2;
-        int joinY = (int) (this.height * 0.56);
+        int by = (int) (this.height * 0.58);
 
-        this.addDrawableChild(ButtonWidget.builder(
-                Text.literal("§lREJOINDRE HEROES-WORLD"), b -> this.connect())
-            .dimensions(cx - 155, joinY, 310, 24).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("§l§eJOUER"), b -> this.connect())
+            .dimensions(cx - 100, by, 200, 26).build());
 
-        this.addDrawableChild(ButtonWidget.builder(
-                Text.literal("Options"), b -> this.client.setScreen(new OptionsScreen(this, this.client.options)))
-            .dimensions(cx - 155, joinY + 32, 151, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("Options"),
+                b -> this.client.setScreen(new OptionsScreen(this, this.client.options)))
+            .dimensions(cx - 100, by + 32, 96, 20).build());
 
-        this.addDrawableChild(ButtonWidget.builder(
-                Text.literal("Quitter"), b -> this.client.scheduleStop())
-            .dimensions(cx + 4, joinY + 32, 151, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("Quitter"),
+                b -> this.client.scheduleStop())
+            .dimensions(cx + 4, by + 32, 96, 20).build());
     }
 
     private void connect() {
@@ -54,38 +53,49 @@ public class HWTitleScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // Fond marbre + liserés or
-        ctx.fillGradient(0, 0, this.width, this.height, MARBLE_TOP, MARBLE_BOT);
-        ctx.fill(0, 0, this.width, 2, GOLD_DARK);
-        ctx.fill(0, this.height - 2, this.width, this.height, GOLD_DARK);
+        ctx.fillGradient(0, 0, this.width, this.height, BG_TOP, BG_BOT);
+        // vignette douce
+        ctx.fillGradient(0, 0, this.width, 48, 0x88000000, 0x00000000);
+        ctx.fillGradient(0, this.height - 70, this.width, this.height, 0x00000000, 0xAA000000);
+        // liserés or
+        ctx.fill(0, 0, this.width, 1, GOLD_DARK);
+        ctx.fill(0, this.height - 1, this.width, this.height, GOLD_DARK);
 
         int cx = this.width / 2;
-
-        // ----- LOGO (bannière) mis en avant -----
-        int logoW = Math.min(this.width - 80, 460);
-        int logoH = logoW / 4; // ratio 2048x512 = 4:1
+        int logoW = Math.min(this.width - 120, 420);
+        int logoH = logoW / 4;
         int logoX = cx - logoW / 2;
-        int logoY = (int) (this.height * 0.14);
-        RenderSystem.enableBlend();
-        ctx.drawTexture(BANNER, logoX, logoY, logoW, logoH, 0f, 0f, 2048, 512, 2048, 512);
+        int logoY = (int) (this.height * 0.16);
 
-        // Sous-titre
+        boolean drew = false;
+        try {
+            RenderSystem.enableBlend();
+            ctx.drawTexture(BANNER, logoX, logoY, logoW, logoH, 0f, 0f, 2048, 512, 2048, 512);
+            drew = true;
+        } catch (Throwable ignored) { drew = false; }
+        if (!drew) drawScaled(ctx, "HEROES-WORLD", cx, logoY + logoH / 2 - 10, 2.4f, GOLD);
+
         ctx.drawCenteredTextWithShadow(this.textRenderer,
             Text.literal("§7Survie  ·  Mythologie  ·  Progression"),
-            cx, logoY + logoH + 8, 0xFFCFC7B2);
+            cx, logoY + logoH + 8, 0xFFB9B2C4);
 
-        // ----- Version en bas à gauche (façon Lunar) -----
-        ctx.drawTextWithShadow(this.textRenderer,
-            Text.literal("HEROES-WORLD  1.20.6  ·  Fabric"), 4, this.height - 12, 0xFFB0AAC0);
-
-        // Pseudo connecté en bas à droite
+        ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8HEROES-WORLD §71.20.6"), 6, this.height - 12, 0xFF8A85A0);
         String who = (this.client.getSession() != null) ? this.client.getSession().getUsername() : "";
         if (who != null && !who.isEmpty()) {
             int w = this.textRenderer.getWidth(who);
-            ctx.drawTextWithShadow(this.textRenderer, Text.literal(who), this.width - w - 6, this.height - 12, 0xFFFFD700);
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal("§e" + who), this.width - w - 6, this.height - 12, GOLD);
         }
 
         super.render(ctx, mouseX, mouseY, delta);
+    }
+
+    private void drawScaled(DrawContext ctx, String text, int centerX, int y, float scale, int color) {
+        int w = this.textRenderer.getWidth(text);
+        ctx.getMatrices().push();
+        ctx.getMatrices().translate(centerX - (w * scale) / 2f, y, 0);
+        ctx.getMatrices().scale(scale, scale, 1f);
+        ctx.drawText(this.textRenderer, text, 0, 0, color, true);
+        ctx.getMatrices().pop();
     }
 
     @Override public boolean shouldCloseOnEsc() { return false; }

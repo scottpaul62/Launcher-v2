@@ -31,6 +31,27 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Set up JDK 21
+        if: steps.tag.outputs.exists == 'false'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        if: steps.tag.outputs.exists == 'false'
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Compiler le mod (menu en jeu)
+        if: steps.tag.outputs.exists == 'false'
+        shell: bash
+        run: |
+          if [ -f mod/build.gradle ]; then
+            (cd mod && gradle --no-daemon build) || echo "::warning::compilation mod echouee -> jar existant conserve"
+            jar=$(ls mod/build/libs/*.jar 2>/dev/null | grep -v sources | head -1 || true)
+            if [ -n "$jar" ]; then cp "$jar" resources/mods/heroworld-titlescreen-1.0.0.jar && echo "mod recompile: $jar"; fi
+          fi
+
       - name: Install
         if: steps.tag.outputs.exists == 'false'
         run: npm install --no-audit --no-fund
