@@ -63,6 +63,7 @@ async function initSkin () {
     viewer.animation = null
     viewer.zoom = 0.92
     viewer.fov = 38
+    try { viewer.animation = new mod.IdleAnimation(); viewer.animation.speed = 0.55 } catch (e) {}
     if (viewer.controls) { viewer.controls.enableRotate = false; viewer.controls.enableZoom = false; viewer.controls.enablePan = false }
     skin3dOk.value = true
   } catch (e) { skin3dOk.value = false }
@@ -204,10 +205,8 @@ function onMouseMove (e) {
   if (drag.id) onMove(e)
   if (bar.on) { barPos.left = e.clientX - bar.ox; barPos.top = e.clientY - bar.oy }
   if (viewer && viewer.playerObject) {
-    const dx = e.clientX / window.innerWidth - 0.5, dy = e.clientY / window.innerHeight - 0.5
-    const head = viewer.playerObject.skin.head
-    head.rotation.y = Math.max(-0.9, Math.min(0.9, dx * 1.5))
-    head.rotation.x = Math.max(-0.5, Math.min(0.5, dy * 0.9))
+    const dx = e.clientX / window.innerWidth - 0.5
+    viewer.playerObject.rotation.y = Math.max(-0.6, Math.min(0.6, dx * 1.0))
   }
 }
 function onUp () {
@@ -246,7 +245,7 @@ function winClose () { if (window.hw) window.hw.close() }
 </script>
 
 <template>
-  <div class="titlebar">
+  <div class="titlebar" @dblclick="winMax">
     <span class="tb-title">⚡ HEROES-WORLD</span>
     <div class="tb-controls">
       <button @click="winMin">─</button><button @click="winMax">▢</button><button class="close" @click="winClose">✕</button>
@@ -442,7 +441,7 @@ function winClose () { if (window.hw) window.hw.close() }
 .account { position: absolute; top: 18px; right: 26px; display: flex; align-items: center; gap: 12px; }
 .name-color { width: 20px; height: 20px; border: none; background: none; padding: 0; border-radius: 5px; cursor: pointer; opacity: .55; } .name-color:hover { opacity: 1; }
 .pseudo { font-weight: 700; font-size: 16px; }
-.skin3d { width: 110px; height: 148px; display: block; }
+.skin3d { width: 84px; height: 112px; display: block; }
 .body { height: 122px; image-rendering: pixelated; transition: transform .12s ease-out; transform-origin: 50% 30%; filter: drop-shadow(0 6px 12px rgba(0,0,0,.55)); }
 
 .brand { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px; width: 470px; }
