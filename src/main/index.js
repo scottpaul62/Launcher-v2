@@ -143,13 +143,29 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     } catch (e) { console.log('[MC] installDependencies', e) }
     send({ phase: 'ready', text: 'Fichiers prêts', percent: 93 })
 
-    // 4) Java
+    // 4) Recherche robuste de Java (préférence Java 21)
     const jexe = process.platform === 'win32' ? 'javaw.exe' : 'java'
-    const javaPath = opts.java || (process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin', jexe) : (process.platform === 'win32' ? 'javaw' : 'java'))
-
-    // 5) Lancement (hors ligne, sans serveur -> menu custom)
-    const ram = Math.max(2, Math.min(16, Number(opts.ram) || 4))
+    function findJava () {
+      const cands = []
+      if (opts.java) cands.push(opts.java)
+      if (process.env.JAVA_HOME) cands.push(path.join(process.env.JAVA_HOME, 'bin', jexe))
+      const bases = [process.env['ProgramFiles'], process.env['ProgramW6432'], process.env['ProgramFiles(x86)'], process.env['LOCALAPPDATA'] ? path.join(process.env['LOCALAPPDATA'], 'Programs') : null].filter(Boolean)
+      for (const base of bases) {
+        for (const vendor of ['Eclipse Adoptium', 'Java', 'Microsoft', 'Zulu', 'Amazon Corretto', 'BellSoft', 'AdoptOpenJDK']) {
+          const dir = path.join(base, vendor)
+          try { for (const d of fs.readdirSync(dir)) { const jp = path.join(dir, d, 'bin', jexe); if (fs.existsSync(jp)) cands.push(jp) } } catch (_) {}
+        }
+      }
+      cands.sort((a, b) => (String(b).includes('-21') || String(b).includes('jdk-21') ? 1 : 0) - (String(a).includes('-21') || String(a).includes('jdk-21') ? 1 : 0))
+      for (const c of cands) { try { if (c && fs.existsSync(c)) return c } catch (_) {} }
+      return jexe
+    }
+    const javaPath = findJava()
+    console.log('[MC] javaPath =', javaPath)
     send({ phase: 'launch', text: 'Lancement du jeu…', percent: 97 })
+
+    // 5) Lancement (hors ligne, sans serveur -> menu custom) + capture des logs pour diagnostic
+    const ram = Math.max(2, Math.min(16, Number(opts.ram) || 4))
     const proc = await core.launch({
       gamePath: root,
       javaPath,
@@ -160,12 +176,24 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
       accessToken: '0',
       userType: 'msa',
       launcherName: 'HEROES-WORLD',
-      launcherBrand: 'HeroesWorld',
-      extraExecOption: { detached: true }
+      launcherBrand: 'HeroesWorld'
     })
+    let tail = ''
+    const cap = (buf) => { try { tail = (tail + buf.toString()).slice(-4000); console.log('[MC:game]', buf.toString().trim()) } catch (_) {} }
+    if (proc.stdout) proc.stdout.on('data', cap)
+    if (proc.stderr) proc.stderr.on('data', cap)
+    const started = Date.now()
     send({ phase: 'done', text: 'Jeu lancé !', percent: 100 })
-    proc.on('error', (err) => { send({ phase: 'error', text: 'Erreur process : ' + err.message }); launching = false })
-    proc.on('exit', (code) => { send({ phase: 'exit', text: 'Jeu fermé (code ' + code + ')' }); launching = false })
+    proc.on('error', (err) => { send({ phase: 'error', text: 'Java introuvable / lancement : ' + err.message }); launching = false })
+    proc.on('exit', (code) => {
+      launching = false
+      if (Date.now() - started < 12000 && code) {
+        const reason = tail.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(-5).join('  |  ').slice(0, 320)
+        send({ phase: 'error', text: 'Le jeu s\'est fermé (code ' + code + '). ' + (reason || 'voir logs') })
+      } else {
+        send({ phase: 'exit', text: 'Jeu fermé (code ' + code + ')' })
+      }
+    })
     return { ok: true }
   } catch (err) {
     console.error('[MC] échec', err)
