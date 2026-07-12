@@ -98,39 +98,23 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     fs.mkdirSync(root, { recursive: true })
     send({ phase: 'prepare', text: 'Préparation…', percent: 2 })
 
-    // 1) JSON vanilla 1.20.6 (nécessaire pour résoudre l'héritage Fabric)
-    const vDir = path.join(root, 'versions', MC)
-    const vJson = path.join(vDir, MC + '.json')
-    if (!fs.existsSync(vJson)) {
-      send({ phase: 'meta', text: 'Récupération de la version…', percent: 5 })
-      const list = await installer.getVersionList()
-      const meta = list.versions.find((v) => v.id === MC)
-      if (!meta) throw new Error('Version ' + MC + ' introuvable')
-      const res = await fetch(meta.url)
-      fs.mkdirSync(vDir, { recursive: true })
-      fs.writeFileSync(vJson, await res.text())
-    }
+    // 1) Minecraft vanilla 1.20.6 (json + jar + libs + assets) — API 6.1.2 : install(meta, root)
+    send({ phase: 'meta', text: 'Récupération de la liste des versions…', percent: 5 })
+    const list = await installer.getVersionList()
+    const meta = list.versions.find((v) => v.id === MC)
+    if (!meta) throw new Error('Version ' + MC + ' introuvable')
+    send({ phase: 'install', text: 'Téléchargement de Minecraft ' + MC + '… (patiente, 1re fois)', percent: 15 })
+    await installer.install(meta, root)
 
-    // 2) Fabric
-    send({ phase: 'fabric', text: 'Installation de Fabric…', percent: 10 })
-    let versionId = await installer.installFabric({ minecraft: MC, loader: LOADER }, root)
+    // 2) Fabric loader — API 6.1.2 : installFabric({ minecraftVersion, version, minecraft })
+    send({ phase: 'fabric', text: 'Installation de Fabric ' + LOADER + '…', percent: 72 })
+    let versionId = await installer.installFabric({ minecraftVersion: MC, version: LOADER, minecraft: root })
     if (!versionId || typeof versionId !== 'string') versionId = 'fabric-loader-' + LOADER + '-' + MC
-    send({ phase: 'fabric', text: 'Fabric prêt', percent: 16 })
 
-    // 3) Téléchargement complet (jar + libs + assets)
+    // 3) Dépendances Fabric (libraries)
+    send({ phase: 'deps', text: 'Finalisation…', percent: 86 })
     const resolved = await core.Version.parse(root, versionId)
-    send({ phase: 'install', text: 'Téléchargement de Minecraft ' + MC + '…', percent: 20 })
-    await installer.completeInstallation(resolved, {
-      tracker: (ev) => {
-        try {
-          const dl = ev && ev.payload && ev.payload.download
-          if (dl && dl.total) {
-            const p = 20 + Math.round((dl.progress / dl.total) * 70)
-            send({ phase: ev.phase, text: 'Téléchargement en cours…', percent: Math.max(20, Math.min(92, p)) })
-          }
-        } catch (_) {}
-      }
-    })
+    try { await installer.installDependencies(resolved) } catch (e) { console.log('[MC] installDependencies', e) }
     send({ phase: 'ready', text: 'Fichiers prêts', percent: 93 })
 
     // 4) Java

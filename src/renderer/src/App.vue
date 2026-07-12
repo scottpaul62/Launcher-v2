@@ -281,7 +281,7 @@ function winClose () { if (window.hw) window.hw.close() }
       <div class="account editable" data-ed="account" :style="styleFor('account')" @mousedown="startMove('account',$event)" @click="toggleAcct">
         <input type="color" class="name-color" :value="nameColor" @input="pickColor" @click.stop title="Couleur du pseudo" />
         <span class="pseudo" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</span>
-        <img class="head" :src="headSrc" :style="headStyle" draggable="false" alt="" />
+        <img class="head" :src="headSrc" draggable="false" alt="" />
         <span v-if="editMode" class="ed-h" @mousedown="startResize('account',$event)"></span>
         <transition name="pop">
           <div v-if="acctMenu" class="acct-menu" @click.stop @mousedown.stop>
