@@ -223,7 +223,8 @@ let launching = false
 ipcMain.handle('mc:launch', async (event, opts = {}) => {
   if (launching) return { ok: false, error: 'Lancement déjà en cours' }
   launching = true
-  const send = (d) => { try { win && !win.isDestroyed() && win.webContents.send('mc:status', d) } catch (_) {} ; console.log('[MC]', d.text || JSON.stringify(d)) }
+  let lastLog = ''
+  const send = (d) => { try { win && !win.isDestroyed() && win.webContents.send('mc:status', d) } catch (_) {} ; const t = d.text || JSON.stringify(d); if (t !== lastLog) { lastLog = t; console.log('[MC]', t) } }
   try {
     const path = await import('path')
     const fs = await import('fs')
