@@ -11,5 +11,8 @@ contextBridge.exposeInMainWorld('hw', {
   checkUpdate: () => ipcRenderer.send('update:check'),
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
   launch: (opts) => ipcRenderer.invoke('mc:launch', opts),
-  onMcStatus: (cb) => ipcRenderer.on('mc:status', (_e, d) => cb(d))
+  onMcStatus: (cb) => ipcRenderer.on('mc:status', (_e, d) => cb(d)),
+  login: () => ipcRenderer.invoke('auth:login'),
+  getAccount: () => ipcRenderer.invoke('auth:get'),
+  logout: () => ipcRenderer.invoke('auth:logout')
 })

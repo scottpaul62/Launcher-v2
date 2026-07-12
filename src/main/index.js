@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
+import { readFileSync, writeFileSync, unlinkSync } from 'fs'
 
 let win
 
@@ -75,6 +76,60 @@ ipcMain.on('win:close', () => win && win.close())
 ipcMain.handle('open:external', (e, url) => {
   try { if (typeof url === 'string' && /^https?:\/\//.test(url)) shell.openExternal(url) } catch (err) {}
 })
+
+// ============ AUTH MICROSOFT ============
+const AZURE_CLIENT_ID = '1ce6e35a-126f-48fd-97fb-54d143ac6d45'
+const REDIRECT = 'https://login.microsoftonline.com/common/oauth2/nativeclient'
+const AUTHORIZE = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?prompt=select_account&client_id=${AZURE_CLIENT_ID}&response_type=code&scope=XboxLive.signin%20offline_access&redirect_uri=${REDIRECT}`
+const TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token'
+const accountFile = () => join(app.getPath('userData'), 'hw-account.json')
+function readAccount () { try { return JSON.parse(readFileSync(accountFile(), 'utf8')) } catch (_) { return null } }
+function writeAccount (a) { try { writeFileSync(accountFile(), JSON.stringify(a)) } catch (_) {} }
+
+async function msToken (body) {
+  const res = await fetch(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(body).toString() })
+  if (!res.ok) throw new Error('Jeton Microsoft ' + res.status)
+  return res.json()
+}
+async function fullAuthFromMs (msAccessToken) {
+  const { MicrosoftAuthenticator } = await import('@xmcl/user')
+  const auth = new MicrosoftAuthenticator({ fetch })
+  const { minecraftXstsResponse } = await auth.acquireXBoxToken(msAccessToken)
+  const uhs = minecraftXstsResponse.DisplayClaims.xui[0].uhs
+  const mc = await auth.loginMinecraftWithXBox(uhs, minecraftXstsResponse.Token)
+  const pr = await fetch('https://api.minecraftservices.com/minecraft/profile', { headers: { Authorization: 'Bearer ' + mc.access_token } })
+  if (!pr.ok) throw new Error('Ce compte ne possède pas Minecraft (profil ' + pr.status + ')')
+  const profile = await pr.json()
+  return { name: profile.name, uuid: profile.id, mcToken: mc.access_token }
+}
+
+ipcMain.handle('auth:get', () => { const a = readAccount(); return a ? { name: a.name, uuid: a.uuid } : null })
+ipcMain.handle('auth:logout', () => { try { unlinkSync(accountFile()) } catch (_) {} ; return { ok: true } })
+ipcMain.handle('auth:login', async () => new Promise((resolve) => {
+  const authWin = new BrowserWindow({ width: 500, height: 660, parent: win, modal: true, show: true, autoHideMenuBar: true, title: 'Connexion Microsoft', webPreferences: { nodeIntegration: false, contextIsolation: true } })
+  let done = false
+  const finish = (r) => { if (done) return; done = true; try { authWin.close() } catch (_) {} ; resolve(r) }
+  const handle = async (uri) => {
+    if (!uri || uri.indexOf(REDIRECT + '?') !== 0) return
+    try {
+      const u = new URL(uri)
+      const err = u.searchParams.get('error')
+      if (err) return finish({ ok: false, error: err })
+      const code = u.searchParams.get('code')
+      if (!code) return
+      const tok = await msToken({ client_id: AZURE_CLIENT_ID, code, grant_type: 'authorization_code', redirect_uri: REDIRECT, scope: 'XboxLive.signin offline_access' })
+      const acc = await fullAuthFromMs(tok.access_token)
+      writeAccount({ name: acc.name, uuid: acc.uuid, refreshToken: tok.refresh_token })
+      console.log('[AUTH] connecté :', acc.name)
+      finish({ ok: true, name: acc.name, uuid: acc.uuid })
+    } catch (e) { console.error('[AUTH]', e); finish({ ok: false, error: String(e && e.message ? e.message : e) }) }
+  }
+  authWin.webContents.on('will-redirect', (e, uri) => handle(uri))
+  authWin.webContents.on('did-navigate', (e, uri) => handle(uri))
+  authWin.webContents.on('will-navigate', (e, uri) => handle(uri))
+  authWin.on('closed', () => { if (!done) { done = true; resolve({ ok: false, error: 'Fenêtre fermée' }) } })
+  authWin.loadURL(AUTHORIZE)
+}))
 
 // ============ LANCEMENT DU JEU via XMCL ============
 // Télécharge Minecraft 1.20.6 + Fabric 0.19.3 puis lance (hors ligne pour ce premier jet,
@@ -180,7 +235,23 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     console.log('[MC] javaPath =', javaPath)
     send({ phase: 'launch', text: 'Lancement du jeu…', percent: 97 })
 
-    // 5) Lancement (hors ligne, sans serveur -> menu custom) + capture des logs pour diagnostic
+    // 5) Compte : Microsoft si connecté (rafraîchi), sinon hors ligne
+    let launchName = String(opts.name || 'Player').slice(0, 16)
+    let launchUuid = '0'.repeat(32)
+    let launchToken = '0'
+    const savedAcc = readAccount()
+    if (savedAcc && savedAcc.refreshToken) {
+      try {
+        send({ phase: 'auth', text: 'Connexion à ton compte Microsoft…', percent: 96 })
+        const tok = await msToken({ client_id: AZURE_CLIENT_ID, refresh_token: savedAcc.refreshToken, grant_type: 'refresh_token', redirect_uri: REDIRECT, scope: 'XboxLive.signin offline_access' })
+        const acc = await fullAuthFromMs(tok.access_token)
+        writeAccount({ name: acc.name, uuid: acc.uuid, refreshToken: tok.refresh_token || savedAcc.refreshToken })
+        launchName = acc.name; launchUuid = String(acc.uuid).replace(/-/g, ''); launchToken = acc.mcToken
+        console.log('[MC] compte Microsoft OK :', launchName)
+      } catch (e) { console.log('[MC] refresh auth échec -> hors ligne', e); send({ phase: 'warn', text: 'Compte non rafraîchi — lancement hors ligne' }) }
+    }
+
+    // 6) Lancement + capture des logs pour diagnostic
     const ram = Math.max(2, Math.min(16, Number(opts.ram) || 4))
     const proc = await core.launch({
       gamePath: root,
@@ -188,8 +259,8 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
       version: versionId,
       minMemory: 1024,
       maxMemory: ram * 1024,
-      gameProfile: { name: String(opts.name || 'Player').slice(0, 16), id: '0'.repeat(32) },
-      accessToken: '0',
+      gameProfile: { name: launchName, id: launchUuid },
+      accessToken: launchToken,
       userType: 'msa',
       launcherName: 'HEROES-WORLD',
       launcherBrand: 'HeroesWorld'

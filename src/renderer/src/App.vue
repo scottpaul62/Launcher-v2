@@ -52,12 +52,26 @@ const headSrc = computed(() => `https://mc-heads.net/head/${CONFIG.uuid || CONFI
 const headStyle = computed(() => ({ transform: `perspective(320px) rotateY(${headTilt.ry.toFixed(1)}deg) rotateX(${headTilt.rx.toFixed(1)}deg)` }))
 function pickColor (e) { nameColor.value = e.target.value; localStorage.setItem('hwNameColor', e.target.value) }
 
-/* Menu compte (façon Lunar) */
+/* Menu compte (façon Lunar) + login Microsoft réel */
 const acctMenu = ref(false)
+const account = reactive({ online: false })
 function toggleAcct () { if (!editMode.value) acctMenu.value = !acctMenu.value }
 function ext (url) { if (window.hw && window.hw.openExternal) window.hw.openExternal(url); acctMenu.value = false }
-function switchAccount () { acctMenu.value = false; toast('Connexion Microsoft — arrive avec le lancement du jeu (XMCL)') }
-function logout () { acctMenu.value = false; toast('Aucun compte connecté pour l\'instant') }
+async function refreshAccount () {
+  if (!(window.hw && window.hw.getAccount)) return
+  try { const a = await window.hw.getAccount(); if (a && a.name) { CONFIG.pseudo = a.name; CONFIG.uuid = a.uuid; account.online = true } else { account.online = false } } catch (_) {}
+}
+async function login () {
+  if (!(window.hw && window.hw.login)) { toast('Connexion indisponible'); return }
+  toast('Fenêtre de connexion Microsoft…')
+  try {
+    const r = await window.hw.login()
+    if (r && r.ok) { CONFIG.pseudo = r.name; CONFIG.uuid = r.uuid; account.online = true; acctMenu.value = false; toast('Connecté : ' + r.name) }
+    else { toast('Connexion annulée' + (r && r.error ? ' (' + r.error + ')' : '')) }
+  } catch (e) { toast('Erreur connexion : ' + e) }
+}
+function switchAccount () { login() }
+async function logout () { acctMenu.value = false; try { if (window.hw && window.hw.logout) await window.hw.logout() } catch (_) {} ; account.online = false; CONFIG.uuid = null; toast('Déconnecté') }
 function onDocDown (e) { if (acctMenu.value && !e.target.closest('.account')) acctMenu.value = false }
 
 
@@ -228,6 +242,7 @@ onMounted(() => {
   window.addEventListener('keydown', onKey)
   meteorTimer = setTimeout(scheduleMeteor, 5000)
   document.addEventListener('mousedown', onDocDown)
+  refreshAccount()
 })
 onUnmounted(() => {
   window.removeEventListener('resize', onResize)
@@ -285,12 +300,15 @@ function winClose () { if (window.hw) window.hw.close() }
         <span v-if="editMode" class="ed-h" @mousedown="startResize('account',$event)"></span>
         <transition name="pop">
           <div v-if="acctMenu" class="acct-menu" @click.stop @mousedown.stop>
-            <div class="am-head"><span class="am-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</span><span class="am-status"><i></i> Hors session</span></div>
-            <button class="am-item" @click="ext('https://account.microsoft.com')">👤 Mon compte Microsoft</button>
-            <button class="am-item" @click="ext('https://www.minecraft.net/fr-fr/msaprofile/mygames/editskin')">🎨 Changer de skin</button>
-            <button class="am-item" @click="switchAccount">🔄 Changer de compte</button>
-            <div class="am-sep"></div>
-            <button class="am-item danger" @click="logout">🚪 Déconnexion</button>
+            <div class="am-head"><span class="am-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</span><span class="am-status" :class="{ on: account.online }"><i></i> {{ account.online ? 'Connecté' : 'Hors session' }}</span></div>
+            <button v-if="!account.online" class="am-item login" @click="login">🔐 Se connecter avec Microsoft</button>
+            <template v-else>
+              <button class="am-item" @click="ext('https://account.microsoft.com')">👤 Mon compte Microsoft</button>
+              <button class="am-item" @click="ext('https://www.minecraft.net/fr-fr/msaprofile/mygames/editskin')">🎨 Changer de skin</button>
+              <button class="am-item" @click="switchAccount">🔄 Changer de compte</button>
+              <div class="am-sep"></div>
+              <button class="am-item danger" @click="logout">🚪 Déconnexion</button>
+            </template>
           </div>
         </transition>
       </div>
@@ -464,7 +482,8 @@ function winClose () { if (window.hw) window.hw.close() }
 .acct-menu { position: absolute; top: 78px; right: 0; width: 236px; z-index: 90; background: rgba(10,11,17,.94); border: 1px solid rgba(212,175,55,.4); border-radius: 12px; padding: 8px; box-shadow: 0 18px 44px rgba(0,0,0,.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); cursor: default; }
 .am-head { padding: 8px 10px 10px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
 .am-name { font-family: var(--serif); font-weight: 700; font-size: 16px; }
-.am-status { font-size: 11px; color: #9A94A8; display: flex; align-items: center; gap: 6px; } .am-status i { width: 7px; height: 7px; border-radius: 50%; background: #6b6b78; }
+.am-status { font-size: 11px; color: #9A94A8; display: flex; align-items: center; gap: 6px; } .am-status i { width: 7px; height: 7px; border-radius: 50%; background: #6b6b78; } .am-status.on { color: #7CCB6E; } .am-status.on i { background: #7CCB6E; box-shadow: 0 0 6px #7CCB6E; }
+.am-item.login { background: rgba(79,195,247,.12); color: #8fd6fb; font-weight: 700; } .am-item.login:hover { background: rgba(79,195,247,.2); }
 .am-item { display: block; width: 100%; text-align: left; background: none; border: none; color: #E7E2D2; font-size: 13px; padding: 9px 10px; border-radius: 8px; cursor: pointer; } .am-item:hover { background: rgba(212,175,55,.14); color: var(--gold); }
 .am-sep { height: 1px; background: rgba(255,255,255,.08); margin: 6px 0; }
 .am-item.danger { color: #E58A8A; } .am-item.danger:hover { background: rgba(224,85,85,.15); color: #ff9a9a; }
