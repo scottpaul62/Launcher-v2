@@ -98,23 +98,49 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     fs.mkdirSync(root, { recursive: true })
     send({ phase: 'prepare', text: 'Préparation…', percent: 2 })
 
-    // 1) Minecraft vanilla 1.20.6 (json + jar + libs + assets) — API 6.1.2 : install(meta, root)
-    send({ phase: 'meta', text: 'Récupération de la liste des versions…', percent: 5 })
+    // 1) Minecraft vanilla 1.20.6 avec PROGRESSION RÉELLE (installTask + startAndWait)
+    send({ phase: 'meta', text: 'Récupération de la liste des versions…', percent: 4 })
     const list = await installer.getVersionList()
     const meta = list.versions.find((v) => v.id === MC)
     if (!meta) throw new Error('Version ' + MC + ' introuvable')
-    send({ phase: 'install', text: 'Téléchargement de Minecraft ' + MC + '… (patiente, 1re fois)', percent: 15 })
-    await installer.install(meta, root)
+    send({ phase: 'install', text: 'Téléchargement de Minecraft ' + MC + '…', percent: 8 })
+    if (typeof installer.installTask === 'function') {
+      const vTask = installer.installTask(meta, root)
+      let last = 0
+      await vTask.startAndWait({
+        onUpdate () {
+          try {
+            if (vTask.total > 0) {
+              const p = 8 + Math.min(62, Math.round((vTask.progress / vTask.total) * 62))
+              if (p !== last) { last = p; send({ phase: 'install', text: 'Téléchargement de Minecraft ' + MC + '…  ' + Math.round((vTask.progress / vTask.total) * 100) + '%', percent: p }) }
+            }
+          } catch (_) {}
+        }
+      })
+    } else {
+      await installer.install(meta, root)
+    }
 
-    // 2) Fabric loader — API 6.1.2 : installFabric({ minecraftVersion, version, minecraft })
+    // 2) Fabric loader
     send({ phase: 'fabric', text: 'Installation de Fabric ' + LOADER + '…', percent: 72 })
     let versionId = await installer.installFabric({ minecraftVersion: MC, version: LOADER, minecraft: root })
     if (!versionId || typeof versionId !== 'string') versionId = 'fabric-loader-' + LOADER + '-' + MC
 
-    // 3) Dépendances Fabric (libraries)
-    send({ phase: 'deps', text: 'Finalisation…', percent: 86 })
+    // 3) Dépendances Fabric avec progression
+    send({ phase: 'deps', text: 'Finalisation des fichiers…', percent: 74 })
     const resolved = await core.Version.parse(root, versionId)
-    try { await installer.installDependencies(resolved) } catch (e) { console.log('[MC] installDependencies', e) }
+    try {
+      if (typeof installer.installDependenciesTask === 'function') {
+        const dTask = installer.installDependenciesTask(resolved)
+        await dTask.startAndWait({
+          onUpdate () {
+            try { if (dTask.total > 0) { const p = 74 + Math.min(18, Math.round((dTask.progress / dTask.total) * 18)); send({ phase: 'deps', text: 'Finalisation des fichiers…', percent: p }) } } catch (_) {}
+          }
+        })
+      } else {
+        await installer.installDependencies(resolved)
+      }
+    } catch (e) { console.log('[MC] installDependencies', e) }
     send({ phase: 'ready', text: 'Fichiers prêts', percent: 93 })
 
     // 4) Java
