@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync, unlinkSync, existsSync, appendFileSync } f
 import { spawn } from 'child_process'
 import net from 'net'
 
+try { app.disableHardwareAcceleration() } catch (_) {}
 let win
 let LOG_PATH = null
 {
@@ -269,6 +270,14 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     // 3) Dépendances Fabric avec progression
     send({ phase: 'deps', text: 'Finalisation des fichiers…', percent: 74 })
     const resolved = await core.Version.parse(root, versionId)
+    // Ne garder que les natives de l'architecture courante (Windows x64). @xmcl inclut x86+arm64 aussi,
+    // ce qui corrompt l'extraction des DLL graphiques -> crash LWJGL 0xC0000005. On les retire.
+    try {
+      const bad = (lib) => /natives-windows-(x86|arm64)|natives-(linux|osx|macos)|-natives-linux|-natives-macos/i.test(String(lib && lib.name) + '|' + String(lib && lib.download && lib.download.path) + '|' + String(lib && lib.path))
+      const before = resolved.libraries.length
+      resolved.libraries = resolved.libraries.filter((lib) => !bad(lib))
+      console.log('[MC] natives filtrees (x64) : ' + before + ' -> ' + resolved.libraries.length + ' libs')
+    } catch (e) { console.log('[MC] filtre natives : ' + String(e)) }
     try {
       if (typeof installer.installDependenciesTask === 'function') {
         const dTask = installer.installDependenciesTask(resolved)
@@ -346,10 +355,14 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     // 6) Lancement + capture des logs pour diagnostic
     const ram = Math.max(2, Math.min(16, Number(opts.ram) || 4))
     console.log('[MC] LANCEMENT version=' + versionId + ' java=' + javaPath + ' ram=' + ram + 'G name=' + launchName + ' online=' + (launchToken !== '0') + ' root=' + root)
+    try {
+      const natDir = path.join(root, 'versions', versionId, versionId + '-natives')
+      if (fs.existsSync(natDir)) { fs.rmSync(natDir, { recursive: true, force: true }); console.log('[MC] dossier natives reinitialise pour extraction propre') }
+    } catch (e) { console.log('[MC] clean natives : ' + String(e)) }
     const launchOpt = {
       gamePath: root,
       javaPath,
-      version: versionId,
+      version: resolved,
       minMemory: 1024,
       maxMemory: ram * 1024,
       gameProfile: { name: launchName, id: launchUuid },
