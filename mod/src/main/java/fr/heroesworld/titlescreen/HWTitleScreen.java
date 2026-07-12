@@ -8,37 +8,38 @@ import net.minecraft.client.network.ServerAddress;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.text.Text;
 
-/** Écran titre HERO WORLD : image de fond nette + menu organisé (aucun flou global). */
+/** Écran titre HERO WORLD : image plein écran + Rejoindre au centre + barre d'outils en bas. */
 public class HWTitleScreen extends Screen {
 
     private static final int GOLD = 0xFFE8C56A;
-    private int clusterTop, clusterBottom;
 
     public HWTitleScreen() { super(Text.literal("HERO WORLD")); }
 
     @Override
     protected void init() {
         int cx = this.width / 2;
-        int py = (int) (this.height * 0.44);
-        int gridTop = py + 40;
-        int lx = cx - 150, rx = cx + 4, cwd = 146;
-        clusterTop = py - 16;
-        clusterBottom = gridTop + 60 + 24 + 14;
 
-        this.addDrawableChild(new HWButton(cx - 150, py, 300, 30, Text.literal("REJOINDRE HEROES-WORLD"), true, b -> this.connect()));
+        // --- Fenêtre centrale : Rejoindre (+ Quitter dessous) ---
+        int ry = (int) (this.height * 0.46);
+        this.addDrawableChild(new HWButton(cx - 160, ry, 320, 32, Text.literal("REJOINDRE HEROES-WORLD"), true, b -> this.connect()));
+        this.addDrawableChild(new HWButton(cx - 100, ry + 40, 200, 22, Text.literal("Quitter"), false, b -> this.client.scheduleStop()));
 
-        this.addDrawableChild(new HWButton(lx, gridTop, cwd, 24, Text.literal("Amis"), false,
+        // --- Barre d'outils en bas ---
+        int bw = 142, gap = 8, n = 5;
+        int total = n * bw + (n - 1) * gap;
+        int sx = cx - total / 2;
+        int by = this.height - 54;
+
+        this.addDrawableChild(new HWButton(sx, by, bw, 22, Text.literal("Amis"), false,
             b -> this.client.setScreen(new HWSoonScreen(this, "Amis", "La liste d'amis arrivera avec l'hébergement du serveur HEROES-WORLD."))));
-        this.addDrawableChild(new HWButton(rx, gridTop, cwd, 24, Text.literal("Personnalisation"), false,
-            b -> this.client.setScreen(new HWSoonScreen(this, "Personnalisation", "Cosmétiques (capes, auras, compagnons, emotes…) — bientôt avec la boutique HEROES-WORLD."))));
-        this.addDrawableChild(new HWButton(lx, gridTop + 30, cwd, 24, Text.literal("Thèmes"), false,
+        this.addDrawableChild(new HWButton(sx + (bw + gap), by, bw, 22, Text.literal("Thèmes"), false,
             b -> this.client.setScreen(new HWThemeScreen(this))));
-        this.addDrawableChild(new HWButton(rx, gridTop + 30, cwd, 24, Text.literal("Options"), false,
+        this.addDrawableChild(new HWButton(sx + 2 * (bw + gap), by, bw, 22, Text.literal("Personnalisation"), false,
+            b -> this.client.setScreen(new HWSoonScreen(this, "Personnalisation", "Cosmétiques (capes, auras, compagnons, emotes…) — bientôt avec la boutique HEROES-WORLD."))));
+        this.addDrawableChild(new HWButton(sx + 3 * (bw + gap), by, bw, 22, Text.literal("Options"), false,
             b -> this.client.setScreen(new OptionsScreen(this, this.client.options))));
-        this.addDrawableChild(new HWButton(lx, gridTop + 60, cwd, 24, Text.literal("Paramètres du client"), false,
+        this.addDrawableChild(new HWButton(sx + 4 * (bw + gap), by, bw, 22, Text.literal("Paramètres du client"), false,
             b -> this.client.setScreen(new HWSoonScreen(this, "Paramètres du client", "Réglages du client HERO WORLD (performance, HUD, raccourcis) — bientôt."))));
-        this.addDrawableChild(new HWButton(rx, gridTop + 60, cwd, 24, Text.literal("Quitter"), false,
-            b -> this.client.scheduleStop()));
     }
 
     private void connect() {
@@ -47,38 +48,30 @@ public class HWTitleScreen extends Screen {
         ConnectScreen.connect(this, this.client, ServerAddress.parse(target), info, false, null);
     }
 
+    // Supprime le fond vanilla de Minecraft (panorama + flou) : fond 100% custom.
+    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
+
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         try { this.client.getWindow().setTitle(HWBrand.WINDOW_TITLE); } catch (Throwable ignored) {}
         HWScene.draw(ctx, this.width, this.height);
 
-        // Scrim CIBLÉ derrière le menu (lisibilité) — le reste du décor reste net
-        int cx = this.width / 2;
-        ctx.fillGradient(cx - 168, clusterTop, cx + 168, clusterBottom, 0xB0060810, 0xB0060810);
-        ctx.fill(cx - 168, clusterTop, cx + 168, clusterTop + 1, 0x55E8C56A);
-        ctx.fill(cx - 168, clusterBottom - 1, cx + 168, clusterBottom, 0x33000000);
-
-        HWLogo.draw(ctx, this.textRenderer, this.width, (int) (this.height * 0.07));
-
-        // Barre du bas (semi-transparente, lisible)
-        int barTop = this.height - 20;
-        ctx.fillGradient(0, barTop, this.width, this.height, 0xC00A0A12, 0xE00A0A12);
-        ctx.fill(0, barTop, this.width, barTop + 1, 0x55E8C56A);
+        // Barre du bas (fine, lisible)
+        int barTop = this.height - 18;
+        ctx.fillGradient(0, barTop, this.width, this.height, 0xB00A0A12, 0xDC0A0A12);
+        ctx.fill(0, barTop, this.width, barTop + 1, 0x44E8C56A);
         ctx.drawTextWithShadow(this.textRenderer,
             Text.literal("§e" + HWBrand.NAME + " §8" + HWBrand.VERSION + " §8· Minecraft " + HWBrand.MC),
-            8, barTop + 6, GOLD);
+            8, barTop + 5, GOLD);
         String who = (this.client.getSession() != null) ? this.client.getSession().getUsername() : "";
         if (who != null && !who.isEmpty()) {
             String tag = "§7Connecté : §f" + who;
             int tw = this.textRenderer.getWidth(Text.literal(tag));
-            ctx.drawTextWithShadow(this.textRenderer, Text.literal(tag), this.width - tw - 8, barTop + 6, 0xFFFFFFFF);
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal(tag), this.width - tw - 8, barTop + 5, 0xFFFFFFFF);
         }
 
         super.render(ctx, mouseX, mouseY, delta);
     }
-
-    // Supprime le fond vanilla de Minecraft (panorama + flou) : fond 100% custom.
-    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
 
     @Override public boolean shouldCloseOnEsc() { return false; }
     @Override public boolean shouldPause() { return false; }

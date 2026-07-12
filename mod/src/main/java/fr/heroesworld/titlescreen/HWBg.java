@@ -8,11 +8,7 @@ import net.minecraft.util.Identifier;
 
 import java.io.InputStream;
 
-/**
- * Charge l'image de fond du menu (assets/heroworld/textures/gui/background.png)
- * directement depuis le jar au runtime (méthode fiable, indépendante du pack de
- * ressources). Dessine en "cover" (remplit l'écran, ratio conservé).
- */
+/** Charge l'image de fond (background.png) au runtime et l'ajuste plein écran. */
 public final class HWBg {
     private static final Identifier ID = new Identifier("heroworld", "hw_background_dyn");
     private static boolean tried = false, ok = false;
@@ -27,7 +23,9 @@ public final class HWBg {
                 NativeImage img = NativeImage.read(in);
                 tw = img.getWidth();
                 th = img.getHeight();
-                MinecraftClient.getInstance().getTextureManager().registerTexture(ID, new NativeImageBackedTexture(img));
+                NativeImageBackedTexture tex = new NativeImageBackedTexture(img);
+                tex.setFilter(true, false); // bilinéaire = lissage propre à l'agrandissement
+                MinecraftClient.getInstance().getTextureManager().registerTexture(ID, tex);
                 ok = true;
             }
             System.out.println("[HWBG] background.png -> " + (ok ? (tw + "x" + th + " charge") : "ABSENT du jar"));
@@ -37,13 +35,11 @@ public final class HWBg {
         }
     }
 
+    /** Ajusté au plein écran (étiré pour remplir, sans recadrage). */
     public static boolean draw(DrawContext ctx, int w, int h) {
         ensure();
         if (!ok) return false;
-        float scale = Math.max((float) w / tw, (float) h / th);
-        int dw = Math.round(tw * scale), dh = Math.round(th * scale);
-        int dx = (w - dw) / 2, dy = (h - dh) / 2;
-        ctx.drawTexture(ID, dx, dy, dw, dh, 0f, 0f, tw, th, tw, th);
+        ctx.drawTexture(ID, 0, 0, w, h, 0f, 0f, tw, th, tw, th);
         return true;
     }
 }
