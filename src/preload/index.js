@@ -14,5 +14,7 @@ contextBridge.exposeInMainWorld('hw', {
   onMcStatus: (cb) => ipcRenderer.on('mc:status', (_e, d) => cb(d)),
   login: () => ipcRenderer.invoke('auth:login'),
   getAccount: () => ipcRenderer.invoke('auth:get'),
-  logout: () => ipcRenderer.invoke('auth:logout')
+  logout: () => ipcRenderer.invoke('auth:logout'),
+  logOpen: () => ipcRenderer.invoke('log:open'),
+  serverOnline: () => ipcRenderer.invoke('server:online')
 })

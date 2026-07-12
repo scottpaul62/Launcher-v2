@@ -73,6 +73,7 @@ async function login () {
 function switchAccount () { login() }
 async function logout () { acctMenu.value = false; try { if (window.hw && window.hw.logout) await window.hw.logout() } catch (_) {} ; account.online = false; CONFIG.uuid = null; toast('Déconnecté') }
 function onDocDown (e) { if (acctMenu.value && !e.target.closest('.account')) acctMenu.value = false }
+function openLog () { if (window.hw && window.hw.logOpen) window.hw.logOpen(); acctMenu.value = false }
 
 
 function starField (n, tile, r, op) {
@@ -125,6 +126,7 @@ const toastMsg = ref('')
 let toastTimer = null
 function toast (m) { toastMsg.value = m; clearTimeout(toastTimer); toastTimer = setTimeout(() => (toastMsg.value = ''), 2400) }
 
+let srvTimer = null
 let wheelLock = false
 function onWheel (e) {
   if (wheelLock || editMode.value) return
@@ -243,6 +245,8 @@ onMounted(() => {
   meteorTimer = setTimeout(scheduleMeteor, 5000)
   document.addEventListener('mousedown', onDocDown)
   refreshAccount()
+  const pingSrv = async () => { try { if (window.hw && window.hw.serverOnline) serverOnline.value = await window.hw.serverOnline() } catch (_) {} }
+  pingSrv(); srvTimer = setInterval(pingSrv, 5000)
 })
 onUnmounted(() => {
   window.removeEventListener('resize', onResize)
@@ -309,6 +313,8 @@ function winClose () { if (window.hw) window.hw.close() }
               <div class="am-sep"></div>
               <button class="am-item danger" @click="logout">🚪 Déconnexion</button>
             </template>
+            <div class="am-sep"></div>
+            <button class="am-item" @click="openLog">📄 Journal (debug)</button>
           </div>
         </transition>
       </div>

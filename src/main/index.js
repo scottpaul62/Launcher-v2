@@ -1,10 +1,23 @@
 import { app, BrowserWindow, ipcMain, shell, Tray, Menu } from 'electron'
 import { join } from 'path'
-import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, unlinkSync, existsSync, appendFileSync } from 'fs'
 import { spawn } from 'child_process'
 import net from 'net'
 
 let win
+let LOG_PATH = null
+{
+  const _log = console.log.bind(console)
+  const write = (a) => {
+    try {
+      if (!LOG_PATH) return
+      const line = '[' + new Date().toISOString() + '] ' + a.map((x) => typeof x === 'string' ? x : (() => { try { return JSON.stringify(x) } catch (_) { return String(x) } })()).join(' ') + '\n'
+      appendFileSync(LOG_PATH, line)
+    } catch (_) {}
+  }
+  console.log = (...a) => { _log(...a); write(a) }
+  console.error = (...a) => { _log(...a); write(a) }
+}
 
 function createWindow () {
   win = new BrowserWindow({
@@ -54,6 +67,8 @@ function setupUpdater () {
 }
 
 app.whenReady().then(() => {
+  try { LOG_PATH = join(app.getPath('userData'), 'heroesworld-debug.log'); appendFileSync(LOG_PATH, '\n===== BOOT ' + new Date().toISOString() + ' v' + app.getVersion() + ' =====\n') } catch (_) {}
+  console.log('[BOOT] userData=' + app.getPath('userData'))
   createWindow()
   setupUpdater()
   startLocalServer()
@@ -114,6 +129,8 @@ function stopLocalServer () {
 }
 ipcMain.handle('server:start', () => startLocalServer())
 ipcMain.handle('server:stop', () => stopLocalServer())
+ipcMain.handle('log:open', () => { try { if (LOG_PATH) shell.openPath(LOG_PATH) } catch (_) {} })
+ipcMain.handle('server:online', () => isPortOpen(25565))
 
 // ---- Tray : le launcher se cache pendant le jeu, revient à la fermeture ----
 let tray = null
@@ -329,6 +346,7 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
 
     // 6) Lancement + capture des logs pour diagnostic
     const ram = Math.max(2, Math.min(16, Number(opts.ram) || 4))
+    console.log('[MC] LANCEMENT version=' + versionId + ' java=' + javaPath + ' ram=' + ram + 'G name=' + launchName + ' online=' + (launchToken !== '0') + ' root=' + root)
     const proc = await core.launch({
       gamePath: root,
       javaPath,
