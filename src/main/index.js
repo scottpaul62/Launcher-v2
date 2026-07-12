@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
-import { readFileSync, writeFileSync, unlinkSync } from 'fs'
+import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'fs'
+import { spawn } from 'child_process'
+import net from 'net'
 
 let win
 
@@ -54,6 +56,7 @@ function setupUpdater () {
 app.whenReady().then(() => {
   createWindow()
   setupUpdater()
+  startLocalServer()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
@@ -77,6 +80,32 @@ ipcMain.handle('open:external', (e, url) => {
   try { if (typeof url === 'string' && /^https?:\/\//.test(url)) shell.openExternal(url) } catch (err) {}
 })
 
+// ============ SERVEUR LOCAL (TEMPORAIRE, pour tester — à remplacer par l'hébergement 24/7) ============
+const SERVER_DIR = 'C:\\Users\\scott\\OneDrive\\Bureau\\Serveur + IA\\Serveur - claude'
+const SERVER_BAT = SERVER_DIR + '\\start.bat'
+let serverStarted = false
+function isPortOpen (port, host = '127.0.0.1') {
+  return new Promise((resolve) => {
+    const sock = net.connect({ port, host })
+    const t = setTimeout(() => { try { sock.destroy() } catch (_) {} ; resolve(false) }, 700)
+    sock.on('connect', () => { clearTimeout(t); try { sock.destroy() } catch (_) {} ; resolve(true) })
+    sock.on('error', () => { clearTimeout(t); resolve(false) })
+  })
+}
+async function startLocalServer () {
+  try {
+    if (serverStarted) return
+    if (process.platform !== 'win32') return
+    if (!existsSync(SERVER_BAT)) { console.log('[SRV] start.bat introuvable :', SERVER_BAT); return }
+    if (await isPortOpen(25565)) { console.log('[SRV] serveur déjà en ligne'); serverStarted = true; return }
+    console.log('[SRV] démarrage du serveur local…')
+    const p = spawn('cmd.exe', ['/c', 'start', '"HEROES-WORLD Serveur"', 'cmd', '/k', SERVER_BAT], { cwd: SERVER_DIR, detached: true, stdio: 'ignore' })
+    p.unref()
+    serverStarted = true
+  } catch (e) { console.log('[SRV]', e) }
+}
+ipcMain.handle('server:start', () => startLocalServer())
+
 // ============ AUTH MICROSOFT ============
 const AZURE_CLIENT_ID = '1ce6e35a-126f-48fd-97fb-54d143ac6d45'
 const REDIRECT = 'https://login.microsoftonline.com/common/oauth2/nativeclient'
@@ -88,7 +117,7 @@ function writeAccount (a) { try { writeFileSync(accountFile(), JSON.stringify(a)
 
 async function msToken (body) {
   const res = await fetch(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(body).toString() })
-  if (!res.ok) throw new Error('Jeton Microsoft ' + res.status)
+  if (!res.ok) { let d = ''; try { d = (await res.text()).slice(0, 160) } catch (_) {} ; throw new Error('Jeton Microsoft ' + res.status + ' ' + d) }
   return res.json()
 }
 async function fullAuthFromMs (msAccessToken) {
@@ -108,15 +137,18 @@ ipcMain.handle('auth:logout', () => { try { unlinkSync(accountFile()) } catch (_
 ipcMain.handle('auth:login', async () => new Promise((resolve) => {
   const authWin = new BrowserWindow({ width: 500, height: 660, parent: win, modal: true, show: true, autoHideMenuBar: true, title: 'Connexion Microsoft', webPreferences: { nodeIntegration: false, contextIsolation: true } })
   let done = false
+  let started = false
   const finish = (r) => { if (done) return; done = true; try { authWin.close() } catch (_) {} ; resolve(r) }
   const handle = async (uri) => {
     if (!uri || uri.indexOf(REDIRECT + '?') !== 0) return
+    let u
+    try { u = new URL(uri) } catch (_) { return }
+    const err = u.searchParams.get('error')
+    if (err) return finish({ ok: false, error: err })
+    const code = u.searchParams.get('code')
+    if (!code || started) return
+    started = true // anti-doublon : le code n'est échangé qu'une fois
     try {
-      const u = new URL(uri)
-      const err = u.searchParams.get('error')
-      if (err) return finish({ ok: false, error: err })
-      const code = u.searchParams.get('code')
-      if (!code) return
       const tok = await msToken({ client_id: AZURE_CLIENT_ID, code, grant_type: 'authorization_code', redirect_uri: REDIRECT, scope: 'XboxLive.signin offline_access' })
       const acc = await fullAuthFromMs(tok.access_token)
       writeAccount({ name: acc.name, uuid: acc.uuid, refreshToken: tok.refresh_token })
@@ -151,6 +183,7 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     let root = String(opts.dir || '').replace(/%APPDATA%/i, appData).trim()
     if (!root) root = path.join(appData, '.heroesworld')
     fs.mkdirSync(root, { recursive: true })
+    startLocalServer()
     send({ phase: 'prepare', text: 'Préparation…', percent: 2 })
 
     // 1) Minecraft vanilla 1.20.6 avec PROGRESSION RÉELLE (installTask + startAndWait)
@@ -213,6 +246,13 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
       if (src) { fs.copyFileSync(src, path.join(modsDir, modName)); console.log('[MC] mod copié depuis', src) }
       else { console.log('[MC] mod introuvable, candidats:', cands) ; send({ phase: 'warn', text: 'Menu custom introuvable (jeu lancé sans le mod)', percent: 95 }) }
     } catch (e) { console.log('[MC] copie mod', e) }
+
+    // 3c) Adresse du bouton "Rejoindre" -> serveur local (TEMPORAIRE : localhost)
+    try {
+      const cfgDir = path.join(root, 'config')
+      fs.mkdirSync(cfgDir, { recursive: true })
+      fs.writeFileSync(path.join(cfgDir, 'heroworld.json'), JSON.stringify({ address: 'localhost:25565' }, null, 2))
+    } catch (e) { console.log('[MC] config heroworld', e) }
 
     // 4) Recherche robuste de Java (préférence Java 21)
     const jexe = process.platform === 'win32' ? 'javaw.exe' : 'java'
