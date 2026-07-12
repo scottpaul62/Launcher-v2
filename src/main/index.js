@@ -8,11 +8,15 @@ import net from 'net'
 // (Si un jour l'UI est noire au démarrage sur une machine, remettre app.disableHardwareAcceleration().)
 let win
 let LOG_PATH = null
+// Journal miroir dans le dossier de travail (accessible pour diagnostic à distance).
+const MIRROR_LOG = 'C:\\Users\\scott\\OneDrive\\Bureau\\Serveur + IA\\HeroWorld-Launcher\\launcher-live.log'
 {
   const _log = console.log.bind(console)
   const emit = (a) => {
     const s = a.map((x) => typeof x === 'string' ? x : (() => { try { return JSON.stringify(x) } catch (_) { return String(x) } })()).join(' ')
-    try { if (LOG_PATH) appendFileSync(LOG_PATH, '[' + new Date().toISOString() + '] ' + s + '\n') } catch (_) {}
+    const line = '[' + new Date().toISOString() + '] ' + s + '\n'
+    try { if (LOG_PATH) appendFileSync(LOG_PATH, line) } catch (_) {}
+    try { appendFileSync(MIRROR_LOG, line) } catch (_) {}
     try { if (win && !win.isDestroyed()) win.webContents.send('log:line', s) } catch (_) {}
   }
   console.log = (...a) => { _log(...a); emit(a) }
@@ -108,6 +112,61 @@ function isPortOpen (port, host = '127.0.0.1') {
     sock.on('error', () => { clearTimeout(t); resolve(false) })
   })
 }
+
+// ---- Ping Minecraft réel (Server List Ping) : nombre de joueurs en ligne / max ----
+function writeVarInt (value) {
+  const bytes = []
+  let v = value >>> 0
+  do { let temp = v & 0x7f; v >>>= 7; if (v !== 0) temp |= 0x80; bytes.push(temp) } while (v !== 0)
+  return Buffer.from(bytes)
+}
+function readVarInt (buf, offset) {
+  let numRead = 0, result = 0, read
+  do {
+    if (offset + numRead >= buf.length) return null
+    read = buf[offset + numRead]
+    result |= (read & 0x7f) << (7 * numRead)
+    numRead++
+    if (numRead > 5) throw new Error('VarInt trop long')
+  } while ((read & 0x80) !== 0)
+  return { value: result, size: numRead }
+}
+function mcPing (host = '127.0.0.1', port = 25565, timeout = 2500) {
+  return new Promise((resolve) => {
+    let done = false
+    const finish = (r) => { if (!done) { done = true; try { sock.destroy() } catch (_) {} ; resolve(r) } }
+    const sock = net.connect({ host, port })
+    sock.setTimeout(timeout)
+    sock.on('timeout', () => finish({ online: false }))
+    sock.on('error', () => finish({ online: false }))
+    sock.on('connect', () => {
+      try {
+        const hostBuf = Buffer.from(host, 'utf8')
+        const portBuf = Buffer.alloc(2); portBuf.writeUInt16BE(port)
+        const payload = Buffer.concat([writeVarInt(0x00), writeVarInt(765), writeVarInt(hostBuf.length), hostBuf, portBuf, writeVarInt(1)])
+        sock.write(Buffer.concat([writeVarInt(payload.length), payload]))
+        sock.write(Buffer.concat([writeVarInt(1), writeVarInt(0x00)]))
+      } catch (_) { finish({ online: false }) }
+    })
+    let buf = Buffer.alloc(0)
+    sock.on('data', (chunk) => {
+      buf = Buffer.concat([buf, chunk])
+      try {
+        const len = readVarInt(buf, 0); if (!len) return
+        if (buf.length < len.size + len.value) return // paquet incomplet
+        let off = len.size
+        const pid = readVarInt(buf, off); if (!pid) return; off += pid.size
+        const jl = readVarInt(buf, off); if (!jl) return; off += jl.size
+        if (buf.length < off + jl.value) return
+        const obj = JSON.parse(buf.slice(off, off + jl.value).toString('utf8'))
+        const p = obj.players || {}
+        const motd = typeof obj.description === 'string' ? obj.description : ((obj.description && (obj.description.text || '')) || '')
+        finish({ online: true, players: { online: p.online || 0, max: p.max || 0 }, version: (obj.version && obj.version.name) || '', motd })
+      } catch (_) { /* attendre plus de données */ }
+    })
+  })
+}
+
 let serverProc = null
 async function startLocalServer () {
   try {
@@ -131,6 +190,7 @@ ipcMain.handle('server:start', () => startLocalServer())
 ipcMain.handle('server:stop', () => stopLocalServer())
 ipcMain.handle('log:open', () => { try { if (LOG_PATH) shell.openPath(LOG_PATH) } catch (_) {} })
 ipcMain.handle('server:online', () => isPortOpen(25565))
+ipcMain.handle('server:status', () => mcPing('127.0.0.1', 25565))
 ipcMain.handle('log:read', () => { try { return readFileSync(LOG_PATH, 'utf8').slice(-16000) } catch (e) { return 'Journal vide ou illisible : ' + String(e) } })
 
 // ---- Tray : le launcher se cache pendant le jeu, revient à la fermeture ----

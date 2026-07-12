@@ -199,16 +199,17 @@ const navItems = [
   { id: 'amis', icon: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z' },
   { id: 'mods', icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
   { id: 'langues', icon: 'M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm7.94 9h-3.05a15.7 15.7 0 0 0-1.32-5.47A8.03 8.03 0 0 1 19.94 11zM12 4.06c.98 1.4 1.72 3.24 2.02 5.94H9.98c.3-2.7 1.04-4.54 2.02-5.94zM4.06 13h3.05c.16 2.05.62 3.9 1.32 5.47A8.03 8.03 0 0 1 4.06 13zm3.05-2H4.06a8.03 8.03 0 0 1 4.37-5.47A15.7 15.7 0 0 0 7.11 11zM12 19.94c-.98-1.4-1.72-3.24-2.02-5.94h4.04c-.3 2.7-1.04 4.54-2.02 5.94zm2.63-1.47c.7-1.57 1.16-3.42 1.32-5.47h3.05a8.03 8.03 0 0 1-4.37 5.47z' },
-  { id: 'themes', icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.1 0 2-.9 2-2 0-.51-.2-.98-.52-1.32-.3-.32-.48-.76-.48-1.18 0-1 .8-1.8 1.8-1.8H17c2.76 0 5-2.24 5-5 0-4.42-4.48-8-10-8zM6.5 12a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z' },
   { id: 'settings', icon: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.48.48 0 0 0 14 2h-4a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.65 8.47a.49.49 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h4c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z' }
 ]
+const MC_VER = '1.20.6'
+const LOADER_VER = '0.19.3'
 const page = ref('accueil')
 const pageLabel = computed(() => t('nav.' + page.value))
 function go (p) { page.value = p; acctOpen.value = false; ulog('page -> ' + p) }
 
 /* ===================== Serveur ===================== */
 const serverOnline = ref(false)
-const players = reactive({ online: 12, max: 40 })
+const players = reactive({ online: 0, max: 0 })
 let srvTimer = null
 
 /* ===================== Compte (Microsoft réel) ===================== */
@@ -474,7 +475,15 @@ onMounted(() => {
   loadMods()
   if (window.hw && window.hw.onLogLine) window.hw.onLogLine(pushLog)
   const pingSrv = async () => {
-    try { if (window.hw && window.hw.serverOnline) serverOnline.value = !!(await window.hw.serverOnline()) } catch (_) {}
+    try {
+      if (window.hw && window.hw.serverStatus) {
+        const s = await window.hw.serverStatus()
+        serverOnline.value = !!(s && s.online)
+        if (s && s.players) { players.online = s.players.online || 0; players.max = s.players.max || 0 }
+      } else if (window.hw && window.hw.serverOnline) {
+        serverOnline.value = !!(await window.hw.serverOnline())
+      }
+    } catch (_) {}
   }
   pingSrv(); srvTimer = setInterval(pingSrv, 5000)
   ulog('App.vue monté')
@@ -520,6 +529,10 @@ onUnmounted(() => {
           <span class="side-label">{{ t('nav.' + n.id) }}</span>
         </button>
       </nav>
+      <div class="side-foot">
+        <span class="sf-dot" :class="{ on: serverOnline }"></span>
+        <span class="side-label sf-txt">Fabric {{ LOADER_VER }} · MC {{ MC_VER }}</span>
+      </div>
     </aside>
 
     <div class="main">
@@ -569,8 +582,6 @@ onUnmounted(() => {
                 <span v-if="serverOnline">{{ t('home.onlineChip').replace('{online}', players.online).replace('{max}', players.max) }}</span>
                 <span v-else>{{ t('home.offlineChip') }}</span>
               </div>
-              <div class="chip"><span>🧩 Fabric 0.19.3 · MC 1.20.6</span></div>
-              <div class="chip"><span>👤 {{ CONFIG.pseudo }}</span></div>
             </div>
           </div>
           <div class="home-news">
@@ -702,19 +713,6 @@ onUnmounted(() => {
               <span>{{ l.name }}</span>
               <span v-if="!l.enabled" class="lang-soon">{{ t('common.comingSoon') }}</span>
               <svg v-else-if="lang === l.code" class="lang-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
-            </button>
-          </div>
-        </section>
-
-        <!-- THÈMES -->
-        <section v-else-if="page === 'themes'" class="pg">
-          <div class="pg-head"><h1>{{ t('nav.themes') }}</h1><p>{{ t('themes.subtitle') }}</p></div>
-          <div class="themes-grid">
-            <button v-for="th in themesList" :key="th.id" class="theme-card" :class="{ active: theme === th.id }" @click="setTheme(th.id)">
-              <div class="tc-preview" :class="'prev-' + th.id"></div>
-              <div class="tc-name">{{ t('theme.' + th.id + '.name') }}</div>
-              <div class="tc-desc">{{ t('theme.' + th.id + '.desc') }}</div>
-              <span v-if="theme === th.id" class="tc-badge">{{ t('themes.active') }}</span>
             </button>
           </div>
         </section>
@@ -854,6 +852,10 @@ onUnmounted(() => {
 .side-ic { width: 19px; height: 19px; flex: 0 0 auto; }
 .side-ic path { fill: currentColor; }
 .side-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side-foot { margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 12px 16px 4px; border-top: 1px solid rgba(255,255,255,.06); font-size: 11.5px; color: #6E6980; }
+.sf-dot { width: 8px; height: 8px; border-radius: 50%; background: #E05555; box-shadow: 0 0 6px #E05555; flex: 0 0 auto; }
+.sf-dot.on { background: #7CCB6E; box-shadow: 0 0 6px #7CCB6E; }
+.sf-txt { font-size: 11.5px; }
 
 /* ===== Zone principale / compte ===== */
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }

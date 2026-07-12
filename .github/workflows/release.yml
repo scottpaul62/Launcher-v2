@@ -40,16 +40,25 @@ jobs:
 
       - name: Set up Gradle
         if: steps.tag.outputs.exists == 'false'
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
 
       - name: Compiler le mod (menu en jeu)
         if: steps.tag.outputs.exists == 'false'
         shell: bash
         run: |
-          if [ -f mod/build.gradle ]; then
-            (cd mod && gradle --no-daemon build) || echo "::warning::compilation mod echouee -> jar existant conserve"
-            jar=$(ls mod/build/libs/*.jar 2>/dev/null | grep -v sources | head -1 || true)
-            if [ -n "$jar" ]; then cp "$jar" resources/mods/heroworld-titlescreen-1.0.0.jar && echo "mod recompile: $jar"; fi
+          echo "gradle : $(gradle --version | grep Gradle || echo introuvable)"
+          if (cd mod && gradle --no-daemon build --stacktrace); then
+            jar=$(ls mod/build/libs/*.jar 2>/dev/null | grep -v sources | head -1)
+            if [ -n "$jar" ]; then
+              cp "$jar" resources/mods/heroworld-titlescreen-1.0.0.jar
+              echo "✅ mod recompilé et copié : $jar"
+            else
+              echo "::warning::build OK mais aucun .jar trouvé -> ancien jar conservé"
+            fi
+          else
+            echo "::warning::❌ compilation du mod ÉCHOUÉE -> ancien menu conservé (lancer Compiler-Mod.bat en local pour voir l'erreur)"
           fi
 
       - name: Install
