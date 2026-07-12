@@ -52,21 +52,44 @@ const headSrc = computed(() => `https://mc-heads.net/body/${CONFIG.uuid || CONFI
 const headStyle = computed(() => ({ transform: `perspective(320px) rotateY(${headTilt.ry.toFixed(1)}deg) rotateX(${headTilt.rx.toFixed(1)}deg)` }))
 function pickColor (e) { nameColor.value = e.target.value; localStorage.setItem('hwNameColor', e.target.value) }
 
+/* Menu compte (façon Lunar) */
+const acctMenu = ref(false)
+function toggleAcct () { if (!editMode.value) acctMenu.value = !acctMenu.value }
+function ext (url) { if (window.hw && window.hw.openExternal) window.hw.openExternal(url); acctMenu.value = false }
+function switchAccount () { acctMenu.value = false; toast('Connexion Microsoft — arrive avec le lancement du jeu (XMCL)') }
+function logout () { acctMenu.value = false; toast('Aucun compte connecté pour l\'instant') }
+function onDocDown (e) { if (acctMenu.value && !e.target.closest('.account')) acctMenu.value = false }
+
 /* Rendu 3D du personnage (tête qui suit le curseur, comme l'inventaire) */
 const skinCanvas = ref(null)
 const skin3dOk = ref(false)
 let viewer = null
+const skinLerp = { cur: 0, target: 0, raf: 0 }
+async function loadSkinFor (who) {
+  if (!viewer) return
+  try { await viewer.loadSkin(`https://mc-heads.net/skin/${who}`); console.log('[AVATAR] skin chargé:', who) }
+  catch (e) { console.log('[AVATAR] skin échec -> Steve', e); try { await viewer.loadSkin('https://mc-heads.net/skin/MHF_Steve') } catch (e2) {} }
+}
+function onVisibility () { if (viewer) { try { viewer.renderPaused = document.hidden } catch (e) {} } }
 async function initSkin () {
   try {
     const mod = await import('skinview3d')
-    viewer = new mod.SkinViewer({ canvas: skinCanvas.value, width: 150, height: 200, skin: `https://mc-heads.net/skin/${CONFIG.uuid || CONFIG.pseudo}` })
-    viewer.animation = null
+    viewer = new mod.SkinViewer({ canvas: skinCanvas.value, width: 150, height: 200 })
     viewer.zoom = 0.92
     viewer.fov = 38
     try { viewer.animation = new mod.IdleAnimation(); viewer.animation.speed = 0.55 } catch (e) {}
     if (viewer.controls) { viewer.controls.enableRotate = false; viewer.controls.enableZoom = false; viewer.controls.enablePan = false }
+    await loadSkinFor(CONFIG.uuid || CONFIG.pseudo)
     skin3dOk.value = true
-  } catch (e) { skin3dOk.value = false }
+    console.log('[AVATAR] rendu 3D initialisé')
+    const tick = () => {
+      skinLerp.raf = requestAnimationFrame(tick)
+      if (document.hidden || !viewer || !viewer.playerObject) return
+      skinLerp.cur += (skinLerp.target - skinLerp.cur) * 0.12
+      viewer.playerObject.rotation.y = skinLerp.cur
+    }
+    tick()
+  } catch (e) { skin3dOk.value = false; console.log('[AVATAR] init échec', e) }
 }
 
 function starField (n, tile, r, op) {
@@ -109,7 +132,7 @@ function onWheel (e) {
   if (page.value === 'accueil' && e.deltaY > 40) { wheelLock = true; go('actus'); setTimeout(() => (wheelLock = false), 700) }
   else if (page.value === 'actus' && e.deltaY < -40) { wheelLock = true; go('accueil'); setTimeout(() => (wheelLock = false), 700) }
 }
-function onKey (e) { if (e.key === 'Escape' && page.value !== 'accueil' && !editMode.value) go('accueil') }
+function onKey (e) { if (e.key !== 'Escape') return; if (acctMenu.value) { acctMenu.value = false; return } if (page.value !== 'accueil' && !editMode.value) go('accueil') }
 
 /* ===== MODE ÉDITION : coordonnées DANS le cadre 1280×800 (stables à toute échelle) ===== */
 const editMode = ref(false)
@@ -204,9 +227,10 @@ function onMouseMove (e) {
   headTilt.rx = Math.max(-18, Math.min(18, -(e.clientY - cy) / window.innerHeight * 60))
   if (drag.id) onMove(e)
   if (bar.on) { barPos.left = e.clientX - bar.ox; barPos.top = e.clientY - bar.oy }
-  if (viewer && viewer.playerObject) {
-    const dx = e.clientX / window.innerWidth - 0.5
-    viewer.playerObject.rotation.y = Math.max(-0.6, Math.min(0.6, dx * 1.0))
+  if (viewer && skinCanvas.value) {
+    const r = skinCanvas.value.getBoundingClientRect()
+    const dx = (e.clientX - (r.left + r.width / 2)) / window.innerWidth
+    skinLerp.target = Math.max(-0.65, Math.min(0.65, dx * 1.3))
   }
 }
 function onUp () {
@@ -223,6 +247,8 @@ onMounted(() => {
   window.addEventListener('wheel', onWheel, { passive: true })
   window.addEventListener('keydown', onKey)
   meteorTimer = setTimeout(scheduleMeteor, 5000)
+  document.addEventListener('visibilitychange', onVisibility)
+  document.addEventListener('mousedown', onDocDown)
   nextTick(initSkin)
 })
 onUnmounted(() => {
@@ -232,6 +258,9 @@ onUnmounted(() => {
   window.removeEventListener('wheel', onWheel)
   window.removeEventListener('keydown', onKey)
   clearTimeout(meteorTimer)
+  document.removeEventListener('visibilitychange', onVisibility)
+  document.removeEventListener('mousedown', onDocDown)
+  cancelAnimationFrame(skinLerp.raf)
   if (viewer) { try { viewer.dispose() } catch (e) {} }
 })
 
@@ -274,12 +303,22 @@ function winClose () { if (window.hw) window.hw.close() }
         <span v-else>Hors ligne</span>
       </div>
 
-      <div class="account editable" data-ed="account" :style="styleFor('account')" @mousedown="startMove('account',$event)">
-        <input type="color" class="name-color" :value="nameColor" @input="pickColor" title="Couleur du pseudo" />
+      <div class="account editable" data-ed="account" :style="styleFor('account')" @mousedown="startMove('account',$event)" @click="toggleAcct">
+        <input type="color" class="name-color" :value="nameColor" @input="pickColor" @click.stop title="Couleur du pseudo" />
         <span class="pseudo" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</span>
         <canvas v-show="skin3dOk" ref="skinCanvas" class="skin3d"></canvas>
         <img v-if="!skin3dOk" class="body" :src="headSrc" :style="headStyle" draggable="false" alt="" />
         <span v-if="editMode" class="ed-h" @mousedown="startResize('account',$event)"></span>
+        <transition name="pop">
+          <div v-if="acctMenu" class="acct-menu" @click.stop @mousedown.stop>
+            <div class="am-head"><span class="am-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</span><span class="am-status"><i></i> Hors session</span></div>
+            <button class="am-item" @click="ext('https://account.microsoft.com')">👤 Mon compte Microsoft</button>
+            <button class="am-item" @click="ext('https://www.minecraft.net/fr-fr/msaprofile/mygames/editskin')">🎨 Changer de skin</button>
+            <button class="am-item" @click="switchAccount">🔄 Changer de compte</button>
+            <div class="am-sep"></div>
+            <button class="am-item danger" @click="logout">🚪 Déconnexion</button>
+          </div>
+        </transition>
       </div>
 
       <template v-if="page === 'accueil'">
@@ -442,6 +481,16 @@ function winClose () { if (window.hw) window.hw.close() }
 .name-color { width: 20px; height: 20px; border: none; background: none; padding: 0; border-radius: 5px; cursor: pointer; opacity: .55; } .name-color:hover { opacity: 1; }
 .pseudo { font-weight: 700; font-size: 16px; }
 .skin3d { width: 84px; height: 112px; display: block; }
+.account { cursor: pointer; }
+.acct-menu { position: absolute; top: 128px; right: 0; width: 236px; z-index: 90; background: rgba(10,11,17,.94); border: 1px solid rgba(212,175,55,.4); border-radius: 12px; padding: 8px; box-shadow: 0 18px 44px rgba(0,0,0,.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); cursor: default; }
+.am-head { padding: 8px 10px 10px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
+.am-name { font-family: var(--serif); font-weight: 700; font-size: 16px; }
+.am-status { font-size: 11px; color: #9A94A8; display: flex; align-items: center; gap: 6px; } .am-status i { width: 7px; height: 7px; border-radius: 50%; background: #6b6b78; }
+.am-item { display: block; width: 100%; text-align: left; background: none; border: none; color: #E7E2D2; font-size: 13px; padding: 9px 10px; border-radius: 8px; cursor: pointer; } .am-item:hover { background: rgba(212,175,55,.14); color: var(--gold); }
+.am-sep { height: 1px; background: rgba(255,255,255,.08); margin: 6px 0; }
+.am-item.danger { color: #E58A8A; } .am-item.danger:hover { background: rgba(224,85,85,.15); color: #ff9a9a; }
+.pop-enter-active, .pop-leave-active { transition: opacity .15s ease, transform .15s ease; }
+.pop-enter-from, .pop-leave-to { opacity: 0; transform: translateY(-6px); }
 .body { height: 122px; image-rendering: pixelated; transition: transform .12s ease-out; transform-origin: 50% 30%; filter: drop-shadow(0 6px 12px rgba(0,0,0,.55)); }
 
 .brand { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px; width: 470px; }

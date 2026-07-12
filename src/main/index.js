@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
 
 let win
@@ -70,6 +70,11 @@ ipcMain.on('win:maximize', () => {
   else win.maximize()
 })
 ipcMain.on('win:close', () => win && win.close())
+
+// Ouvre une URL dans le navigateur externe (jamais dans la fenêtre Electron)
+ipcMain.handle('open:external', (e, url) => {
+  try { if (typeof url === 'string' && /^https?:\/\//.test(url)) shell.openExternal(url) } catch (err) {}
+})
 
 // TODO (prochaine étape) : IPC de lancement via XMCL Core
 //  ipcMain.handle('mc:launch', async (e, opts) => { ... @xmcl/core launch ... })
