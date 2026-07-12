@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, Tray, Menu } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'fs'
 import { spawn } from 'child_process'
@@ -63,6 +63,7 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  stopLocalServer()
   if (process.platform !== 'darwin') app.quit()
 })
 
@@ -92,19 +93,54 @@ function isPortOpen (port, host = '127.0.0.1') {
     sock.on('error', () => { clearTimeout(t); resolve(false) })
   })
 }
+let serverProc = null
 async function startLocalServer () {
   try {
-    if (serverStarted) return
     if (process.platform !== 'win32') return
     if (!existsSync(SERVER_BAT)) { console.log('[SRV] start.bat introuvable :', SERVER_BAT); return }
+    if (serverProc && serverProc.exitCode === null) { console.log('[SRV] déjà lancé par le launcher'); return }
     if (await isPortOpen(25565)) { console.log('[SRV] serveur déjà en ligne'); serverStarted = true; return }
     console.log('[SRV] démarrage du serveur local…')
-    const p = spawn('cmd.exe', ['/c', 'start', '"HEROES-WORLD Serveur"', 'cmd', '/k', SERVER_BAT], { cwd: SERVER_DIR, detached: true, stdio: 'ignore' })
-    p.unref()
+    // cmd /c "chemin\\start.bat" — Node protège les espaces ; le .bat gère le "+" via un lien temporaire.
+    serverProc = spawn('cmd.exe', ['/c', SERVER_BAT], { cwd: SERVER_DIR })
     serverStarted = true
+    serverProc.on('exit', () => { serverProc = null; serverStarted = false })
+    serverProc.on('error', (e) => { console.log('[SRV] erreur', e); serverProc = null; serverStarted = false })
   } catch (e) { console.log('[SRV]', e) }
 }
+function stopLocalServer () {
+  try { if (serverProc && serverProc.pid) spawn('taskkill', ['/pid', String(serverProc.pid), '/t', '/f']) } catch (_) {}
+  serverProc = null; serverStarted = false
+}
 ipcMain.handle('server:start', () => startLocalServer())
+ipcMain.handle('server:stop', () => stopLocalServer())
+
+// ---- Tray : le launcher se cache pendant le jeu, revient à la fermeture ----
+let tray = null
+function iconPath () {
+  const cands = [join(process.resourcesPath || '', 'icon.png'), join(app.getAppPath(), 'build', 'icon.png'), join(app.getAppPath(), 'resources', 'icon.png')]
+  return cands.find((p) => { try { return p && existsSync(p) } catch (_) { return false } }) || ''
+}
+function restoreLauncher () {
+  try { if (win) { win.show(); win.focus() } } catch (_) {}
+  if (tray) { try { tray.destroy() } catch (_) {} ; tray = null }
+}
+function goToTray () {
+  const ic = iconPath()
+  if (!ic) { try { win.minimize() } catch (_) {} ; return }
+  try {
+    if (!tray) {
+      tray = new Tray(ic)
+      tray.setToolTip('HEROES-WORLD — en jeu (clique pour rouvrir)')
+      tray.setContextMenu(Menu.buildFromTemplate([
+        { label: 'Ouvrir HEROES-WORLD', click: () => restoreLauncher() },
+        { label: 'Quitter', click: () => { stopLocalServer(); app.quit() } }
+      ]))
+      tray.on('click', () => restoreLauncher())
+    }
+    win.hide()
+  } catch (_) { try { win.minimize() } catch (__) {} }
+}
 
 // ============ AUTH MICROSOFT ============
 const AZURE_CLIENT_ID = '1ce6e35a-126f-48fd-97fb-54d143ac6d45'
@@ -311,9 +347,12 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     if (proc.stderr) proc.stderr.on('data', cap)
     const started = Date.now()
     send({ phase: 'done', text: 'Jeu lancé !', percent: 100 })
-    proc.on('error', (err) => { send({ phase: 'error', text: 'Java introuvable / lancement : ' + err.message }); launching = false })
+    goToTray()
+    proc.on('error', (err) => { send({ phase: 'error', text: 'Java introuvable / lancement : ' + err.message }); launching = false; restoreLauncher(); stopLocalServer() })
     proc.on('exit', (code) => {
       launching = false
+      restoreLauncher()
+      stopLocalServer()
       if (Date.now() - started < 12000 && code) {
         const reason = tail.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(-5).join('  |  ').slice(0, 320)
         send({ phase: 'error', text: 'Le jeu s\'est fermé (code ' + code + '). ' + (reason || 'voir logs') })
