@@ -363,19 +363,29 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     if (proc.stdout) proc.stdout.on('data', cap)
     if (proc.stderr) proc.stderr.on('data', cap)
     const started = Date.now()
-    send({ phase: 'done', text: 'Jeu lancé !', percent: 100 })
-    goToTray()
-    proc.on('error', (err) => { send({ phase: 'error', text: 'Java introuvable / lancement : ' + err.message }); launching = false; restoreLauncher(); stopLocalServer() })
-    proc.on('exit', (code) => {
+    send({ phase: 'done', text: 'Jeu lancé — initialisation…', percent: 100 })
+    const watcher = core.createMinecraftProcessWatcher(proc)
+    watcher.on('minecraft-window-ready', () => { console.log('[MC] fenêtre du jeu prête -> launcher au tray'); goToTray() })
+    watcher.on('error', (err) => { console.log('[MC] watcher error : ' + String(err)); send({ phase: 'error', text: 'Lancement : ' + String(err) }); launching = false; restoreLauncher(); stopLocalServer() })
+    watcher.on('minecraft-exit', (e) => {
       launching = false
       restoreLauncher()
       stopLocalServer()
-      if (Date.now() - started < 12000 && code) {
-        const reason = tail.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(-5).join('  |  ').slice(0, 320)
-        send({ phase: 'error', text: 'Le jeu s\'est fermé (code ' + code + '). ' + (reason || 'voir logs') })
-      } else {
-        send({ phase: 'exit', text: 'Jeu fermé (code ' + code + ')' })
-      }
+      console.log('[MC] sortie code=' + e.code + ' signal=' + e.signal)
+      try { if (e.crashReport) console.log('[CRASH] rapport MC (' + e.crashReportLocation + ') :\n' + String(e.crashReport).slice(0, 1500)) } catch (_) {}
+      // Rapport de crash natif JVM (hs_err_pid) — nomme la DLL qui plante
+      try {
+        const errs = fs.readdirSync(root).filter((n) => /^hs_err_pid.*\.log$/.test(n)).map((n) => ({ n, t: fs.statSync(path.join(root, n)).mtimeMs })).sort((a, b) => b.t - a.t)
+        if (errs.length) { console.log('[CRASH] ' + errs[0].n + ' :\n' + fs.readFileSync(path.join(root, errs[0].n), 'utf8').split(/\r?\n/).slice(0, 34).join('\n')) }
+        else console.log('[CRASH] aucun hs_err_pid dans ' + root)
+      } catch (er) { console.log('[CRASH] lecture hs_err : ' + String(er)) }
+      // État des fichiers natifs (glfw/opengl/lwjgl)
+      try {
+        const nat = path.join(root, 'versions', versionId, versionId + '-natives')
+        console.log('[NATIVES] ' + nat + ' existe=' + fs.existsSync(nat) + ' -> ' + (fs.existsSync(nat) ? fs.readdirSync(nat).join(', ') : 'RIEN'))
+      } catch (_) {}
+      if (e.code) { send({ phase: 'error', text: 'Le jeu a planté (code ' + e.code + '). Ouvre la console (📋) pour le détail.' }) }
+      else { send({ phase: 'exit', text: 'Jeu fermé' }) }
     })
     return { ok: true }
   } catch (err) {
