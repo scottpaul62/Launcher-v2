@@ -17,7 +17,7 @@ public class HWSoonScreen extends Screen {
     @Override
     protected void init() {
         this.addDrawableChild(new HWButton(this.width / 2 - 70, (int) (this.height * 0.62), 140, 24,
-            Text.literal("Retour"), false, b -> this.client.setScreen(parent != null ? parent : new HWTitleScreen())));
+            Text.literal("Retour"), HWButton.SECONDARY, 0, b -> this.client.setScreen(parent != null ? parent : new HWTitleScreen())));
     }
 
     @Override

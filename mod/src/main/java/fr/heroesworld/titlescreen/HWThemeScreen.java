@@ -14,7 +14,7 @@ public class HWThemeScreen extends Screen {
     @Override
     protected void init() {
         this.addDrawableChild(new HWButton(this.width / 2 - 70, this.height - 46, 140, 24,
-            Text.literal("Retour"), false, b -> this.client.setScreen(parent != null ? parent : new HWTitleScreen())));
+            Text.literal("Retour"), HWButton.SECONDARY, 0, b -> this.client.setScreen(parent != null ? parent : new HWTitleScreen())));
     }
 
     private int rowStartX() {

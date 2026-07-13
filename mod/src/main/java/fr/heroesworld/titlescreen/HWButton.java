@@ -1,45 +1,114 @@
 package fr.heroesworld.titlescreen;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 
-/** Bouton HERO WORLD épuré : fond sombre translucide, bord fin, survol lumineux. */
+/** Bouton HERO WORLD premium : styles (principal / secondaire / dock), icônes dessinées, survol animé. */
 public class HWButton extends ButtonWidget {
-    private final boolean primary;
+    public static final int PRIMARY = 0, SECONDARY = 1, DOCK = 2;
 
-    public HWButton(int x, int y, int w, int h, Text msg, boolean primary, PressAction onPress) {
+    private final int style;
+    private final int icon; // 0=aucune, 1=amis, 2=thèmes, 3=perso, 4=options, 5=paramètres
+    private float hover = 0f;
+
+    public HWButton(int x, int y, int w, int h, Text msg, int style, int icon, PressAction onPress) {
         super(x, y, w, h, msg, onPress, DEFAULT_NARRATION_SUPPLIER);
-        this.primary = primary;
+        this.style = style;
+        this.icon = icon;
     }
 
     @Override
     protected void renderWidget(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        int x = this.getX(), y = this.getY(), w = this.getWidth(), h = this.getHeight();
-        boolean hov = this.isHovered() || this.isFocused();
+        int x = getX(), y = getY(), w = getWidth(), h = getHeight();
+        boolean over = isHovered() || isFocused();
+        hover += ((over ? 1f : 0f) - hover) * 0.3f;
+        TextRenderer tr = MinecraftClient.getInstance().textRenderer;
 
-        int fill = primary
-            ? (hov ? 0xEE2A2110 : 0xDC1D1708)
-            : (hov ? 0xDC201B28 : 0xB214121C);
-        rrect(ctx, x, y, w, h, fill);
-
-        int border = primary
-            ? (hov ? 0xFFF3D889 : 0xFFE8C56A)
-            : (hov ? 0xCCE8C56A : 0x3AFFFFFF);
-        borderR(ctx, x, y, w, h, border);
-        if (hov) ctx.fill(x + 2, y + 1, x + w - 2, y + 2, 0x22FFFFFF); // léger reflet au survol
-
-        int col = primary ? 0xFFFFEFC6 : (hov ? 0xFFFFFFFF : 0xFFD7D1E0);
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ctx.drawCenteredTextWithShadow(mc.textRenderer, this.getMessage(), x + w / 2, y + (h - 8) / 2, col);
+        if (style == PRIMARY) renderPrimary(ctx, tr, x, y, w, h);
+        else if (style == DOCK) renderDock(ctx, tr, x, y, w, h);
+        else renderSecondary(ctx, tr, x, y, w, h);
     }
 
-    private static void rrect(DrawContext ctx, int x, int y, int w, int h, int c) {
+    private void renderPrimary(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
+        float pulse = 0.5f + 0.5f * (float) Math.sin(System.currentTimeMillis() / 500.0);
+        int glowA = (int) (26 + 46 * (0.4f + 0.6f * hover) * (0.6f + 0.4f * pulse));
+        ctx.fillGradient(x - 8, y - 8, x + w + 8, y + h + 8, (glowA << 24) | 0xE8C56A, 0x00000000);
+        int top = lerp(0xFF3B2E12, 0xFF5A431A, hover);
+        int bot = lerp(0xFF241B0A, 0xFF3A2C10, hover);
+        rgrad(ctx, x, y, w, h, top, bot);
+        border(ctx, x, y, w, h, 0xFFE8C56A);
+        ctx.fill(x + 2, y + 1, x + w - 2, y + 2, 0x33FFFFFF);
+        ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + (h - 8) / 2, 0xFFFFEFC6);
+    }
+
+    private void renderSecondary(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
+        int fill = lerp(0x9014121C, 0xC0221D2A, hover);
+        rflat(ctx, x, y, w, h, fill);
+        border(ctx, x, y, w, h, lerp(0x33FFFFFF, 0xAAE8C56A, hover));
+        ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + (h - 8) / 2, lerp(0xFFCFC9DA, 0xFFFFFFFF, hover));
+    }
+
+    private void renderDock(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
+        if (hover > 0.02f) rflat(ctx, x + 2, y + 2, w - 4, h - 4, lerp(0x00000000, 0x552A2233, hover));
+        int iconCol = lerp(0xFFCBB98A, 0xFFF3D889, hover);
+        drawIcon(ctx, icon, x + w / 2, y + 13, iconCol);
+        ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + h - 12, lerp(0xFFB9B3C4, 0xFFFFFFFF, hover));
+        int uw = (int) ((w - 24) * hover);
+        if (uw > 1) ctx.fill(x + w / 2 - uw / 2, y + h - 3, x + w / 2 + uw / 2, y + h - 2, 0xCCE8C56A);
+    }
+
+    private static void drawIcon(DrawContext ctx, int kind, int cx, int cy, int col) {
+        switch (kind) {
+            case 1 -> {
+                ctx.fill(cx - 6, cy - 3, cx - 1, cy + 1, col); ctx.fill(cx - 7, cy + 1, cx, cy + 5, col);
+                ctx.fill(cx + 1, cy - 3, cx + 6, cy + 1, col); ctx.fill(cx, cy + 1, cx + 7, cy + 5, col);
+            }
+            case 2 -> {
+                ctx.fill(cx - 6, cy - 5, cx - 1, cy, 0xFFE8C56A);
+                ctx.fill(cx + 1, cy - 5, cx + 6, cy, 0xFF5AA9E6);
+                ctx.fill(cx - 6, cy + 1, cx - 1, cy + 6, 0xFF7CCB6E);
+                ctx.fill(cx + 1, cy + 1, cx + 6, cy + 6, 0xFFB98CFF);
+            }
+            case 3 -> {
+                ctx.fill(cx - 1, cy - 7, cx + 1, cy + 7, col);
+                ctx.fill(cx - 7, cy - 1, cx + 7, cy + 1, col);
+                ctx.fill(cx - 3, cy - 3, cx - 2, cy - 2, col); ctx.fill(cx + 2, cy - 3, cx + 3, cy - 2, col);
+                ctx.fill(cx - 3, cy + 2, cx - 2, cy + 3, col); ctx.fill(cx + 2, cy + 2, cx + 3, cy + 3, col);
+            }
+            case 4 -> {
+                ctx.fill(cx - 4, cy - 4, cx + 4, cy + 4, col);
+                ctx.fill(cx - 2, cy - 7, cx + 2, cy - 5, col); ctx.fill(cx - 2, cy + 5, cx + 2, cy + 7, col);
+                ctx.fill(cx - 7, cy - 2, cx - 5, cy + 2, col); ctx.fill(cx + 5, cy - 2, cx + 7, cy + 2, col);
+                ctx.fill(cx - 1, cy - 1, cx + 1, cy + 1, 0xFF141018);
+            }
+            case 5 -> {
+                ctx.fill(cx - 7, cy - 4, cx + 7, cy - 3, col); ctx.fill(cx + 2, cy - 6, cx + 4, cy - 1, col);
+                ctx.fill(cx - 7, cy, cx + 7, cy + 1, col);     ctx.fill(cx - 4, cy - 2, cx - 2, cy + 3, col);
+                ctx.fill(cx - 7, cy + 4, cx + 7, cy + 5, col); ctx.fill(cx, cy + 2, cx + 2, cy + 7, col);
+            }
+            default -> { }
+        }
+    }
+
+    private static int lerp(int a, int b, float t) {
+        t = Math.max(0f, Math.min(1f, t));
+        int aa = a >>> 24, ar = (a >> 16) & 0xFF, ag = (a >> 8) & 0xFF, ab = a & 0xFF;
+        int ba = b >>> 24, br = (b >> 16) & 0xFF, bg = (b >> 8) & 0xFF, bb = b & 0xFF;
+        return ((int) (aa + (ba - aa) * t) << 24) | ((int) (ar + (br - ar) * t) << 16)
+             | ((int) (ag + (bg - ag) * t) << 8) | (int) (ab + (bb - ab) * t);
+    }
+    private static void rgrad(DrawContext ctx, int x, int y, int w, int h, int top, int bot) {
+        ctx.fillGradient(x + 1, y, x + w - 1, y + h, top, bot);
+        ctx.fillGradient(x, y + 1, x + w, y + h - 1, top, bot);
+    }
+    private static void rflat(DrawContext ctx, int x, int y, int w, int h, int c) {
         ctx.fill(x + 1, y, x + w - 1, y + h, c);
         ctx.fill(x, y + 1, x + w, y + h - 1, c);
     }
-    private static void borderR(DrawContext ctx, int x, int y, int w, int h, int c) {
+    private static void border(DrawContext ctx, int x, int y, int w, int h, int c) {
         ctx.fill(x + 1, y, x + w - 1, y + 1, c);
         ctx.fill(x + 1, y + h - 1, x + w - 1, y + h, c);
         ctx.fill(x, y + 1, x + 1, y + h - 1, c);
