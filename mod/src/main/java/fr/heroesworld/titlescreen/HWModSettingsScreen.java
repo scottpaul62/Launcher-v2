@@ -22,7 +22,7 @@ public class HWModSettingsScreen extends Screen {
             b -> { el.enabled = !el.enabled; HWHudManager.save(); reopen(); }));
         this.addDrawableChild(new HWButton(cx - 150, y + 30, 300, 24, Text.literal("Deplacer dans l'editeur de HUD"), HWButton.SECONDARY, 0,
             b -> this.client.setScreen(new HWHudEditScreen(parent))));
-        this.addDrawableChild(new HWButton(cx - 150, y + 60, 300, 24, Text.literal("Reinitialiser la position (X" + el.dx + " Y" + el.dy + ")"), HWButton.SECONDARY, 0,
+        this.addDrawableChild(new HWButton(cx - 150, y + 60, 300, 24, Text.literal("Reinitialiser la position"), HWButton.SECONDARY, 0,
             b -> { HWHudManager.resetPos(el); HWHudManager.save(); reopen(); }));
         this.addDrawableChild(new HWButton(cx - 70, y + 100, 140, 22, Text.literal("Retour"), HWButton.SECONDARY, 0,
             b -> this.client.setScreen(parent)));
@@ -36,7 +36,7 @@ public class HWModSettingsScreen extends Screen {
         else { HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0xB0000000); }
         int y = (int) (this.height * 0.32);
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§e" + el.name), this.width / 2, y - 26, 0xFFE8C56A);
-        ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8Categorie : " + el.category + "   Position X" + el.x + " Y" + el.y), this.width / 2, y - 14, 0xFF888888);
+        ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8Categorie : " + el.category + "   Coin : " + HWHudManager.anchorName(el.anchor)), this.width / 2, y - 14, 0xFF888888);
         super.render(ctx, mouseX, mouseY, delta);
     }
 

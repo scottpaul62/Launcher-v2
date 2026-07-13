@@ -48,6 +48,8 @@ public class HWButton extends ButtonWidget {
         int fill = lerp(0x9014121C, 0xC0221D2A, hover);
         rflat(ctx, x, y, w, h, fill);
         border(ctx, x, y, w, h, lerp(0x33FFFFFF, 0xAAE8C56A, hover));
+        boolean hasText = !getMessage().getString().isEmpty();
+        if (icon > 0) HWIcons.draw(ctx, icon, hasText ? x + 15 : x + w / 2, y + h / 2, 16);
         ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + (h - 8) / 2, lerp(0xFFCFC9DA, 0xFFFFFFFF, hover));
     }
 

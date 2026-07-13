@@ -61,9 +61,9 @@ public class HWModsScreen extends Screen {
             int cyp = gridTop + row * (cardH + gap);
             if (cyp + cardH > gridBottom) break;
             String lbl = "§f" + e.name + "   " + (e.enabled ? "§aON" : "§8OFF");
-            this.addDrawableChild(new HWButton(cxp, cyp, cardW - 26, cardH, Text.literal(lbl), HWButton.SECONDARY, 0,
+            this.addDrawableChild(new HWButton(cxp, cyp, cardW - 26, cardH, Text.literal(lbl), HWButton.SECONDARY, iconKind(e.id),
                 b -> { e.enabled = !e.enabled; HWHudManager.save(); reopen(); }));
-            this.addDrawableChild(new HWButton(cxp + cardW - 24, cyp, 24, cardH, Text.literal("cfg"), HWButton.SECONDARY, 0,
+            this.addDrawableChild(new HWButton(cxp + cardW - 24, cyp, 24, cardH, Text.literal(""), HWButton.SECONDARY, 5,
                 b -> this.client.setScreen(new HWModSettingsScreen(this, e))));
         }
 
@@ -90,13 +90,21 @@ public class HWModsScreen extends Screen {
         if (this.client.world != null) super.renderBackground(ctx, mouseX, mouseY, delta);
         else { HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0xB0000000); }
 
-        ctx.fill(px, py, px + pw, py + ph, 0xD0121019);
+        ctx.fill(px, py, px + pw, py + ph, 0xE60E0C14);
         drawBorder(ctx, px, py, pw, ph, 0xFFE8C56A);
-        ctx.fill(px, py, px + pw, py + 30, 0x50E8C56A);
+        ctx.fill(px, py + 30, px + pw, py + 31, 0x66E8C56A);
         ctx.drawTextWithShadow(this.textRenderer, Text.literal("§6HERO WORLD §7Client"), px + 12, py + 11, 0xFFFFFFFF);
         ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8v1.1.6"), px + pw - 44, py + 11, 0xFF888888);
 
         super.render(ctx, mouseX, mouseY, delta);
+    }
+
+    private static int iconKind(String id) {
+        switch (id) {
+            case "fps": return 6; case "coords": return 7; case "direction": return 8; case "time": return 9;
+            case "day": return 10; case "session": return 11; case "keystrokes": return 12; case "armor": return 13;
+            default: return 0;
+        }
     }
 
     private static void drawBorder(DrawContext ctx, int x, int y, int w, int h, int col) {

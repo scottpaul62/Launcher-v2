@@ -5,7 +5,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 
-/** Editeur de HUD : glisser-deposer chaque element, sauvegarde des positions. */
+/** Editeur de HUD : glisser-deposer chaque element, re-ancrage au coin le plus proche, sauvegarde. */
 public class HWHudEditScreen extends Screen {
     private final Screen parent;
     private HWHudManager.El dragging;
@@ -26,6 +26,27 @@ public class HWHudEditScreen extends Screen {
         this.client.setScreen(parent != null ? parent : new HWModsScreen(null));
     }
 
+    private void setPos(HWHudManager.El e, int nx, int ny, int w, int h) {
+        int sw = this.width, sh = this.height;
+        nx = Math.max(0, Math.min(sw - w, nx));
+        ny = Math.max(0, Math.min(sh - h, ny));
+        switch (e.anchor) {
+            case 1: e.ox = sw - w - nx; e.oy = ny; break;
+            case 2: e.ox = nx; e.oy = sh - h - ny; break;
+            case 3: e.ox = sw - w - nx; e.oy = sh - h - ny; break;
+            default: e.ox = nx; e.oy = ny;
+        }
+        if (e.ox < 0) e.ox = 0;
+        if (e.oy < 0) e.oy = 0;
+    }
+
+    private void reanchor(HWHudManager.El e, int w, int h) {
+        int ax = HWHudManager.actualX(e, this.width, w), ay = HWHudManager.actualY(e, this.height, h);
+        int cx = ax + w / 2, cy = ay + h / 2;
+        e.anchor = (cx > this.width / 2 ? 1 : 0) + (cy > this.height / 2 ? 2 : 0);
+        setPos(e, ax, ay, w, h);
+    }
+
     public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
 
     @Override
@@ -40,16 +61,17 @@ public class HWHudEditScreen extends Screen {
         for (HWHudManager.El e : HWHudManager.ELEMENTS) {
             if (!e.enabled) continue;
             int w = HWHudManager.width(mc, e), h = HWHudManager.height(e);
-            boolean sel = (e == dragging) || (mouseX >= e.x - 2 && mouseX <= e.x + w + 2 && mouseY >= e.y - 2 && mouseY <= e.y + h + 2);
-            ctx.fill(e.x - 2, e.y - 2, e.x + w + 2, e.y + h + 2, sel ? 0x40E8C56A : 0x20FFFFFF);
-            drawBorder(ctx, e.x - 2, e.y - 2, w + 4, h + 4, sel ? 0xFFE8C56A : 0x66FFFFFF);
-            try { HWHudManager.renderOne(ctx, mc, e); } catch (Throwable ignored) {}
+            int ax = HWHudManager.actualX(e, this.width, w), ay = HWHudManager.actualY(e, this.height, h);
+            boolean sel = (e == dragging) || (mouseX >= ax - 2 && mouseX <= ax + w + 2 && mouseY >= ay - 2 && mouseY <= ay + h + 2);
+            ctx.fill(ax - 2, ay - 2, ax + w + 2, ay + h + 2, sel ? 0x40E8C56A : 0x20FFFFFF);
+            drawBorder(ctx, ax - 2, ay - 2, w + 4, h + 4, sel ? 0xFFE8C56A : 0x66FFFFFF);
+            try { HWHudManager.renderAt(ctx, mc, e, ax, ay); } catch (Throwable ignored) {}
             if (sel) {
-                int ly = (e.y - 11 < 0) ? e.y + h + 3 : e.y - 11;
-                ctx.drawTextWithShadow(this.textRenderer, Text.literal("§e" + e.name + " §7(" + e.x + "," + e.y + ")"), e.x, ly, 0xFFFFFFFF);
+                int ly = (ay - 11 < 0) ? ay + h + 3 : ay - 11;
+                ctx.drawTextWithShadow(this.textRenderer, Text.literal("§e" + e.name + " §7[" + HWHudManager.anchorName(e.anchor) + "]"), ax, ly, 0xFFFFFFFF);
             }
         }
-        ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§eEditeur de HUD §7- glisse les elements, Echap pour sauver"), this.width / 2, 8, 0xFFE8C56A);
+        ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§eEditeur de HUD §7- glisse les elements, ils s'ancrent au coin le plus proche - Echap pour sauver"), this.width / 2, 8, 0xFFE8C56A);
         super.render(ctx, mouseX, mouseY, delta);
     }
 
@@ -61,8 +83,9 @@ public class HWHudEditScreen extends Screen {
                 HWHudManager.El e = HWHudManager.ELEMENTS.get(i);
                 if (!e.enabled) continue;
                 int w = HWHudManager.width(this.client, e), h = HWHudManager.height(e);
-                if (mx >= e.x - 2 && mx <= e.x + w + 2 && my >= e.y - 2 && my <= e.y + h + 2) {
-                    dragging = e; offX = (int) mx - e.x; offY = (int) my - e.y; return true;
+                int ax = HWHudManager.actualX(e, this.width, w), ay = HWHudManager.actualY(e, this.height, h);
+                if (mx >= ax - 2 && mx <= ax + w + 2 && my >= ay - 2 && my <= ay + h + 2) {
+                    dragging = e; offX = (int) mx - ax; offY = (int) my - ay; return true;
                 }
             }
         }
@@ -73,9 +96,7 @@ public class HWHudEditScreen extends Screen {
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
         if (dragging != null) {
             int w = HWHudManager.width(this.client, dragging), h = HWHudManager.height(dragging);
-            int nx = Math.max(0, Math.min(this.width - w, (int) mx - offX));
-            int ny = Math.max(0, Math.min(this.height - h, (int) my - offY));
-            dragging.x = nx; dragging.y = ny;
+            setPos(dragging, (int) mx - offX, (int) my - offY, w, h);
             return true;
         }
         return super.mouseDragged(mx, my, button, dx, dy);
@@ -83,7 +104,11 @@ public class HWHudEditScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
-        if (dragging != null) { dragging = null; HWHudManager.save(); return true; }
+        if (dragging != null) {
+            int w = HWHudManager.width(this.client, dragging), h = HWHudManager.height(dragging);
+            reanchor(dragging, w, h);
+            dragging = null; HWHudManager.save(); return true;
+        }
         return super.mouseReleased(mx, my, button);
     }
 
