@@ -11,5 +11,6 @@ public class HeroworldClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         HWConfig.load();
+        HWCosmetics.load();
     }
 }

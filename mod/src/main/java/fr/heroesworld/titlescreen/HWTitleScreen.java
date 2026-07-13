@@ -35,7 +35,7 @@ public class HWTitleScreen extends Screen {
         this.addDrawableChild(new HWButton(dockX + (itemW + gap), dockY, itemW, dockH, Text.literal("Thèmes"), HWButton.DOCK, 2,
             b -> this.client.setScreen(new HWThemeScreen(this))));
         this.addDrawableChild(new HWButton(dockX + 2 * (itemW + gap), dockY, itemW, dockH, Text.literal("Personnalisation"), HWButton.DOCK, 3,
-            b -> this.client.setScreen(new HWSoonScreen(this, "Personnalisation", "Cosmétiques (capes, auras, compagnons, emotes…) — bientôt avec la boutique HEROES-WORLD."))));
+            b -> this.client.setScreen(new HWCosmeticsScreen(this))));
         this.addDrawableChild(new HWButton(dockX + 3 * (itemW + gap), dockY, itemW, dockH, Text.literal("Options"), HWButton.DOCK, 4,
             b -> this.client.setScreen(new OptionsScreen(this, this.client.options))));
         this.addDrawableChild(new HWButton(dockX + 4 * (itemW + gap), dockY, itemW, dockH, Text.literal("Paramètres"), HWButton.DOCK, 5,

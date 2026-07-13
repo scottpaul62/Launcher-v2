@@ -2,10 +2,13 @@
   "required": true,
   "package": "fr.heroesworld.titlescreen.mixin",
   "compatibilityLevel": "JAVA_21",
-  "injectors": { "defaultRequire": 1 },
+  "injectors": {
+    "defaultRequire": 1
+  },
   "refmap": "heroworld.refmap.json",
   "client": [
     "ScreenSwapMixin",
-    "GameMenuMixin"
+    "GameMenuMixin",
+    "AuraTickMixin"
   ]
 }
