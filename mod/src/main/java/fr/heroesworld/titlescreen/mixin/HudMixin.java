@@ -1,6 +1,6 @@
 package fr.heroesworld.titlescreen.mixin;
 
-import fr.heroesworld.titlescreen.HWHud;
+import fr.heroesworld.titlescreen.HWHudManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.InGameHud;
@@ -14,6 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class HudMixin {
     @Inject(method = "render", at = @At("TAIL"), require = 0)
     private void heroworld$hud(DrawContext context, float tickDelta, CallbackInfo ci) {
-        HWHud.render(context, MinecraftClient.getInstance());
+        HWHudManager.renderAll(context, MinecraftClient.getInstance());
     }
 }

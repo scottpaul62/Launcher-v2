@@ -29,7 +29,7 @@ const comet_ = comet // conserve l'import (utilisé comme sprite décoratif pote
 const settings = reactive(Object.assign(
   {
     ram: 4, res: '1920 × 1080', dir: '%APPDATA%/.heroesworld', java: '',
-    updateFreq: 'auto', autoDownload: true, minimizeOnLaunch: true,
+    autoDownload: true, minimizeOnLaunch: true,
     notifEnabled: true, animations: true
   },
   JSON.parse(localStorage.getItem('hwSettings') || '{}')
@@ -108,8 +108,6 @@ const messages = {
     'settings.cat.compte': 'Compte', 'settings.cat.jeu': 'Jeu', 'settings.cat.minecraft': 'Minecraft', 'settings.cat.java': 'Java',
     'settings.cat.launcher': 'Launcher', 'settings.cat.notifications': 'Notifications', 'settings.cat.apparence': 'Apparence',
     'settings.cat.performances': 'Performances', 'settings.cat.apropos': 'À propos',
-    'settings.updateFreqLabel': 'Fréquence des mises à jour', 'settings.updateFreqAuto': 'Automatique',
-    'settings.updateFreqDaily': 'Quotidienne', 'settings.updateFreqManual': 'Manuelle',
     'settings.autoDownloadLabel': 'Téléchargement automatique', 'settings.minimizeOnLaunchLabel': 'Réduire le launcher au lancement',
     'settings.notifEnabledLabel': 'Activer les notifications', 'settings.animationsLabel': 'Animations du décor',
     'settings.bgQualityLabel': 'Qualité des arrière-plans', 'settings.bgQualityHigh': 'Élevée',
@@ -205,8 +203,6 @@ const messages = {
     'settings.cat.compte': 'Account', 'settings.cat.jeu': 'Game', 'settings.cat.minecraft': 'Minecraft', 'settings.cat.java': 'Java',
     'settings.cat.launcher': 'Launcher', 'settings.cat.notifications': 'Notifications', 'settings.cat.apparence': 'Appearance',
     'settings.cat.performances': 'Performance', 'settings.cat.apropos': 'About',
-    'settings.updateFreqLabel': 'Update frequency', 'settings.updateFreqAuto': 'Automatic',
-    'settings.updateFreqDaily': 'Daily', 'settings.updateFreqManual': 'Manual',
     'settings.autoDownloadLabel': 'Automatic download', 'settings.minimizeOnLaunchLabel': 'Minimize launcher on launch',
     'settings.notifEnabledLabel': 'Enable notifications', 'settings.animationsLabel': 'Background animations',
     'settings.bgQualityLabel': 'Background quality', 'settings.bgQualityHigh': 'High',
@@ -595,7 +591,7 @@ const settingsFieldIndex = [
   { cat: 'jeu', labelKey: 'settings.memoryTitle' }, { cat: 'jeu', labelKey: 'settings.ramLabel' },
   { cat: 'jeu', labelKey: 'settings.displayTitle' }, { cat: 'jeu', labelKey: 'settings.resolutionLabel' },
   { cat: 'jeu', labelKey: 'settings.folderTitle' }, { cat: 'jeu', labelKey: 'settings.javaTitle' },
-  { cat: 'launcher', labelKey: 'settings.updateFreqLabel' }, { cat: 'launcher', labelKey: 'settings.autoDownloadLabel' },
+  { cat: 'launcher', labelKey: 'settings.autoDownloadLabel' },
   { cat: 'launcher', labelKey: 'settings.minimizeOnLaunchLabel' }, { cat: 'launcher', labelKey: 'settings.notifEnabledLabel' },
   { cat: 'launcher', labelKey: 'settings.animationsLabel' },
   { cat: 'apropos', labelKey: 'settings.launcherTitle' }, { cat: 'apropos', labelKey: 'settings.checkUpdateBtn' },
@@ -735,7 +731,7 @@ onMounted(() => {
   try { if (window.hw && window.hw.appVersion) window.hw.appVersion().then(v => { if (v) APP_VERSION.value = v }) } catch (_) {}
   addNotif('event', t('notif.event1.title'), t('notif.event1.text'))
   addNotif('cosmetic', t('notif.cosmetic1.title'), t('notif.cosmetic1.text'))
-  if (settings.updateFreq !== 'manual' && window.hw && window.hw.checkUpdate) { window.hw.checkUpdate() }
+  if (window.hw && window.hw.checkUpdate) { window.hw.checkUpdate() }
   ulog('App.vue monté')
 })
 onUnmounted(() => {
@@ -1092,16 +1088,6 @@ onUnmounted(() => {
 
               <div v-if="catVisible('launcher')" class="panel set-block">
                 <h3>{{ t('settings.cat.launcher') }}</h3>
-                <div v-show="fieldVisible('settings.updateFreqLabel', 'launcher')" class="set-row">
-                  <label>{{ t('settings.updateFreqLabel') }}</label>
-                  <div class="set-control">
-                    <select v-model="settings.updateFreq">
-                      <option value="auto">{{ t('settings.updateFreqAuto') }}</option>
-                      <option value="daily">{{ t('settings.updateFreqDaily') }}</option>
-                      <option value="manual">{{ t('settings.updateFreqManual') }}</option>
-                    </select>
-                  </div>
-                </div>
                 <div v-show="fieldVisible('settings.autoDownloadLabel', 'launcher')" class="set-row set-row-toggle">
                   <label>{{ t('settings.autoDownloadLabel') }}</label>
                   <label class="switch"><input type="checkbox" v-model="settings.autoDownload" /><span class="switch-track"></span></label>
@@ -1459,12 +1445,13 @@ onUnmounted(() => {
 .mr-sub { font-size: 11px; color: #8A85A0; margin-top: 2px; }
 .mr-static { font-size: 11px; color: #7CCB6E; }
 .mods-empty { color: #8A85A0; font-size: 13px; }
-.switch { position: relative; width: 36px; height: 20px; flex: 0 0 auto; display: inline-block; }
+.switch { position: relative; width: 40px; height: 22px; flex: 0 0 auto; display: inline-block; cursor: pointer; }
 .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
-.switch-track { position: absolute; inset: 0; background: rgba(255,255,255,.15); border-radius: 999px; transition: background .15s; }
-.switch-track::before { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #EDE8DA; transition: transform .15s; }
-.switch input:checked + .switch-track { background: #7CCB6E; }
-.switch input:checked + .switch-track::before { transform: translateX(16px); }
+.switch-track { position: absolute; inset: 0; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.14); border-radius: 999px; transition: background .2s ease, border-color .2s ease; }
+.switch-track::before { content: ''; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #EDE8DA; box-shadow: 0 1px 3px rgba(0,0,0,.45); transition: transform .2s ease, background .2s ease; }
+.switch input:checked + .switch-track { background: #3a2e14; border-color: var(--gold, #E8C56A); }
+.switch input:checked + .switch-track::before { transform: translateX(18px); background: var(--gold, #E8C56A); box-shadow: 0 1px 3px rgba(0,0,0,.45), 0 0 6px rgba(232,197,106,.45); }
+.switch input:focus-visible + .switch-track { outline: 2px solid var(--gold, #E8C56A); outline-offset: 2px; }
 .mods-detail { padding: 18px; position: sticky; top: 0; max-height: calc(100vh - 300px); overflow-y: auto; }
 .mods-detail h3 { font-family: var(--serif, Georgia, serif); color: var(--gold, #E8C56A); font-size: 16px; margin-bottom: 10px; }
 .md-row { display: flex; justify-content: space-between; font-size: 12px; color: #B9B4C6; margin-bottom: 6px; }

@@ -70,6 +70,8 @@ function setupUpdater () {
   ipcMain.on('update:install', () => { try { autoUpdater.quitAndInstall() } catch (e) {} })
   ipcMain.on('update:check', () => { try { autoUpdater.checkForUpdates() } catch (e) {} })
   try { autoUpdater.checkForUpdatesAndNotify() } catch (e) {}
+  // Vérifie automatiquement les mises à jour toutes les 15 min, même launcher ouvert.
+  setInterval(() => { try { autoUpdater.checkForUpdates() } catch (e) {} }, 15 * 60 * 1000)
 }
 
 app.whenReady().then(() => {

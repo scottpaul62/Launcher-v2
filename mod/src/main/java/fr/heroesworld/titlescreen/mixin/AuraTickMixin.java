@@ -30,7 +30,7 @@ public class AuraTickMixin {
             net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
             boolean pressed = mc != null && net.minecraft.client.util.InputUtil.isKeyPressed(mc.getWindow().getHandle(), 344); // Maj-droite
             if (pressed && !heroworld$prevKey && mc.currentScreen == null) {
-                mc.setScreen(new fr.heroesworld.titlescreen.HWClientSettings(null));
+                mc.setScreen(new fr.heroesworld.titlescreen.HWModsScreen(null));
             }
             heroworld$prevKey = pressed;
         } catch (Throwable ignored) {}
