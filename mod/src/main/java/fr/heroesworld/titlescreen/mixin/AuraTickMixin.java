@@ -2,6 +2,7 @@ package fr.heroesworld.titlescreen.mixin;
 
 import fr.heroesworld.titlescreen.HWAura;
 import fr.heroesworld.titlescreen.HWCosmetics;
+import fr.heroesworld.titlescreen.HWWings;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,6 +22,7 @@ public class AuraTickMixin {
             ClientPlayerEntity self = (ClientPlayerEntity) (Object) this;
             if (self.getWorld() instanceof ClientWorld cw) {
                 HWAura.spawn(cw, self, HWCosmetics.aura, heroworld$t);
+                HWWings.spawn(cw, self, HWCosmetics.wings, heroworld$t);
             }
         } catch (Throwable ignored) {}
     }

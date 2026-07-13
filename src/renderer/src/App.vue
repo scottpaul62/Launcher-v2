@@ -27,7 +27,11 @@ const comet_ = comet // conserve l'import (utilisé comme sprite décoratif pote
 
 /* ===================== Réglages persistés ===================== */
 const settings = reactive(Object.assign(
-  { ram: 4, res: '1920 × 1080', dir: '%APPDATA%/.heroesworld', java: '' },
+  {
+    ram: 4, res: '1920 × 1080', dir: '%APPDATA%/.heroesworld', java: '',
+    updateFreq: 'auto', autoDownload: true, minimizeOnLaunch: true,
+    notifEnabled: true, animations: true, bgQuality: 'high', fpsLimit: '60'
+  },
   JSON.parse(localStorage.getItem('hwSettings') || '{}')
 ))
 function saveSettings () { localStorage.setItem('hwSettings', JSON.stringify(settings)) }
@@ -56,10 +60,24 @@ const messages = {
     'home.onlineChip': 'En ligne · {online}/{max} joueurs', 'home.offlineChip': 'Hors ligne',
     'home.seeAll': 'Tout voir ›',
     'actus.subtitle': 'Toutes les annonces du serveur HEROES-WORLD.', 'actus.prev': 'Précédent', 'actus.next': 'Suivant',
-    'cosmetics.subtitle': 'Aperçu de ton personnage. Le catalogue arrive avec la boutique.',
-    'cosmetics.notice': 'Les cosmétiques (capes, auras, compagnons…) arriveront avec la boutique HEROES-WORLD.',
-    'cosmetics.previewSub': 'Aperçu de ton skin actuel.', 'cosmetics.searchPlaceholder': 'Rechercher un cosmétique…',
-    'cosmetics.soonBadge': 'Bientôt',
+    'cosmetics.subtitle': 'Le vestiaire de tes cosmétiques : parcours le catalogue et prévisualise ton personnage en 3D.',
+    'cosmetics.notice': "Ceci est une vitrine : parcours le catalogue, prévisualise en 3D et marque tes favoris. L'équipement réel de tes cosmétiques se fait EN JEU, dans le menu HEROES-WORLD.",
+    'cosmetics.previewSub': 'Aperçu de ton skin actuel.', 'cosmetics.searchPlaceholder': 'Rechercher un cosmétique (toutes catégories)…',
+    'cosmetics.categories': 'Catégories',
+    'cosmetics.cat.capes': 'Capes', 'cosmetics.cat.ailes': 'Ailes', 'cosmetics.cat.auras': 'Auras',
+    'cosmetics.cat.casques': 'Casques / Chapeaux', 'cosmetics.cat.masques': 'Masques', 'cosmetics.cat.compagnons': 'Compagnons',
+    'cosmetics.cat.effets': 'Effets', 'cosmetics.cat.emotes': 'Emotes', 'cosmetics.cat.sprays': 'Sprays',
+    'cosmetics.cat.skins': 'Skins', 'cosmetics.cat.exclusifs': 'Exclusifs HW',
+    'cosmetics.filterAllTypes': 'Tous les types', 'cosmetics.filterAllRarities': 'Toutes les raretés',
+    'cosmetics.filterAllOwned': 'Tous', 'cosmetics.filterOwned': 'Possédés', 'cosmetics.filterLocked': 'Non possédés',
+    'cosmetics.sortName': 'Nom', 'cosmetics.sortNew': 'Nouveauté', 'cosmetics.sortRarity': 'Rareté', 'cosmetics.sortEquipped': 'Équipé',
+    'cosmetics.rarity.commun': 'Commun', 'cosmetics.rarity.rare': 'Rare', 'cosmetics.rarity.epique': 'Épique',
+    'cosmetics.rarity.legendaire': 'Légendaire', 'cosmetics.rarity.mythique': 'Mythique',
+    'cosmetics.owned': 'Possédé', 'cosmetics.locked': 'Non possédé', 'cosmetics.equippedBadge': 'Équipé',
+    'cosmetics.equipBtn': 'Équiper (aperçu)', 'cosmetics.unequipBtn': 'Retirer (aperçu)',
+    'cosmetics.equipNote': "L'équipement réel se fait EN JEU — ceci n'est qu'un aperçu visuel dans le launcher.",
+    'cosmetics.favToggle': 'Ajouter/retirer des favoris', 'cosmetics.favorites': 'Favoris',
+    'cosmetics.noResults': 'Aucun cosmétique ne correspond à ta recherche.',
     'friends.subtitle': 'Ta liste d\'amis HEROES-WORLD.', 'friends.tabOnline': 'En ligne', 'friends.tabOffline': 'Hors ligne',
     'friends.tabRequests': 'Demandes', 'friends.emptyTitle': 'Aucun ami pour le moment.',
     'friends.emptySub': "La liste d'amis sera disponible avec l'hébergement du serveur HEROES-WORLD.",
@@ -84,6 +102,18 @@ const messages = {
     'settings.accountTitle': 'Compte', 'settings.connectedAs': 'Connecté : {name}.', 'settings.logoutBtn': 'Déconnexion',
     'settings.loginBtn': 'Se connecter', 'settings.launcherTitle': 'Launcher', 'settings.versionLabel': 'Version {v}',
     'settings.checkUpdateBtn': 'Vérifier les mises à jour',
+    'settings.searchPlaceholder': 'Rechercher un réglage…',
+    'settings.cat.compte': 'Compte', 'settings.cat.minecraft': 'Minecraft', 'settings.cat.java': 'Java',
+    'settings.cat.launcher': 'Launcher', 'settings.cat.notifications': 'Notifications', 'settings.cat.apparence': 'Apparence',
+    'settings.cat.performances': 'Performances', 'settings.cat.apropos': 'À propos',
+    'settings.updateFreqLabel': 'Fréquence des mises à jour', 'settings.updateFreqAuto': 'Automatique',
+    'settings.updateFreqDaily': 'Quotidienne', 'settings.updateFreqManual': 'Manuelle',
+    'settings.autoDownloadLabel': 'Téléchargement automatique', 'settings.minimizeOnLaunchLabel': 'Réduire le launcher au lancement',
+    'settings.notifEnabledLabel': 'Activer les notifications', 'settings.animationsLabel': 'Animations du décor',
+    'settings.bgQualityLabel': 'Qualité des arrière-plans', 'settings.bgQualityHigh': 'Élevée',
+    'settings.bgQualityMedium': 'Moyenne', 'settings.bgQualityLow': 'Faible',
+    'settings.fpsLimitLabel': 'Limite FPS interface', 'settings.fpsUnlimited': 'Illimitée',
+    'settings.themeTitle': 'Thème visuel', 'settings.noResults': 'Aucun réglage ne correspond à ta recherche.',
     'launch.phase.prepare': 'Préparation…', 'launch.phase.meta': 'Vérification des fichiers…',
     'launch.phase.install': 'Téléchargement de Minecraft…', 'launch.phase.fabric': 'Installation de Fabric…',
     'launch.phase.deps': 'Installation des dépendances…', 'launch.phase.ready': 'Prêt',
@@ -102,7 +132,16 @@ const messages = {
     'toast.loggedOut': 'Déconnecté', 'toast.launchUnavailable': 'Lancement indisponible',
     'toast.folderOpened': 'Dossier ouvert', 'toast.modsFolderOpened': 'Dossier des mods ouvert',
     'toast.folderOpenFailed': "Impossible d'ouvrir le dossier", 'toast.logCopied': 'Journal copié',
-    'toast.logCopyFailed': 'Copie impossible', 'toast.updateChecking': 'Recherche de mise à jour…'
+    'toast.logCopyFailed': 'Copie impossible', 'toast.updateChecking': 'Recherche de mise à jour…',
+    'launch.repair': 'Réparer', 'launch.copyLogs': 'Copier les logs',
+    'launch.hint.cancelled': 'Lancement annulé par toi.', 'launch.hint.java': "Java introuvable — vérifie l'installation de Java 21.",
+    'launch.hint.network': 'Problème réseau — vérifie ta connexion.', 'launch.hint.crash': 'Le jeu a planté — ouvre la console pour le détail.',
+    'launch.hint.generic': 'Une erreur est survenue au lancement.',
+    'notif.title': 'Notifications', 'notif.markAllRead': 'Tout marquer comme lu', 'notif.empty': 'Aucune notification pour le moment.',
+    'notif.update.title': 'Mise à jour disponible', 'notif.error.title': 'Échec du lancement',
+    'notif.event1.title': 'Événement', 'notif.event1.text': 'Ouverture publique en préparation.',
+    'notif.cosmetic1.title': 'Nouveau cosmétique', 'notif.cosmetic1.text': 'Ailes de foudre bientôt disponibles.',
+    'home.playingAs': 'Connecté en tant que {name}'
   },
   en: {
     'nav.accueil': 'Home', 'nav.actus': 'News', 'nav.cosmetiques': 'Cosmetics', 'nav.amis': 'Friends',
@@ -116,10 +155,24 @@ const messages = {
     'home.onlineChip': 'Online · {online}/{max} players', 'home.offlineChip': 'Offline',
     'home.seeAll': 'See all ›',
     'actus.subtitle': 'All HEROES-WORLD server announcements.', 'actus.prev': 'Previous', 'actus.next': 'Next',
-    'cosmetics.subtitle': 'Preview of your character. The catalogue is coming with the shop.',
-    'cosmetics.notice': 'Cosmetics (capes, auras, companions…) will arrive with the HEROES-WORLD shop.',
-    'cosmetics.previewSub': 'Preview of your current skin.', 'cosmetics.searchPlaceholder': 'Search a cosmetic…',
-    'cosmetics.soonBadge': 'Soon',
+    'cosmetics.subtitle': 'Your cosmetics locker: browse the catalogue and preview your character in 3D.',
+    'cosmetics.notice': "This is a showcase: browse, preview in 3D and star your favorites. Actually equipping cosmetics happens IN-GAME, from the HEROES-WORLD menu.",
+    'cosmetics.previewSub': 'Preview of your current skin.', 'cosmetics.searchPlaceholder': 'Search a cosmetic (all categories)…',
+    'cosmetics.categories': 'Categories',
+    'cosmetics.cat.capes': 'Capes', 'cosmetics.cat.ailes': 'Wings', 'cosmetics.cat.auras': 'Auras',
+    'cosmetics.cat.casques': 'Helmets / Hats', 'cosmetics.cat.masques': 'Masks', 'cosmetics.cat.compagnons': 'Companions',
+    'cosmetics.cat.effets': 'Effects', 'cosmetics.cat.emotes': 'Emotes', 'cosmetics.cat.sprays': 'Sprays',
+    'cosmetics.cat.skins': 'Skins', 'cosmetics.cat.exclusifs': 'HW Exclusives',
+    'cosmetics.filterAllTypes': 'All types', 'cosmetics.filterAllRarities': 'All rarities',
+    'cosmetics.filterAllOwned': 'All', 'cosmetics.filterOwned': 'Owned', 'cosmetics.filterLocked': 'Not owned',
+    'cosmetics.sortName': 'Name', 'cosmetics.sortNew': 'Newest', 'cosmetics.sortRarity': 'Rarity', 'cosmetics.sortEquipped': 'Equipped',
+    'cosmetics.rarity.commun': 'Common', 'cosmetics.rarity.rare': 'Rare', 'cosmetics.rarity.epique': 'Epic',
+    'cosmetics.rarity.legendaire': 'Legendary', 'cosmetics.rarity.mythique': 'Mythic',
+    'cosmetics.owned': 'Owned', 'cosmetics.locked': 'Not owned', 'cosmetics.equippedBadge': 'Equipped',
+    'cosmetics.equipBtn': 'Equip (preview)', 'cosmetics.unequipBtn': 'Unequip (preview)',
+    'cosmetics.equipNote': 'Actual equipping happens IN-GAME — this is only a visual preview in the launcher.',
+    'cosmetics.favToggle': 'Add/remove from favorites', 'cosmetics.favorites': 'Favorites',
+    'cosmetics.noResults': 'No cosmetic matches your search.',
     'friends.subtitle': 'Your HEROES-WORLD friends list.', 'friends.tabOnline': 'Online', 'friends.tabOffline': 'Offline',
     'friends.tabRequests': 'Requests', 'friends.emptyTitle': 'No friends yet.',
     'friends.emptySub': 'The friends list will be available once the HEROES-WORLD server is hosted.',
@@ -144,6 +197,18 @@ const messages = {
     'settings.accountTitle': 'Account', 'settings.connectedAs': 'Connected: {name}.', 'settings.logoutBtn': 'Log out',
     'settings.loginBtn': 'Log in', 'settings.launcherTitle': 'Launcher', 'settings.versionLabel': 'Version {v}',
     'settings.checkUpdateBtn': 'Check for updates',
+    'settings.searchPlaceholder': 'Search a setting…',
+    'settings.cat.compte': 'Account', 'settings.cat.minecraft': 'Minecraft', 'settings.cat.java': 'Java',
+    'settings.cat.launcher': 'Launcher', 'settings.cat.notifications': 'Notifications', 'settings.cat.apparence': 'Appearance',
+    'settings.cat.performances': 'Performance', 'settings.cat.apropos': 'About',
+    'settings.updateFreqLabel': 'Update frequency', 'settings.updateFreqAuto': 'Automatic',
+    'settings.updateFreqDaily': 'Daily', 'settings.updateFreqManual': 'Manual',
+    'settings.autoDownloadLabel': 'Automatic download', 'settings.minimizeOnLaunchLabel': 'Minimize launcher on launch',
+    'settings.notifEnabledLabel': 'Enable notifications', 'settings.animationsLabel': 'Background animations',
+    'settings.bgQualityLabel': 'Background quality', 'settings.bgQualityHigh': 'High',
+    'settings.bgQualityMedium': 'Medium', 'settings.bgQualityLow': 'Low',
+    'settings.fpsLimitLabel': 'Interface FPS limit', 'settings.fpsUnlimited': 'Unlimited',
+    'settings.themeTitle': 'Visual theme', 'settings.noResults': 'No setting matches your search.',
     'launch.phase.prepare': 'Preparing…', 'launch.phase.meta': 'Checking files…',
     'launch.phase.install': 'Downloading Minecraft…', 'launch.phase.fabric': 'Installing Fabric…',
     'launch.phase.deps': 'Installing dependencies…', 'launch.phase.ready': 'Ready',
@@ -162,7 +227,16 @@ const messages = {
     'toast.loggedOut': 'Logged out', 'toast.launchUnavailable': 'Launch unavailable',
     'toast.folderOpened': 'Folder opened', 'toast.modsFolderOpened': 'Mods folder opened',
     'toast.folderOpenFailed': 'Could not open the folder', 'toast.logCopied': 'Log copied',
-    'toast.logCopyFailed': 'Copy failed', 'toast.updateChecking': 'Checking for updates…'
+    'toast.logCopyFailed': 'Copy failed', 'toast.updateChecking': 'Checking for updates…',
+    'launch.repair': 'Repair', 'launch.copyLogs': 'Copy logs',
+    'launch.hint.cancelled': 'Launch cancelled by you.', 'launch.hint.java': 'Java not found — check your Java 21 installation.',
+    'launch.hint.network': 'Network issue — check your connection.', 'launch.hint.crash': 'The game crashed — open the console for details.',
+    'launch.hint.generic': 'An error occurred during launch.',
+    'notif.title': 'Notifications', 'notif.markAllRead': 'Mark all as read', 'notif.empty': 'No notifications yet.',
+    'notif.update.title': 'Update available', 'notif.error.title': 'Launch failed',
+    'notif.event1.title': 'Event', 'notif.event1.text': 'Public opening in preparation.',
+    'notif.cosmetic1.title': 'New cosmetic', 'notif.cosmetic1.text': 'Lightning wings coming soon.',
+    'home.playingAs': 'Playing as {name}'
   }
 }
 function t (key) {
@@ -206,7 +280,7 @@ const MC_VER = '1.20.6'
 const LOADER_VER = '0.19.3'
 const page = ref('accueil')
 const pageLabel = computed(() => t('nav.' + page.value))
-function go (p) { page.value = p; acctOpen.value = false; ulog('page -> ' + p) }
+function go (p) { page.value = p; acctOpen.value = false; notifOpen.value = false; ulog('page -> ' + p) }
 
 /* ===================== Serveur ===================== */
 const serverOnline = ref(false)
@@ -218,7 +292,7 @@ const acctOpen = ref(false)
 const account = reactive({ online: false })
 const headSrc = computed(() => `https://mc-heads.net/head/${CONFIG.uuid || CONFIG.pseudo}`)
 const bodySrc = computed(() => `https://mc-heads.net/body/${CONFIG.uuid || CONFIG.pseudo}`)
-function toggleAcct () { acctOpen.value = !acctOpen.value }
+function toggleAcct () { acctOpen.value = !acctOpen.value; if (acctOpen.value) notifOpen.value = false }
 function ext (url) { if (window.hw && window.hw.openExternal) window.hw.openExternal(url); acctOpen.value = false }
 async function refreshAccount () {
   if (!(window.hw && window.hw.getAccount)) return
@@ -258,7 +332,10 @@ async function openGameFolderBtn () {
   const r = await openFolder()
   toast(r && r.ok ? t('toast.folderOpened') : t('toast.folderOpenFailed'))
 }
-function onDocDown (e) { if (acctOpen.value && !e.target.closest('.acct-chip')) acctOpen.value = false }
+function onDocDown (e) {
+  if (acctOpen.value && !e.target.closest('.acct-chip')) acctOpen.value = false
+  if (notifOpen.value && !e.target.closest('.bell-chip')) notifOpen.value = false
+}
 
 /* ===================== Journal / logs ===================== */
 const logLines = ref([])
@@ -286,10 +363,12 @@ const launchPhaseLabel = computed(() => {
   }
   return map[launchInfo.phase] || launchInfo.text || t('launch.phase.default')
 })
+let minimizedThisLaunch = false
 function launch () {
   ulog('LANCER cliqué')
   if (launchInfo.active) return
   if (!window.hw || !window.hw.launch) { toast(t('toast.launchUnavailable')); return }
+  minimizedThisLaunch = false
   launchInfo.active = true; launchInfo.phase = 'prepare'; launchInfo.percent = 0; launchInfo.text = ''; launchInfo.error = ''
   window.hw.launch({ dir: settings.dir, ram: settings.ram, name: CONFIG.pseudo })
     .then((r) => { if (!r || !r.ok) { launchInfo.phase = 'error'; launchInfo.error = (r && r.error) || 'Échec inconnu' } })
@@ -300,7 +379,21 @@ async function cancelLaunch () {
   try { if (window.hw && window.hw.cancelLaunch) await window.hw.cancelLaunch() } catch (_) {}
   launchInfo.active = false; launchInfo.phase = ''; launchInfo.percent = 0
 }
-function closeLaunchOverlay () { launchInfo.active = false; launchInfo.phase = '' }
+function closeLaunchOverlay () { launchInfo.active = false; launchInfo.phase = ''; launchInfo.error = '' }
+function repairLaunch () {
+  ulog('repair click')
+  launchInfo.active = false; launchInfo.phase = ''; launchInfo.error = ''
+  nextTick(() => launch())
+}
+function errorHint (msg) {
+  const m = ('' + (msg || '')).toLowerCase()
+  if (m.includes('annulé') || m.includes('annule')) return t('launch.hint.cancelled')
+  if (m.includes('java')) return t('launch.hint.java')
+  if (m.includes('réseau') || m.includes('reseau') || m.includes('network') || m.includes('timeout') || m.includes('econnrefused') || m.includes('enotfound')) return t('launch.hint.network')
+  if (m.includes('0xc0000005') || m.includes('crash') || m.includes('planté') || m.includes('plante')) return t('launch.hint.crash')
+  return t('launch.hint.generic')
+}
+const launchErrorHint = computed(() => errorHint(launchInfo.error))
 let _lastPhase = ''
 if (typeof window !== 'undefined' && window.hw && window.hw.onMcStatus) {
   window.hw.onMcStatus((d) => {
@@ -308,8 +401,17 @@ if (typeof window !== 'undefined' && window.hw && window.hw.onMcStatus) {
     if (d.text) launchInfo.text = d.text
     if (typeof d.percent === 'number') launchInfo.percent = d.percent
     if (d.phase && d.phase !== _lastPhase) { _lastPhase = d.phase; ulog('mc status -> ' + d.phase + (d.text ? (' ' + d.text) : '')) }
-    if (d.phase === 'error' || d.phase === 'exit') launchInfo.error = d.text || 'Le lancement a été interrompu.'
-    else if (d.phase === 'done') setTimeout(() => { launchInfo.active = false; launchInfo.phase = '' }, 1800)
+    if (d.phase === 'launch' && settings.minimizeOnLaunch && !minimizedThisLaunch) { minimizedThisLaunch = true; winMin() }
+    if (d.phase === 'error') {
+      launchInfo.error = d.text || 'Le lancement a été interrompu.'
+      logsOpen.value = true
+      addNotif('error', t('notif.error.title'), launchInfo.error)
+    } else if (d.phase === 'exit') {
+      // Fermeture normale du jeu (code 0) : pas d'écran d'erreur, on referme discrètement l'overlay.
+      launchInfo.active = false; launchInfo.phase = ''; launchInfo.error = ''
+    } else if (d.phase === 'done') {
+      setTimeout(() => { launchInfo.active = false; launchInfo.phase = '' }, 1800)
+    }
   })
 }
 
@@ -363,29 +465,91 @@ async function openModsFolderBtn () {
   toast(r && r.ok ? t('toast.modsFolderOpened') : t('toast.folderOpenFailed'))
 }
 
-/* ===================== Cosmétiques (aperçu honnête, rien n'équipe réellement) ===================== */
-const cosmeticCategories = ['Capes', 'Casques', 'Ailes', 'Compagnons', 'Auras', 'Costumes', 'Emotes', 'Sprays', 'Skins', 'Exclusifs HW']
+/* ===================== Cosmétiques (vitrine + aperçu 3D — l'équipement réel se fait EN JEU) ===================== */
+const cosmeticCategories = [
+  { id: 'capes', key: 'cosmetics.cat.capes', label: 'Cape' },
+  { id: 'ailes', key: 'cosmetics.cat.ailes', label: 'Aile' },
+  { id: 'auras', key: 'cosmetics.cat.auras', label: 'Aura' },
+  { id: 'casques', key: 'cosmetics.cat.casques', label: 'Casque' },
+  { id: 'masques', key: 'cosmetics.cat.masques', label: 'Masque' },
+  { id: 'compagnons', key: 'cosmetics.cat.compagnons', label: 'Compagnon' },
+  { id: 'effets', key: 'cosmetics.cat.effets', label: 'Effet' },
+  { id: 'emotes', key: 'cosmetics.cat.emotes', label: 'Emote' },
+  { id: 'sprays', key: 'cosmetics.cat.sprays', label: 'Spray' },
+  { id: 'skins', key: 'cosmetics.cat.skins', label: 'Skin' },
+  { id: 'exclusifs', key: 'cosmetics.cat.exclusifs', label: 'Exclusif' }
+]
 const mythSuffixes = ["de Zeus", "d'Athéna", "d'Apollon", "de Poséidon", "d'Hadès", "d'Hermès", "d'Arès", "d'Artémis", "d'Héra", "de Cronos", "de l'Olympe", "des Titans", "de Perséphone", "d'Héphaïstos"]
+const RARITY_LIST = ['commun', 'rare', 'epique', 'legendaire', 'mythique']
+const RARITY_COLORS = { commun: '#9A94A8', rare: '#5AA9E6', epique: '#B07CE8', legendaire: '#E8C56A', mythique: '#FF5C7A' }
+const RARITY_CYCLE = ['commun', 'commun', 'rare', 'commun', 'rare', 'epique', 'commun', 'rare', 'legendaire', 'mythique', 'commun', 'rare']
+function rarityColor (r) { return RARITY_COLORS[r] || RARITY_COLORS.commun }
+function rarityBadgeStyle (r) { const c = rarityColor(r); return { color: c, borderColor: c, background: c + '22' } }
 function buildCosmetics () {
   const store = {}
+  let newCounter = 0
   cosmeticCategories.forEach((cat, ci) => {
-    const singular = cat.endsWith('s') ? cat.slice(0, -1) : cat
-    const count = 6 + (ci % 4)
+    const count = 8 + (ci % 5)
     const items = []
     for (let i = 0; i < count; i++) {
-      items.push({ id: cat + '-' + i, name: singular + ' ' + mythSuffixes[(i + ci * 3) % mythSuffixes.length] })
+      const rarity = cat.id === 'exclusifs' ? 'mythique' : RARITY_CYCLE[(i + ci * 2) % RARITY_CYCLE.length]
+      const owned = cat.id === 'exclusifs' ? (i === 0) : ((i + ci) % 3 !== 0)
+      items.push({
+        id: cat.id + '-' + i,
+        name: cat.label + ' ' + mythSuffixes[(i + ci * 3) % mythSuffixes.length],
+        category: cat.id,
+        rarity,
+        owned,
+        newIndex: newCounter++
+      })
     }
-    store[cat] = items
+    store[cat.id] = items
   })
   return store
 }
 const cosmetics = reactive(buildCosmetics())
-const cosCategory = ref('Capes')
+const cosCategory = ref('capes')
 const cosSearch = ref('')
+const cosFilterType = ref('all')
+const cosFilterRarity = ref('all')
+const cosFilterOwned = ref('all')
+const cosSort = ref('name')
+const cosSelected = ref(null)
+const favCosmetics = reactive(JSON.parse(localStorage.getItem('hwFavCosmetics') || '{}'))
+const equippedPreview = reactive(JSON.parse(localStorage.getItem('hwEquippedPreview') || '{}'))
+function isFav (id) { return !!favCosmetics[id] }
+function toggleFav (it) {
+  if (favCosmetics[it.id]) delete favCosmetics[it.id]; else favCosmetics[it.id] = true
+  localStorage.setItem('hwFavCosmetics', JSON.stringify(favCosmetics))
+}
+function isEquipped (it) { return !!it && equippedPreview[it.category] === it.id }
+function toggleEquip (it) {
+  if (!it || !it.owned) return
+  if (equippedPreview[it.category] === it.id) delete equippedPreview[it.category]; else equippedPreview[it.category] = it.id
+  localStorage.setItem('hwEquippedPreview', JSON.stringify(equippedPreview))
+  ulog('equip preview -> ' + JSON.stringify(equippedPreview))
+}
+function selectCosCategory (id) { cosCategory.value = id; cosSearch.value = '' }
+function selectCosmetic (it) { cosSelected.value = it.id; ulog('cosmetic select -> ' + it.id) }
+function selectFromShowcase (it) { cosCategory.value = it.category; cosSearch.value = ''; cosSelected.value = it.id }
+const cosAllItems = computed(() => cosmeticCategories.flatMap(c => cosmetics[c.id] || []))
+const cosSelectedObj = computed(() => cosAllItems.value.find(i => i.id === cosSelected.value) || null)
+const cosEquippedList = computed(() => Object.entries(equippedPreview).map(([, id]) => cosAllItems.value.find(i => i.id === id)).filter(Boolean))
+const favShowcase = computed(() => cosAllItems.value.filter(i => isFav(i.id)).slice(0, 10))
 const cosItemsFiltered = computed(() => {
-  let list = cosmetics[cosCategory.value] || []
-  if (cosSearch.value.trim()) { const q = cosSearch.value.trim().toLowerCase(); list = list.filter(i => i.name.toLowerCase().includes(q)) }
-  return [...list].sort((a, b) => a.name.localeCompare(b.name))
+  const q = cosSearch.value.trim().toLowerCase()
+  let list = q ? cosAllItems.value.filter(i => i.name.toLowerCase().includes(q)) : (cosmetics[cosCategory.value] || [])
+  if (cosFilterType.value !== 'all') list = list.filter(i => i.category === cosFilterType.value)
+  if (cosFilterRarity.value !== 'all') list = list.filter(i => i.rarity === cosFilterRarity.value)
+  if (cosFilterOwned.value === 'owned') list = list.filter(i => i.owned)
+  else if (cosFilterOwned.value === 'locked') list = list.filter(i => !i.owned)
+  const rarityRank = { commun: 0, rare: 1, epique: 2, legendaire: 3, mythique: 4 }
+  const sorted = [...list]
+  if (cosSort.value === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name))
+  else if (cosSort.value === 'new') sorted.sort((a, b) => b.newIndex - a.newIndex)
+  else if (cosSort.value === 'rarity') sorted.sort((a, b) => rarityRank[b.rarity] - rarityRank[a.rarity])
+  else if (cosSort.value === 'equipped') sorted.sort((a, b) => (isEquipped(b) ? 1 : 0) - (isEquipped(a) ? 1 : 0))
+  return sorted
 })
 
 /* ===================== Amis (aucune donnée fictive) ===================== */
@@ -393,18 +557,70 @@ const friendsTab = ref('online')
 
 /* ===================== Langues ===================== */
 const languages = [
-  { code: 'fr', name: 'Français', enabled: true }, { code: 'en', name: 'English', enabled: true },
-  { code: 'es', name: 'Español', enabled: false }, { code: 'de', name: 'Deutsch', enabled: false },
-  { code: 'it', name: 'Italiano', enabled: false }, { code: 'pt', name: 'Português', enabled: false },
-  { code: 'nl', name: 'Nederlands', enabled: false }, { code: 'pl', name: 'Polski', enabled: false },
-  { code: 'ru', name: 'Русский', enabled: false }, { code: 'ja', name: '日本語', enabled: false },
-  { code: 'zh', name: '简体中文', enabled: false }, { code: 'ko', name: '한국어', enabled: false }
+  { code: 'fr', name: 'Français', flag: '🇫🇷', enabled: true }, { code: 'en', name: 'English', flag: '🇬🇧', enabled: true },
+  { code: 'es', name: 'Español', flag: '🇪🇸', enabled: false }, { code: 'de', name: 'Deutsch', flag: '🇩🇪', enabled: false },
+  { code: 'it', name: 'Italiano', flag: '🇮🇹', enabled: false }, { code: 'pt', name: 'Português', flag: '🇵🇹', enabled: false },
+  { code: 'nl', name: 'Nederlands', flag: '🇳🇱', enabled: false }, { code: 'pl', name: 'Polski', flag: '🇵🇱', enabled: false },
+  { code: 'ru', name: 'Русский', flag: '🇷🇺', enabled: false }, { code: 'ja', name: '日本語', flag: '🇯🇵', enabled: false },
+  { code: 'zh', name: '简体中文', flag: '🇨🇳', enabled: false }, { code: 'ko', name: '한국어', flag: '🇰🇷', enabled: false }
 ]
 const langSearch = ref('')
 const languagesFiltered = computed(() => {
   const q = langSearch.value.trim().toLowerCase()
   return q ? languages.filter(l => l.name.toLowerCase().includes(q)) : languages
 })
+
+/* ===================== Paramètres (catégories + recherche) ===================== */
+const settingsCategories = [
+  { id: 'compte', key: 'settings.cat.compte' },
+  { id: 'minecraft', key: 'settings.cat.minecraft' },
+  { id: 'java', key: 'settings.cat.java' },
+  { id: 'launcher', key: 'settings.cat.launcher' },
+  { id: 'notifications', key: 'settings.cat.notifications' },
+  { id: 'apparence', key: 'settings.cat.apparence' },
+  { id: 'performances', key: 'settings.cat.performances' },
+  { id: 'apropos', key: 'settings.cat.apropos' }
+]
+const settingsSelectedCat = ref('compte')
+const settingsSearch = ref('')
+const settingsFieldIndex = [
+  { cat: 'compte', labelKey: 'settings.accountTitle' }, { cat: 'compte', labelKey: 'settings.connectedAs' },
+  { cat: 'minecraft', labelKey: 'settings.memoryTitle' }, { cat: 'minecraft', labelKey: 'settings.ramLabel' },
+  { cat: 'minecraft', labelKey: 'settings.displayTitle' }, { cat: 'minecraft', labelKey: 'settings.resolutionLabel' },
+  { cat: 'minecraft', labelKey: 'settings.folderTitle' },
+  { cat: 'java', labelKey: 'settings.javaTitle' },
+  { cat: 'launcher', labelKey: 'settings.updateFreqLabel' }, { cat: 'launcher', labelKey: 'settings.autoDownloadLabel' },
+  { cat: 'launcher', labelKey: 'settings.minimizeOnLaunchLabel' },
+  { cat: 'notifications', labelKey: 'settings.notifEnabledLabel' },
+  { cat: 'apparence', labelKey: 'settings.animationsLabel' }, { cat: 'apparence', labelKey: 'settings.bgQualityLabel' },
+  { cat: 'apparence', labelKey: 'settings.themeTitle' },
+  { cat: 'performances', labelKey: 'settings.fpsLimitLabel' },
+  { cat: 'apropos', labelKey: 'settings.launcherTitle' }, { cat: 'apropos', labelKey: 'settings.checkUpdateBtn' },
+  { cat: 'apropos', labelKey: 'settings.openFolderBtn' }
+]
+const settingsSearchActive = computed(() => settingsSearch.value.trim().length > 0)
+const settingsMatchedCats = computed(() => {
+  const set = new Set()
+  if (!settingsSearchActive.value) return set
+  const q = settingsSearch.value.trim().toLowerCase()
+  settingsCategories.forEach(c => { if (t(c.key).toLowerCase().includes(q)) set.add(c.id) })
+  settingsFieldIndex.forEach(f => { if (t(f.labelKey).toLowerCase().includes(q)) set.add(f.cat) })
+  return set
+})
+const settingsNoResults = computed(() => settingsSearchActive.value && settingsMatchedCats.value.size === 0)
+function categoryNameMatches (catId) {
+  if (!settingsSearchActive.value) return false
+  const q = settingsSearch.value.trim().toLowerCase()
+  const c = settingsCategories.find(x => x.id === catId)
+  return c ? t(c.key).toLowerCase().includes(q) : false
+}
+function catVisible (id) { return !settingsSearchActive.value ? settingsSelectedCat.value === id : settingsMatchedCats.value.has(id) }
+function fieldVisible (labelKey, catId) {
+  if (!settingsSearchActive.value) return true
+  if (catId && categoryNameMatches(catId)) return true
+  return t(labelKey).toLowerCase().includes(settingsSearch.value.trim().toLowerCase())
+}
+function selectSettingsCat (id) { settingsSelectedCat.value = id; settingsSearch.value = '' }
 
 /* ===================== Ambiance (ciel / météores) ===================== */
 function starField (n, tile, r, op) {
@@ -431,7 +647,7 @@ function spawnMeteor () {
   meteors.value.push({ id, style })
   setTimeout(() => { meteors.value = meteors.value.filter(m => m.id !== id) }, dur * 1000 + 400)
 }
-function scheduleMeteor () { meteorTimer = setTimeout(() => { if (!document.hidden) spawnMeteor(); scheduleMeteor() }, 11000 + Math.random() * 15000) }
+function scheduleMeteor () { meteorTimer = setTimeout(() => { if (!document.hidden && settings.animations) spawnMeteor(); scheduleMeteor() }, 11000 + Math.random() * 15000) }
 
 /* ===================== Mise à jour / toast ===================== */
 const upd = reactive({ state: null, percent: 0, version: '' })
@@ -446,6 +662,30 @@ if (typeof window !== 'undefined' && window.hw && window.hw.onUpdate) {
 function installUpdate () { if (window.hw && window.hw.installUpdate) { window.hw.installUpdate(); ulog('install update') } }
 function checkUpdate () { if (window.hw && window.hw.checkUpdate) { window.hw.checkUpdate(); toast(t('toast.updateChecking')); ulog('check update') } }
 
+/* ===================== Notifications ===================== */
+const notifications = reactive([])
+let notifId = 0
+function nowLabel () {
+  try { return new Date().toLocaleTimeString(lang.value === 'en' ? 'en-US' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }) } catch (_) { return '' }
+}
+function addNotif (type, title, text) {
+  if (!settings.notifEnabled) return
+  notifications.unshift({ id: ++notifId, type, title, text, time: nowLabel(), read: false })
+  if (notifications.length > 30) notifications.length = 30
+}
+const notifUnread = computed(() => notifications.filter(n => !n.read).length)
+function notifIcon (type) { return { update: '⬇', event: '🌿', error: '⚠', cosmetic: '✨', friend: '👥' }[type] || '🔔' }
+function markAllRead () { notifications.forEach(n => { n.read = true }) }
+const notifOpen = ref(false)
+function toggleNotif () {
+  notifOpen.value = !notifOpen.value
+  if (notifOpen.value) { acctOpen.value = false; markAllRead() }
+  ulog('notif -> ' + notifOpen.value)
+}
+watch(() => upd.state, (v, old) => {
+  if (v === 'ready' && old !== 'ready') addNotif('update', t('notif.update.title'), t('update.ready').replace('{version}', upd.version))
+})
+
 const toastMsg = ref('')
 let toastTimer = null
 function toast (m) { toastMsg.value = m; clearTimeout(toastTimer); toastTimer = setTimeout(() => (toastMsg.value = ''), 2400) }
@@ -456,6 +696,7 @@ const actuIndex = ref(0)
 /* ===================== Clavier / fenêtre / cycle de vie ===================== */
 function onKey (e) {
   if (e.key !== 'Escape') return
+  if (notifOpen.value) { notifOpen.value = false; return }
   if (acctOpen.value) { acctOpen.value = false; return }
   if (launchInfo.active && (launchInfo.phase === 'error' || launchInfo.phase === 'exit')) { closeLaunchOverlay(); return }
   if (page.value !== 'accueil') go('accueil')
@@ -489,6 +730,9 @@ onMounted(() => {
   }
   pingSrv(); srvTimer = setInterval(pingSrv, 5000)
   try { if (window.hw && window.hw.appVersion) window.hw.appVersion().then(v => { if (v) APP_VERSION.value = v }) } catch (_) {}
+  addNotif('event', t('notif.event1.title'), t('notif.event1.text'))
+  addNotif('cosmetic', t('notif.cosmetic1.title'), t('notif.cosmetic1.text'))
+  if (settings.updateFreq !== 'manual' && window.hw && window.hw.checkUpdate) { window.hw.checkUpdate() }
   ulog('App.vue monté')
 })
 onUnmounted(() => {
@@ -511,7 +755,7 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <div class="bg" :class="['theme-' + theme, { switching: themeSwitching }]">
+  <div class="bg" :class="['theme-' + theme, 'bg-quality-' + settings.bgQuality, { switching: themeSwitching, 'anim-off': !settings.animations }]">
     <div class="sky" :style="{ backgroundImage: `url(${sky})` }"></div>
     <div class="stars" :style="stars1"></div>
     <div class="stars s2" :style="stars2"></div>
@@ -523,7 +767,7 @@ onUnmounted(() => {
     <div class="scrim"></div>
   </div>
 
-  <div class="shell">
+  <div class="shell" :class="{ 'anim-off': !settings.animations }">
     <aside class="sidebar">
       <div class="side-brand"><img :src="logo" alt="HEROES-WORLD" /></div>
       <nav class="side-nav">
@@ -541,29 +785,54 @@ onUnmounted(() => {
     <div class="main">
       <div class="topbar">
         <div class="tb-crumb">{{ pageLabel }}</div>
-        <div class="acct-chip" :class="{ open: acctOpen }" @click="toggleAcct">
-          <span class="acct-dot" :class="{ on: account.online }"></span>
-          <span class="acct-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</span>
-          <img class="acct-head" :src="`https://mc-heads.net/avatar/${CONFIG.uuid || CONFIG.pseudo}/64`" alt="" draggable="false" />
-          <transition name="pop">
-            <div v-if="acctOpen" class="acct-pop" @click.stop>
-              <div class="ap-head">
-                <img class="ap-head" :src="`https://mc-heads.net/avatar/${CONFIG.uuid || CONFIG.pseudo}/100`" alt="" draggable="false" @click="toggleAcct" />
-                <div class="ap-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</div>
-                <div class="ap-status" :class="{ on: account.online }"><i></i>{{ account.online ? t('account.online') : t('account.offline') }}</div>
+        <div class="tb-right">
+          <div class="bell-chip" :class="{ open: notifOpen }" @click="toggleNotif" :title="t('notif.title')">
+            <svg class="bell-ic" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" /></svg>
+            <span v-if="notifUnread" class="bell-badge">{{ notifUnread > 9 ? '9+' : notifUnread }}</span>
+            <transition name="pop">
+              <div v-if="notifOpen" class="notif-pop" @click.stop>
+                <div class="np-head">
+                  <b>{{ t('notif.title') }}</b>
+                  <button v-if="notifications.length" class="np-mark" @click="markAllRead">{{ t('notif.markAllRead') }}</button>
+                </div>
+                <div class="np-list">
+                  <div v-for="n in notifications" :key="n.id" class="np-item" :class="{ unread: !n.read }">
+                    <span class="np-ic" :class="'ic-' + n.type">{{ notifIcon(n.type) }}</span>
+                    <div class="np-body">
+                      <div class="np-title">{{ n.title }}</div>
+                      <div class="np-text">{{ n.text }}</div>
+                      <div class="np-time">{{ n.time }}</div>
+                    </div>
+                  </div>
+                  <div v-if="!notifications.length" class="np-empty">{{ t('notif.empty') }}</div>
+                </div>
               </div>
-              <button v-if="!account.online" class="ap-item login" @click="login">{{ t('account.loginMs') }}</button>
-              <template v-else>
-                <button class="ap-item" @click="ext('https://account.microsoft.com')">{{ t('account.myAccount') }}</button>
-                <button class="ap-item" @click="ext('https://www.minecraft.net/fr-fr/msaprofile/mygames/editskin')">{{ t('account.changeSkin') }}</button>
-                <button class="ap-item" @click="login">{{ t('account.switchAccount') }}</button>
-                <button class="ap-item" @click="openGameFolderBtn">{{ t('account.screenshots') }}</button>
-                <button class="ap-item" @click="go('settings')">{{ t('account.settings') }}</button>
-                <div class="ap-sep"></div>
-                <button class="ap-item danger" @click="logout">{{ t('account.logout') }}</button>
-              </template>
-            </div>
-          </transition>
+            </transition>
+          </div>
+          <div class="acct-chip" :class="{ open: acctOpen }" @click="toggleAcct">
+            <span class="acct-dot" :class="{ on: account.online }"></span>
+            <span class="acct-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</span>
+            <img class="acct-head" :src="`https://mc-heads.net/avatar/${CONFIG.uuid || CONFIG.pseudo}/64`" alt="" draggable="false" />
+            <transition name="pop">
+              <div v-if="acctOpen" class="acct-pop" @click.stop>
+                <div class="ap-head">
+                  <img class="ap-head" :src="`https://mc-heads.net/avatar/${CONFIG.uuid || CONFIG.pseudo}/100`" alt="" draggable="false" @click="toggleAcct" />
+                  <div class="ap-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</div>
+                  <div class="ap-status" :class="{ on: account.online }"><i></i>{{ account.online ? t('account.online') : t('account.offline') }}</div>
+                </div>
+                <button v-if="!account.online" class="ap-item login" @click="login">{{ t('account.loginMs') }}</button>
+                <template v-else>
+                  <button class="ap-item" @click="ext('https://account.microsoft.com')">{{ t('account.myAccount') }}</button>
+                  <button class="ap-item" @click="ext('https://www.minecraft.net/fr-fr/msaprofile/mygames/editskin')">{{ t('account.changeSkin') }}</button>
+                  <button class="ap-item" @click="login">{{ t('account.switchAccount') }}</button>
+                  <button class="ap-item" @click="openGameFolderBtn">{{ t('account.screenshots') }}</button>
+                  <button class="ap-item" @click="go('settings')">{{ t('account.settings') }}</button>
+                  <div class="ap-sep"></div>
+                  <button class="ap-item danger" @click="logout">{{ t('account.logout') }}</button>
+                </template>
+              </div>
+            </transition>
+          </div>
         </div>
       </div>
 
@@ -577,11 +846,15 @@ onUnmounted(() => {
               <template v-if="!launchInfo.active">{{ t('home.launch') }}</template>
               <template v-else>{{ launchPhaseLabel }}</template>
             </button>
+            <div class="home-profile">{{ t('home.playingAs').replace('{name}', CONFIG.pseudo) }}</div>
             <div class="home-chips">
               <div class="chip" :class="{ on: serverOnline }">
                 <span class="chip-dot"></span>
                 <span v-if="serverOnline">{{ t('home.onlineChip').replace('{online}', players.online).replace('{max}', players.max) }}</span>
                 <span v-else>{{ t('home.offlineChip') }}</span>
+              </div>
+              <div class="chip chip-ghost">
+                <span>Fabric {{ LOADER_VER }} · MC {{ MC_VER }}</span>
               </div>
             </div>
           </div>
@@ -589,7 +862,7 @@ onUnmounted(() => {
             <div class="home-news-head"><span>{{ t('nav.actus') }}</span><button @click="go('actus')">{{ t('home.seeAll') }}</button></div>
             <div class="home-news-grid">
               <article v-for="(a, i) in CONFIG.actus.slice(0, 3)" :key="i" class="news-card" @click="go('actus')">
-                <div class="nc-tag">{{ a.tag }}</div>
+                <div class="nc-tag" :class="{ 'nc-tag-event': a.tag === 'Événement' }">{{ a.tag }}</div>
                 <h3>{{ a.titre }}</h3>
                 <p>{{ a.texte }}</p>
                 <div class="nc-date">{{ a.date }}</div>
@@ -604,7 +877,7 @@ onUnmounted(() => {
           <div class="actus-body">
             <aside class="actus-list">
               <button v-for="(a, i) in CONFIG.actus" :key="i" class="actus-item" :class="{ active: actuIndex === i }" @click="actuIndex = i">
-                <span class="ai-tag">{{ a.tag }}</span>
+                <span class="ai-tag" :class="{ 'ai-tag-event': a.tag === 'Événement' }">{{ a.tag }}</span>
                 <span class="ai-title">{{ a.titre }}</span>
                 <span class="ai-date">{{ a.date }}</span>
               </button>
@@ -624,27 +897,83 @@ onUnmounted(() => {
         </section>
 
         <!-- COSMÉTIQUES -->
-        <section v-else-if="page === 'cosmetiques'" class="pg">
+        <section v-else-if="page === 'cosmetiques'" class="pg pg-cos">
           <div class="pg-head"><h1>{{ t('nav.cosmetiques') }}</h1><p>{{ t('cosmetics.subtitle') }}</p></div>
           <div class="cos-notice panel">{{ t('cosmetics.notice') }}</div>
           <div class="cos-body">
-            <aside class="cos-cats">
-              <button v-for="c in cosmeticCategories" :key="c" class="cos-cat" :class="{ active: cosCategory === c }" @click="cosCategory = c">{{ c }}</button>
+            <aside class="cos-cats panel">
+              <div class="cos-cats-title">{{ t('cosmetics.categories') }}</div>
+              <button v-for="c in cosmeticCategories" :key="c.id" class="cos-cat" :class="{ active: cosCategory === c.id && !cosSearch.trim() }" @click="selectCosCategory(c.id)">
+                <span>{{ t(c.key) }}</span>
+                <span class="cos-cat-count">{{ (cosmetics[c.id] || []).length }}</span>
+              </button>
             </aside>
+
             <div class="cos-preview panel">
               <div class="cos-viewer"><CharacterViewer :name="CONFIG.uuid || CONFIG.pseudo" :size="200" /></div>
               <div class="cos-preview-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</div>
               <div class="cos-preview-sub">{{ t('cosmetics.previewSub') }}</div>
-            </div>
-            <div class="cos-grid-wrap">
-              <div class="cos-controls">
-                <input class="ipt" type="text" v-model="cosSearch" :placeholder="t('cosmetics.searchPlaceholder')" />
+
+              <div v-if="cosEquippedList.length" class="cos-equipped-list">
+                <span v-for="e in cosEquippedList" :key="e.id" class="cos-equipped-chip" :style="{ borderColor: rarityColor(e.rarity), color: rarityColor(e.rarity) }">{{ e.name }}</span>
               </div>
-              <div class="cos-grid">
-                <div v-for="it in cosItemsFiltered" :key="it.id" class="cos-item soon">
-                  <div class="ci-name">{{ it.name }}</div>
-                  <span class="ci-badge soon">{{ t('cosmetics.soonBadge') }}</span>
+
+              <div v-if="cosSelectedObj" class="cos-selected-card">
+                <div class="cos-selected-name" :style="{ color: rarityColor(cosSelectedObj.rarity) }">{{ cosSelectedObj.name }}</div>
+                <div class="cos-selected-meta">
+                  <span class="cos-rarity-badge" :style="rarityBadgeStyle(cosSelectedObj.rarity)">{{ t('cosmetics.rarity.' + cosSelectedObj.rarity) }}</span>
+                  <span class="cos-owned-badge" :class="cosSelectedObj.owned ? 'owned' : 'locked'">{{ cosSelectedObj.owned ? t('cosmetics.owned') : t('cosmetics.locked') }}</span>
                 </div>
+                <div class="cos-selected-actions">
+                  <button class="btn-sm" :class="{ ghost: !cosSelectedObj.owned }" :disabled="!cosSelectedObj.owned" @click="toggleEquip(cosSelectedObj)">
+                    {{ isEquipped(cosSelectedObj) ? t('cosmetics.unequipBtn') : t('cosmetics.equipBtn') }}
+                  </button>
+                  <button class="btn-fav" :class="{ active: isFav(cosSelectedObj.id) }" @click="toggleFav(cosSelectedObj)" :title="t('cosmetics.favToggle')">★</button>
+                </div>
+                <p class="cos-equip-note">{{ t('cosmetics.equipNote') }}</p>
+              </div>
+            </div>
+
+            <div class="cos-grid-wrap">
+              <div class="cos-controls panel">
+                <input class="ipt" type="text" v-model="cosSearch" :placeholder="t('cosmetics.searchPlaceholder')" />
+                <select class="ipt" v-model="cosFilterType">
+                  <option value="all">{{ t('cosmetics.filterAllTypes') }}</option>
+                  <option v-for="c in cosmeticCategories" :key="c.id" :value="c.id">{{ t(c.key) }}</option>
+                </select>
+                <select class="ipt" v-model="cosFilterRarity">
+                  <option value="all">{{ t('cosmetics.filterAllRarities') }}</option>
+                  <option v-for="r in RARITY_LIST" :key="r" :value="r">{{ t('cosmetics.rarity.' + r) }}</option>
+                </select>
+                <select class="ipt" v-model="cosFilterOwned">
+                  <option value="all">{{ t('cosmetics.filterAllOwned') }}</option>
+                  <option value="owned">{{ t('cosmetics.filterOwned') }}</option>
+                  <option value="locked">{{ t('cosmetics.filterLocked') }}</option>
+                </select>
+                <select class="ipt" v-model="cosSort">
+                  <option value="name">{{ t('cosmetics.sortName') }}</option>
+                  <option value="new">{{ t('cosmetics.sortNew') }}</option>
+                  <option value="rarity">{{ t('cosmetics.sortRarity') }}</option>
+                  <option value="equipped">{{ t('cosmetics.sortEquipped') }}</option>
+                </select>
+              </div>
+
+              <div v-if="favShowcase.length && !cosSearch.trim()" class="cos-fav-strip">
+                <span class="cos-fav-label">★ {{ t('cosmetics.favorites') }}</span>
+                <button v-for="f in favShowcase" :key="'fav-' + f.id" class="cos-fav-chip" :style="{ borderColor: rarityColor(f.rarity), color: rarityColor(f.rarity) }" @click="selectFromShowcase(f)">{{ f.name }}</button>
+              </div>
+
+              <div class="cos-grid">
+                <div v-for="it in cosItemsFiltered" :key="it.id" class="cos-item" :class="{ locked: !it.owned, active: cosSelected === it.id, equipped: isEquipped(it) }" @click="selectCosmetic(it)">
+                  <button class="cos-fav-star" :class="{ active: isFav(it.id) }" @click.stop="toggleFav(it)" :title="t('cosmetics.favToggle')">★</button>
+                  <div class="ci-name">{{ it.name }}</div>
+                  <div class="ci-badges">
+                    <span class="ci-badge ci-rarity" :style="rarityBadgeStyle(it.rarity)">{{ t('cosmetics.rarity.' + it.rarity) }}</span>
+                    <span v-if="!it.owned" class="ci-badge locked">{{ t('cosmetics.locked') }}</span>
+                    <span v-else-if="isEquipped(it)" class="ci-badge equipped">{{ t('cosmetics.equippedBadge') }}</span>
+                  </div>
+                </div>
+                <p v-if="!cosItemsFiltered.length" class="cos-empty">{{ t('cosmetics.noResults') }}</p>
               </div>
             </div>
           </div>
@@ -711,7 +1040,7 @@ onUnmounted(() => {
           <input class="ipt lang-search" type="text" v-model="langSearch" :placeholder="t('langues.searchPlaceholder')" />
           <div class="lang-list">
             <button v-for="l in languagesFiltered" :key="l.code" class="lang-row" :class="{ active: lang === l.code, disabled: !l.enabled }" :disabled="!l.enabled" @click="l.enabled && setLang(l.code)">
-              <span>{{ l.name }}</span>
+              <span class="lang-main"><span class="lang-flag">{{ l.flag }}</span>{{ l.name }}</span>
               <span v-if="!l.enabled" class="lang-soon">{{ t('common.comingSoon') }}</span>
               <svg v-else-if="lang === l.code" class="lang-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
             </button>
@@ -719,38 +1048,106 @@ onUnmounted(() => {
         </section>
 
         <!-- PARAMÈTRES -->
-        <section v-else-if="page === 'settings'" class="pg">
+        <section v-else-if="page === 'settings'" class="pg pg-settings">
           <div class="pg-head"><h1>{{ t('nav.settings') }}</h1></div>
-          <div class="set-grid">
-            <div class="panel set-block">
-              <h3>{{ t('settings.memoryTitle') }}</h3>
-              <div class="set-row"><label>{{ t('settings.ramLabel') }}</label><input type="range" min="2" max="12" v-model.number="settings.ram" /><span class="set-val">{{ settings.ram }} {{ t('settings.ramUnit') }}</span></div>
-              <p class="set-note">{{ t('settings.ramNote') }}</p>
-            </div>
-            <div class="panel set-block">
-              <h3>{{ t('settings.displayTitle') }}</h3>
-              <div class="set-row"><label>{{ t('settings.resolutionLabel') }}</label>
-                <select v-model="settings.res"><option>1920 × 1080</option><option>2560 × 1440</option><option>1600 × 900</option><option>1366 × 768</option></select>
+          <input class="ipt set-search" type="text" v-model="settingsSearch" :placeholder="t('settings.searchPlaceholder')" />
+          <div class="set-body">
+            <aside class="set-cats panel">
+              <button v-for="c in settingsCategories" :key="c.id" class="set-cat" :class="{ active: !settingsSearchActive && settingsSelectedCat === c.id }" @click="selectSettingsCat(c.id)">{{ t(c.key) }}</button>
+            </aside>
+
+            <div class="set-panels">
+              <div v-if="catVisible('compte')" class="panel set-block">
+                <h3>{{ t('settings.accountTitle') }}</h3>
+                <p v-show="fieldVisible('settings.connectedAs', 'compte')" class="set-note">{{ t('settings.connectedAs').replace('{name}', CONFIG.pseudo) }}</p>
+                <div class="set-row"><button v-if="account.online" class="btn-sm danger" @click="logout">{{ t('settings.logoutBtn') }}</button><button v-else class="btn-sm" @click="login">{{ t('settings.loginBtn') }}</button></div>
               </div>
-            </div>
-            <div class="panel set-block">
-              <h3>{{ t('settings.folderTitle') }}</h3>
-              <div class="set-row"><input class="ipt full" type="text" v-model="settings.dir" spellcheck="false" /></div>
-              <div class="set-row"><button class="btn-sm ghost" @click="openGameFolderBtn">{{ t('settings.openFolderBtn') }}</button></div>
-            </div>
-            <div class="panel set-block">
-              <h3>{{ t('settings.javaTitle') }}</h3>
-              <div class="set-row"><input class="ipt full" type="text" v-model="settings.java" :placeholder="t('settings.javaPlaceholder')" spellcheck="false" /></div>
-            </div>
-            <div class="panel set-block">
-              <h3>{{ t('settings.accountTitle') }}</h3>
-              <p class="set-note">{{ t('settings.connectedAs').replace('{name}', CONFIG.pseudo) }}</p>
-              <div class="set-row"><button v-if="account.online" class="btn-sm danger" @click="logout">{{ t('settings.logoutBtn') }}</button><button v-else class="btn-sm" @click="login">{{ t('settings.loginBtn') }}</button></div>
-            </div>
-            <div class="panel set-block">
-              <h3>{{ t('settings.launcherTitle') }}</h3>
-              <p class="set-note">{{ t('settings.versionLabel').replace('{v}', APP_VERSION) }}</p>
-              <div class="set-row"><button class="btn-sm ghost" @click="checkUpdate">{{ t('settings.checkUpdateBtn') }}</button></div>
+
+              <div v-if="catVisible('minecraft')" class="panel set-block">
+                <h3>{{ t('settings.cat.minecraft') }}</h3>
+                <div v-show="fieldVisible('settings.ramLabel', 'minecraft')" class="set-row"><label>{{ t('settings.ramLabel') }}</label><input type="range" min="2" max="12" v-model.number="settings.ram" /><span class="set-val">{{ settings.ram }} {{ t('settings.ramUnit') }}</span></div>
+                <p v-show="fieldVisible('settings.ramLabel', 'minecraft')" class="set-note">{{ t('settings.ramNote') }}</p>
+                <div v-show="fieldVisible('settings.resolutionLabel', 'minecraft')" class="set-row"><label>{{ t('settings.resolutionLabel') }}</label>
+                  <select v-model="settings.res"><option>1920 × 1080</option><option>2560 × 1440</option><option>1600 × 900</option><option>1366 × 768</option></select>
+                </div>
+                <div v-show="fieldVisible('settings.folderTitle', 'minecraft')" class="set-row"><label>{{ t('settings.folderTitle') }}</label><input class="ipt full" type="text" v-model="settings.dir" spellcheck="false" /></div>
+                <div v-show="fieldVisible('settings.folderTitle', 'minecraft')" class="set-row"><button class="btn-sm ghost" @click="openGameFolderBtn">{{ t('settings.openFolderBtn') }}</button></div>
+              </div>
+
+              <div v-if="catVisible('java')" class="panel set-block">
+                <h3>{{ t('settings.javaTitle') }}</h3>
+                <div class="set-row"><input class="ipt full" type="text" v-model="settings.java" :placeholder="t('settings.javaPlaceholder')" spellcheck="false" /></div>
+              </div>
+
+              <div v-if="catVisible('launcher')" class="panel set-block">
+                <h3>{{ t('settings.cat.launcher') }}</h3>
+                <div v-show="fieldVisible('settings.updateFreqLabel', 'launcher')" class="set-row"><label>{{ t('settings.updateFreqLabel') }}</label>
+                  <select v-model="settings.updateFreq">
+                    <option value="auto">{{ t('settings.updateFreqAuto') }}</option>
+                    <option value="daily">{{ t('settings.updateFreqDaily') }}</option>
+                    <option value="manual">{{ t('settings.updateFreqManual') }}</option>
+                  </select>
+                </div>
+                <div v-show="fieldVisible('settings.autoDownloadLabel', 'launcher')" class="set-row set-row-toggle"><label>{{ t('settings.autoDownloadLabel') }}</label>
+                  <label class="switch"><input type="checkbox" v-model="settings.autoDownload" /><span class="switch-track"></span></label>
+                </div>
+                <div v-show="fieldVisible('settings.minimizeOnLaunchLabel', 'launcher')" class="set-row set-row-toggle"><label>{{ t('settings.minimizeOnLaunchLabel') }}</label>
+                  <label class="switch"><input type="checkbox" v-model="settings.minimizeOnLaunch" /><span class="switch-track"></span></label>
+                </div>
+              </div>
+
+              <div v-if="catVisible('notifications')" class="panel set-block">
+                <h3>{{ t('settings.cat.notifications') }}</h3>
+                <div v-show="fieldVisible('settings.notifEnabledLabel', 'notifications')" class="set-row set-row-toggle"><label>{{ t('settings.notifEnabledLabel') }}</label>
+                  <label class="switch"><input type="checkbox" v-model="settings.notifEnabled" /><span class="switch-track"></span></label>
+                </div>
+              </div>
+
+              <div v-if="catVisible('apparence')" class="panel set-block">
+                <h3>{{ t('settings.cat.apparence') }}</h3>
+                <div v-show="fieldVisible('settings.animationsLabel', 'apparence')" class="set-row set-row-toggle"><label>{{ t('settings.animationsLabel') }}</label>
+                  <label class="switch"><input type="checkbox" v-model="settings.animations" /><span class="switch-track"></span></label>
+                </div>
+                <div v-show="fieldVisible('settings.bgQualityLabel', 'apparence')" class="set-row"><label>{{ t('settings.bgQualityLabel') }}</label>
+                  <select v-model="settings.bgQuality">
+                    <option value="high">{{ t('settings.bgQualityHigh') }}</option>
+                    <option value="medium">{{ t('settings.bgQualityMedium') }}</option>
+                    <option value="low">{{ t('settings.bgQualityLow') }}</option>
+                  </select>
+                </div>
+                <div v-show="fieldVisible('settings.themeTitle', 'apparence')" class="set-themes">
+                  <label class="set-themes-label">{{ t('settings.themeTitle') }}</label>
+                  <div class="themes-grid-mini">
+                    <button v-for="th in themesList" :key="th.id" class="theme-card" :class="{ active: theme === th.id }" @click="setTheme(th.id)">
+                      <div class="tc-preview" :class="'prev-' + th.id"></div>
+                      <div class="tc-name">{{ t('theme.' + th.id + '.name') }}</div>
+                      <div class="tc-desc">{{ t('theme.' + th.id + '.desc') }}</div>
+                      <span v-if="theme === th.id" class="tc-badge">{{ t('themes.active') }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="catVisible('performances')" class="panel set-block">
+                <h3>{{ t('settings.cat.performances') }}</h3>
+                <div v-show="fieldVisible('settings.fpsLimitLabel', 'performances')" class="set-row"><label>{{ t('settings.fpsLimitLabel') }}</label>
+                  <select v-model="settings.fpsLimit">
+                    <option value="60">60</option>
+                    <option value="120">120</option>
+                    <option value="144">144</option>
+                    <option value="unlimited">{{ t('settings.fpsUnlimited') }}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div v-if="catVisible('apropos')" class="panel set-block">
+                <h3>{{ t('settings.launcherTitle') }}</h3>
+                <p class="set-note">{{ t('settings.versionLabel').replace('{v}', APP_VERSION) }}</p>
+                <div class="set-row"><button class="btn-sm ghost" @click="checkUpdate">{{ t('settings.checkUpdateBtn') }}</button></div>
+                <div class="set-row"><button class="btn-sm ghost" @click="openGameFolderBtn">{{ t('settings.openFolderBtn') }}</button></div>
+              </div>
+
+              <p v-if="settingsNoResults" class="set-empty">{{ t('settings.noResults') }}</p>
             </div>
           </div>
         </section>
@@ -775,13 +1172,22 @@ onUnmounted(() => {
           <div class="lo-error-ic">⚠</div>
           <div class="lo-error-title">{{ t('launch.failedTitle') }}</div>
           <p class="lo-error-msg">{{ launchInfo.error }}</p>
+          <p class="lo-error-hint">{{ launchErrorHint }}</p>
         </div>
       </template>
       <div class="lo-actions">
-        <button class="btn-sm ghost" @click="logsOpen = !logsOpen">{{ logsOpen ? t('launch.hideLogs') : t('launch.showLogs') }}</button>
-        <button class="btn-sm ghost" @click="openGameFolderBtn">{{ t('launch.openFolder') }}</button>
-        <button v-if="launchInfo.phase === 'error' || launchInfo.phase === 'exit'" class="btn-sm" @click="closeLaunchOverlay">{{ t('launch.close') }}</button>
-        <button v-else class="btn-sm danger" @click="cancelLaunch">{{ t('launch.cancel') }}</button>
+        <template v-if="launchInfo.phase === 'error' || launchInfo.phase === 'exit'">
+          <button class="btn-sm" @click="repairLaunch">{{ t('launch.repair') }}</button>
+          <button class="btn-sm ghost" @click="copyLog">{{ t('launch.copyLogs') }}</button>
+          <button class="btn-sm ghost" @click="logsOpen = !logsOpen">{{ logsOpen ? t('launch.hideLogs') : t('launch.showLogs') }}</button>
+          <button class="btn-sm ghost" @click="openGameFolderBtn">{{ t('launch.openFolder') }}</button>
+          <button class="btn-sm ghost" @click="closeLaunchOverlay">{{ t('launch.close') }}</button>
+        </template>
+        <template v-else>
+          <button class="btn-sm ghost" @click="logsOpen = !logsOpen">{{ logsOpen ? t('launch.hideLogs') : t('launch.showLogs') }}</button>
+          <button class="btn-sm ghost" @click="openGameFolderBtn">{{ t('launch.openFolder') }}</button>
+          <button class="btn-sm danger" @click="cancelLaunch">{{ t('launch.cancel') }}</button>
+        </template>
       </div>
       <transition name="pop">
         <div v-if="logsOpen" class="lo-logs">
@@ -839,6 +1245,13 @@ onUnmounted(() => {
 .meteor { position: absolute; top: 0; left: 0; width: 170px; height: 2px; border-radius: 3px; pointer-events: none; opacity: 0; transform-origin: right center; background: linear-gradient(90deg, rgba(190,205,255,0), rgba(205,220,255,.5) 60%, rgba(255,255,255,.95)); animation-name: meteorGo; animation-timing-function: linear; animation-fill-mode: forwards; will-change: transform; }
 .meteor::after { content: ''; position: absolute; right: -1px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 9px 2px rgba(205,220,255,.9); }
 @keyframes meteorGo { 0% { transform: translate(var(--sx), var(--sy)) rotate(var(--ang)) scale(var(--sc)); opacity: 0 } 15% { opacity: .6 } 80% { opacity: .55 } 100% { transform: translate(var(--ex), var(--ey)) rotate(var(--ang)) scale(var(--sc)); opacity: 0 } }
+.bg.anim-off .sky, .bg.anim-off .lightning, .bg.anim-off .planet { animation: none !important; }
+.bg.anim-off .meteor { display: none; }
+.bg.bg-quality-medium .stars.s2 { opacity: .22; }
+.bg.bg-quality-low .stars.s2 { display: none; }
+.bg.bg-quality-low .planet-glow { opacity: .5; }
+.bg.bg-quality-low .lightning { display: none; }
+.shell.anim-off .pg { animation: none; }
 
 /* ===== Coquille / barre latérale ===== */
 .shell { position: fixed; inset: 34px 0 0 0; z-index: 10; display: flex; }
@@ -862,7 +1275,33 @@ onUnmounted(() => {
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
 .topbar { height: 78px; flex: 0 0 auto; display: flex; align-items: center; padding: 0 clamp(16px, 2vw, 32px); gap: 16px; border-bottom: 1px solid rgba(255,255,255,.06); background: rgba(7,7,12,.28); }
 .tb-crumb { font-family: var(--serif, Georgia, serif); font-size: 15px; letter-spacing: 1px; color: #CFC7B2; }
-.acct-chip { position: relative; margin-left: auto; display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 16px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); cursor: pointer; transition: background .15s, border-color .15s; }
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.bell-chip { position: relative; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: 0 0 auto; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); cursor: pointer; transition: background .15s, border-color .15s; }
+.bell-chip:hover, .bell-chip.open { background: rgba(232,197,106,.1); border-color: rgba(232,197,106,.3); }
+.bell-ic { width: 18px; height: 18px; }
+.bell-ic path { fill: #CFC7B2; transition: fill .15s; }
+.bell-chip:hover .bell-ic path, .bell-chip.open .bell-ic path { fill: var(--gold, #E8C56A); }
+.bell-badge { position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: #E05555; color: #fff; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px rgba(9,10,16,.9); }
+.notif-pop { position: absolute; top: 50px; right: 0; width: 320px; max-height: 420px; z-index: 90; display: flex; flex-direction: column; background: rgba(10,11,17,.96); border: 1px solid rgba(232,197,106,.35); border-radius: 12px; padding: 10px; box-shadow: 0 18px 44px rgba(0,0,0,.6); backdrop-filter: blur(14px); cursor: default; }
+.np-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 10px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 6px; }
+.np-head b { font-family: var(--serif, Georgia, serif); font-size: 13.5px; color: #EDE8DA; letter-spacing: .5px; }
+.np-mark { background: none; border: none; color: var(--gold, #E8C56A); font-size: 11px; cursor: pointer; }
+.np-mark:hover { text-decoration: underline; }
+.np-list { overflow-y: auto; max-height: 340px; display: flex; flex-direction: column; gap: 4px; }
+.np-item { display: flex; gap: 10px; padding: 9px 8px; border-radius: 9px; }
+.np-item.unread { background: rgba(232,197,106,.08); }
+.np-ic { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; background: rgba(255,255,255,.06); }
+.np-ic.ic-update { background: rgba(90,169,230,.15); }
+.np-ic.ic-error { background: rgba(224,85,85,.15); }
+.np-ic.ic-cosmetic { background: rgba(232,197,106,.15); }
+.np-ic.ic-event { background: rgba(124,203,110,.15); }
+.np-ic.ic-friend { background: rgba(160,140,230,.15); }
+.np-body { min-width: 0; flex: 1; }
+.np-title { font-size: 12.5px; font-weight: 700; color: #EDE8DA; }
+.np-text { font-size: 11.5px; color: #9A94A8; margin-top: 2px; line-height: 1.4; }
+.np-time { font-size: 10px; color: #6b6b78; margin-top: 4px; }
+.np-empty { padding: 30px 10px; text-align: center; color: #6b6b78; font-size: 12.5px; }
+.acct-chip { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 16px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); cursor: pointer; transition: background .15s, border-color .15s; }
 .acct-chip:hover, .acct-chip.open { background: rgba(232,197,106,.1); border-color: rgba(232,197,106,.3); }
 .acct-dot { width: 8px; height: 8px; border-radius: 50%; background: #6b6b78; }
 .acct-dot.on { background: #7CCB6E; box-shadow: 0 0 7px #7CCB6E; }
@@ -887,9 +1326,9 @@ onUnmounted(() => {
 
 /* ===== Contenu / pages génériques ===== */
 .content { flex: 1; min-height: 0; overflow-y: auto; padding: clamp(18px, 2.2vw, 36px); contain: layout paint; }
-.content::-webkit-scrollbar { width: 9px; }
-.content::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 6px; }
-.pg { animation: pgIn .28s ease; }
+.content::-webkit-scrollbar, .mods-list::-webkit-scrollbar, .mods-detail::-webkit-scrollbar, .lang-list::-webkit-scrollbar, .friends-list::-webkit-scrollbar, .cos-grid::-webkit-scrollbar, .cos-cats::-webkit-scrollbar, .actus-list::-webkit-scrollbar, .np-list::-webkit-scrollbar { width: 8px; }
+.content::-webkit-scrollbar-thumb, .mods-list::-webkit-scrollbar-thumb, .mods-detail::-webkit-scrollbar-thumb, .lang-list::-webkit-scrollbar-thumb, .friends-list::-webkit-scrollbar-thumb, .cos-grid::-webkit-scrollbar-thumb, .cos-cats::-webkit-scrollbar-thumb, .actus-list::-webkit-scrollbar-thumb, .np-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 6px; }
+.pg { max-width: 1600px; width: 100%; margin: 0 auto; animation: pgIn .28s ease; }
 @keyframes pgIn { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }
 .pg-head { margin-bottom: 20px; }
 .pg-head h1 { font-family: var(--serif, Georgia, serif); font-size: clamp(22px, 2.4vw, 30px); color: #EDE8DA; letter-spacing: .5px; }
@@ -915,10 +1354,12 @@ onUnmounted(() => {
 .btn-launch:hover:not(:disabled) { transform: scale(1.04); color: #FFE9A8; box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 24px rgba(240,213,133,.3), 0 10px 30px rgba(0,0,0,.45); border-color: rgba(233,204,116,.6); }
 .btn-launch:active:not(:disabled) { transform: scale(.99); }
 .btn-launch.busy, .btn-launch:disabled { cursor: default; letter-spacing: 2px; opacity: .85; }
+.home-profile { font-size: 12px; color: #9A94A8; letter-spacing: .3px; margin-top: -6px; }
 .home-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 6px; }
 .chip { display: flex; align-items: center; gap: 8px; border-radius: 999px; padding: 8px 16px; font-size: 13px; color: #CFC7B2; background: rgba(9,10,16,.65); border: 1px solid rgba(255,255,255,.08); }
 .chip-dot { width: 8px; height: 8px; border-radius: 50%; background: #E05555; box-shadow: 0 0 7px #E05555; }
 .chip.on .chip-dot { background: #7CCB6E; box-shadow: 0 0 7px #7CCB6E; }
+.chip-ghost { color: #8A85A0; background: rgba(255,255,255,.03); }
 .home-news { width: min(1000px, 94%); }
 .home-news-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .home-news-head span { font-family: var(--serif, Georgia, serif); color: #CFC7B2; letter-spacing: 1px; font-size: 14px; }
@@ -927,13 +1368,14 @@ onUnmounted(() => {
 .news-card { background: rgba(9,10,16,.84); border: 1px solid rgba(255,255,255,.07); border-radius: 14px; padding: 16px 18px; cursor: pointer; transition: border-color .15s, transform .15s; contain: content; }
 .news-card:hover { border-color: rgba(232,197,106,.4); transform: translateY(-3px); }
 .nc-tag { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #5AA9E6; margin-bottom: 8px; }
+.nc-tag-event, .ai-tag-event { color: var(--gold, #E8C56A); }
 .news-card h3 { font-family: var(--serif, Georgia, serif); font-size: 15.5px; color: var(--gold, #E8C56A); margin-bottom: 8px; line-height: 1.3; }
 .news-card p { font-size: 12.5px; color: #9A94A8; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .nc-date { font-size: 11px; color: #6b6b78; margin-top: 10px; }
 
 /* ===== Actualités ===== */
 .actus-body { display: flex; gap: 20px; align-items: flex-start; }
-.actus-list { width: 260px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; }
+.actus-list { width: 260px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
 .actus-item { display: flex; flex-direction: column; gap: 3px; text-align: left; background: rgba(9,10,16,.55); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 10px 12px; cursor: pointer; color: #C9C4D6; contain: content; }
 .actus-item:hover { border-color: rgba(232,197,106,.3); }
 .actus-item.active { border-color: rgba(232,197,106,.55); background: rgba(232,197,106,.08); }
@@ -952,33 +1394,64 @@ onUnmounted(() => {
 
 /* ===== Cosmétiques ===== */
 .cos-notice { padding: 12px 16px; margin-bottom: 16px; font-size: 12.5px; color: #CFC7B2; border-color: rgba(232,197,106,.25); }
-.cos-body { display: grid; grid-template-columns: 170px 260px 1fr; gap: 18px; align-items: start; }
-.cos-cats { display: flex; flex-direction: column; gap: 4px; }
-.cos-cat { text-align: left; background: rgba(9,10,16,.5); border: 1px solid rgba(255,255,255,.06); color: #B9B4C6; border-radius: 9px; padding: 9px 12px; cursor: pointer; font-size: 12.5px; }
+.cos-body { display: grid; grid-template-columns: 200px 260px 1fr; gap: 18px; align-items: start; }
+.cos-cats { display: flex; flex-direction: column; gap: 4px; padding: 10px; max-height: calc(100vh - 300px); overflow-y: auto; }
+.cos-cats-title { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #6b6b78; margin: 2px 4px 6px; }
+.cos-cat { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; background: rgba(9,10,16,.5); border: 1px solid rgba(255,255,255,.06); color: #B9B4C6; border-radius: 9px; padding: 9px 12px; cursor: pointer; font-size: 12.5px; contain: content; }
 .cos-cat:hover { border-color: rgba(232,197,106,.3); }
 .cos-cat.active { color: var(--gold, #E8C56A); background: rgba(232,197,106,.1); border-color: rgba(232,197,106,.4); }
-.cos-preview { padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.cos-cat-count { font-size: 10.5px; color: #6b6b78; }
+.cos-cat.active .cos-cat-count { color: var(--gold, #E8C56A); }
+.cos-preview { padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; max-height: calc(100vh - 300px); overflow-y: auto; }
 .cos-body-img { width: 120px; image-rendering: pixelated; filter: drop-shadow(0 10px 20px rgba(0,0,0,.5)); }
-.cos-viewer { width: 200px; height: 300px; margin: 0 auto; }
+.cos-viewer { width: 200px; height: 260px; margin: 0 auto; flex: 0 0 auto; }
 .acct-head { width: 38px; height: 38px; border-radius: 8px; image-rendering: pixelated; flex: 0 0 auto; }
 .ap-head { width: 96px; height: 96px; border-radius: 10px; image-rendering: pixelated; cursor: pointer; align-self: center; }
 .cos-preview-name { font-weight: 700; font-size: 14px; margin-top: 4px; }
 .cos-preview-sub { font-size: 11.5px; color: #8A85A0; }
+.cos-equipped-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 8px; }
+.cos-equipped-chip { font-size: 10px; padding: 3px 9px; border-radius: 999px; border: 1px solid; background: rgba(255,255,255,.04); contain: content; }
+.cos-selected-card { width: 100%; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.cos-selected-name { font-weight: 700; font-size: 14px; }
+.cos-selected-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.cos-rarity-badge { font-size: 10px; padding: 3px 9px; border-radius: 999px; border: 1px solid; font-weight: 700; }
+.cos-owned-badge { font-size: 9.5px; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .5px; }
+.cos-owned-badge.owned { background: rgba(124,203,110,.16); color: #7CCB6E; }
+.cos-owned-badge.locked { background: rgba(255,255,255,.08); color: #9A94A8; }
+.cos-selected-actions { display: flex; align-items: center; gap: 8px; }
+.btn-fav { width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); color: #6b6b78; cursor: pointer; font-size: 15px; line-height: 1; transition: color .15s, border-color .15s, background .15s; }
+.btn-fav:hover { border-color: rgba(232,197,106,.4); color: var(--gold, #E8C56A); }
+.btn-fav.active { color: var(--gold, #E8C56A); background: rgba(232,197,106,.14); border-color: rgba(232,197,106,.45); }
+.cos-equip-note { font-size: 10.5px; color: #6b6b78; line-height: 1.5; max-width: 220px; }
 .cos-grid-wrap { min-width: 0; }
-.cos-controls { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.cos-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; padding: 12px 14px; }
 .cos-controls .ipt { flex: 1; min-width: 140px; }
-.cos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-.cos-item { position: relative; background: rgba(9,10,16,.65); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 14px 14px 20px; min-height: 80px; contain: content; }
-.cos-item.soon { opacity: .55; }
-.ci-name { font-size: 13px; color: #EDE8DA; font-weight: 600; line-height: 1.3; }
-.ci-badge { position: absolute; top: 10px; right: 10px; font-size: 9.5px; padding: 2px 7px; border-radius: 999px; }
-.ci-badge.soon { background: rgba(255,255,255,.1); color: #9A94A8; text-transform: uppercase; letter-spacing: .5px; }
+.cos-fav-strip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.cos-fav-label { font-size: 11.5px; color: var(--gold, #E8C56A); font-weight: 700; margin-right: 2px; }
+.cos-fav-chip { font-size: 11px; padding: 5px 11px; border-radius: 999px; border: 1px solid; background: rgba(255,255,255,.04); cursor: pointer; contain: content; }
+.cos-fav-chip:hover { background: rgba(232,197,106,.1); }
+.cos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; max-height: calc(100vh - 400px); overflow-y: auto; align-content: start; padding-right: 4px; }
+.cos-item { position: relative; background: rgba(9,10,16,.65); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 14px 40px 34px 14px; min-height: 84px; cursor: pointer; transition: border-color .15s, transform .15s; contain: content; }
+.cos-item:hover { border-color: rgba(232,197,106,.3); transform: translateY(-2px); }
+.cos-item.active { border-color: rgba(232,197,106,.55); background: rgba(232,197,106,.06); }
+.cos-item.locked { opacity: .6; }
+.cos-item.equipped { border-color: rgba(124,203,110,.5); }
+.cos-fav-star { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 7px; background: rgba(0,0,0,.25); border: none; color: #6b6b78; cursor: pointer; font-size: 13px; line-height: 1; }
+.cos-fav-star:hover { color: #CFC7B2; }
+.cos-fav-star.active { color: var(--gold, #E8C56A); }
+.ci-name { font-size: 13px; color: #EDE8DA; font-weight: 600; line-height: 1.3; padding-right: 20px; }
+.ci-badges { position: absolute; left: 14px; bottom: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
+.ci-badge { font-size: 9.5px; padding: 2px 7px; border-radius: 999px; }
+.ci-badge.ci-rarity { border: 1px solid; font-weight: 700; }
+.ci-badge.locked { background: rgba(255,255,255,.1); color: #9A94A8; text-transform: uppercase; letter-spacing: .5px; }
+.ci-badge.equipped { background: rgba(124,203,110,.18); color: #7CCB6E; text-transform: uppercase; letter-spacing: .5px; }
+.cos-empty { grid-column: 1 / -1; color: #8A85A0; font-size: 13px; padding: 20px 0; }
 
 /* ===== Amis ===== */
 .friends-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
 .friends-tabs button { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: #B9B4C6; border-radius: 999px; padding: 8px 16px; cursor: pointer; font-size: 12.5px; }
 .friends-tabs button.active { background: rgba(232,197,106,.14); color: var(--gold, #E8C56A); border-color: rgba(232,197,106,.4); }
-.friends-list { display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+.friends-list { display: flex; flex-direction: column; gap: 8px; max-width: 640px; max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
 .friends-empty { padding: 30px; text-align: center; }
 .fe-title { color: #EDE8DA; font-size: 14px; font-weight: 700; }
 .fe-sub { color: #8A85A0; font-size: 12.5px; margin-top: 8px; line-height: 1.55; }
@@ -988,7 +1461,7 @@ onUnmounted(() => {
 .mods-toolbar .ipt { flex: 1; }
 .mods-hint { background: rgba(232,197,106,.1); border: 1px solid rgba(232,197,106,.3); color: var(--gold, #E8C56A); border-radius: 9px; padding: 9px 14px; font-size: 12.5px; margin-bottom: 12px; }
 .mods-body { display: grid; grid-template-columns: 1fr 280px; gap: 16px; align-items: start; }
-.mods-list { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.mods-list { display: flex; flex-direction: column; gap: 14px; min-width: 0; max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
 .mg-title { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #6b6b78; margin-bottom: 6px; }
 .mod-row { display: flex; align-items: center; gap: 12px; background: rgba(9,10,16,.55); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 11px 14px; margin-bottom: 6px; cursor: pointer; contain: content; }
 .mod-row:hover { border-color: rgba(232,197,106,.25); }
@@ -1004,7 +1477,7 @@ onUnmounted(() => {
 .switch-track::before { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #EDE8DA; transition: transform .15s; }
 .switch input:checked + .switch-track { background: #7CCB6E; }
 .switch input:checked + .switch-track::before { transform: translateX(16px); }
-.mods-detail { padding: 18px; }
+.mods-detail { padding: 18px; position: sticky; top: 0; max-height: calc(100vh - 300px); overflow-y: auto; }
 .mods-detail h3 { font-family: var(--serif, Georgia, serif); color: var(--gold, #E8C56A); font-size: 16px; margin-bottom: 10px; }
 .md-row { display: flex; justify-content: space-between; font-size: 12px; color: #B9B4C6; margin-bottom: 6px; }
 .md-desc { font-size: 12.5px; color: #9A94A8; line-height: 1.55; margin-top: 10px; }
@@ -1012,7 +1485,7 @@ onUnmounted(() => {
 
 /* ===== Langues ===== */
 .lang-search { width: min(360px, 100%); margin-bottom: 14px; }
-.lang-list { display: flex; flex-direction: column; gap: 4px; max-width: 420px; }
+.lang-list { display: flex; flex-direction: column; gap: 4px; max-width: 420px; max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
 .lang-row { display: flex; align-items: center; justify-content: space-between; background: rgba(9,10,16,.5); border: 1px solid rgba(255,255,255,.06); border-radius: 9px; padding: 11px 14px; cursor: pointer; color: #C9C4D6; font-size: 13px; contain: content; }
 .lang-row:hover { border-color: rgba(232,197,106,.3); }
 .lang-row.active { color: var(--gold, #E8C56A); border-color: rgba(232,197,106,.45); background: rgba(232,197,106,.08); }
@@ -1020,6 +1493,8 @@ onUnmounted(() => {
 .lang-row.disabled:hover { border-color: rgba(255,255,255,.06); }
 .lang-soon { font-size: 9.5px; letter-spacing: .5px; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); color: #9A94A8; }
 .lang-check { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.lang-main { display: flex; align-items: center; gap: 10px; }
+.lang-flag { font-size: 16px; line-height: 1; }
 
 /* ===== Thèmes ===== */
 .themes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; max-width: 900px; }
@@ -1037,15 +1512,26 @@ onUnmounted(() => {
 .tc-badge { position: absolute; top: 10px; right: 10px; background: rgba(124,203,110,.2); color: #7CCB6E; font-size: 10px; padding: 2px 8px; border-radius: 999px; }
 
 /* ===== Paramètres ===== */
-.set-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; max-width: 1000px; }
+.set-search { width: min(420px, 100%); margin-bottom: 14px; }
+.set-body { display: flex; gap: 18px; align-items: flex-start; max-width: 1200px; }
+.set-cats { width: 190px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; padding: 10px; max-height: calc(100vh - 300px); overflow-y: auto; }
+.set-cat { text-align: left; background: rgba(9,10,16,.5); border: 1px solid rgba(255,255,255,.06); color: #B9B4C6; border-radius: 9px; padding: 10px 12px; cursor: pointer; font-size: 12.5px; contain: content; }
+.set-cat:hover { border-color: rgba(232,197,106,.3); }
+.set-cat.active { color: var(--gold, #E8C56A); background: rgba(232,197,106,.1); border-color: rgba(232,197,106,.4); }
+.set-panels { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; max-width: 760px; max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
 .set-block { padding: 18px 20px; }
 .set-block h3 { font-family: var(--serif, Georgia, serif); font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #CFC7B2; margin-bottom: 12px; }
-.set-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
-.set-row label { width: 110px; font-size: 13px; flex: 0 0 auto; }
-.set-row select, .set-row input[type=range] { flex: 1; }
+.set-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; flex-wrap: wrap; }
+.set-row label { min-width: 160px; flex: 1 1 160px; font-size: 13px; }
+.set-row select, .set-row input[type=range] { flex: 2 1 160px; min-width: 120px; }
 .set-row input[type=range] { accent-color: var(--gold-dark, #D4AF37); }
+.set-row-toggle { justify-content: space-between; }
 .set-val { width: 56px; text-align: right; color: var(--gold, #E8C56A); font-weight: 700; font-size: 13px; }
 .set-note { font-size: 11.5px; color: #8A85A0; margin-top: 6px; }
+.set-empty { color: #8A85A0; font-size: 13px; padding: 20px 0; }
+.set-themes { margin-top: 10px; }
+.set-themes-label { display: block; font-size: 13px; color: #CFC7B2; margin-bottom: 10px; }
+.themes-grid-mini { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
 
 /* ===== Overlay de lancement ===== */
 .launch-ov { position: fixed; inset: 0; z-index: 500; display: grid; place-items: center; }
@@ -1063,6 +1549,7 @@ onUnmounted(() => {
 .lo-error-ic { font-size: 30px; color: #E05555; }
 .lo-error-title { font-family: var(--serif, Georgia, serif); font-size: 16px; color: #E58A8A; }
 .lo-error-msg { font-size: 12.5px; color: #C9A0A0; max-width: 440px; word-break: break-word; }
+.lo-error-hint { font-size: 12px; color: #CFC7B2; max-width: 440px; margin-top: 2px; }
 .lo-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .lo-logs { width: 100%; background: #0A0B11; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; overflow: hidden; }
 .lo-logs-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.08); color: #EDE8DA; font-size: 12.5px; }
@@ -1079,6 +1566,9 @@ onUnmounted(() => {
 .toast { position: fixed; bottom: 26px; left: 50%; transform: translate(-50%,12px); z-index: 600; opacity: 0; pointer-events: none; transition: .2s; background: #0A0B11; color: #EDE8DA; border: 1px solid var(--gold, #E8C56A); border-radius: 10px; padding: 11px 20px; font-size: 13px; }
 .toast.show { opacity: 1; transform: translate(-50%,0); }
 
+/* ===== Accessibilité ===== */
+button:focus-visible, .side-item:focus-visible, .acct-chip:focus-visible, .bell-chip:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid rgba(232,197,106,.65); outline-offset: 2px; border-radius: 6px; }
+
 /* ===== Responsive ===== */
 @media (max-width: 980px) {
   .sidebar { width: 62px; }
@@ -1088,13 +1578,25 @@ onUnmounted(() => {
   .topbar { height: 64px; }
   .acct-head-3d { width: 40px; height: 40px; }
   .acct-pop { top: 60px; }
+  .notif-pop { top: 56px; width: 280px; }
+  .bell-chip { width: 36px; height: 36px; }
 }
 @media (max-width: 620px) {
   .acct-name { display: none; }
+  .notif-pop { width: min(88vw, 320px); }
 }
 @media (max-width: 1100px) {
   .cos-body { grid-template-columns: 130px 1fr; }
   .cos-preview { display: none; }
   .cos-viewer { width: 150px; height: 220px; }
+}
+@media (max-width: 900px) {
+  .set-body { flex-direction: column; }
+  .set-cats { width: 100%; flex-direction: row; flex-wrap: wrap; max-height: none; }
+  .set-panels { max-height: none; max-width: none; }
+}
+@media (max-width: 700px) {
+  .cos-controls { flex-direction: column; align-items: stretch; }
+  .cos-controls .ipt, .cos-controls select { width: 100%; }
 }
 </style>
