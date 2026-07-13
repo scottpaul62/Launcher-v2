@@ -39,7 +39,7 @@ public class HWTitleScreen extends Screen {
         this.addDrawableChild(new HWButton(dockX + 3 * (itemW + gap), dockY, itemW, dockH, Text.literal("Options"), HWButton.DOCK, 4,
             b -> this.client.setScreen(new OptionsScreen(this, this.client.options))));
         this.addDrawableChild(new HWButton(dockX + 4 * (itemW + gap), dockY, itemW, dockH, Text.literal("Paramètres"), HWButton.DOCK, 5,
-            b -> this.client.setScreen(new HWSoonScreen(this, "Paramètres du client", "Réglages du client HERO WORLD (performance, HUD, raccourcis) — bientôt."))));
+            b -> this.client.setScreen(new HWClientSettings(this))));
     }
 
     private void connect() {

@@ -274,7 +274,6 @@ function setTheme (id) {
 const navItems = [
   { id: 'accueil', icon: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z' },
   { id: 'actus', icon: 'M4 11h9v2H4zM4 7h13v2H4zM4 15h6v2H4zM19 5H2v14h17a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z' },
-  { id: 'cosmetiques', icon: 'M12 2l2.4 3.6L18 4l-.6 3.9L21 10l-3.6 1.4L18 15l-3.9-.6L12 18l-2.1-3.6L6 15l.6-3.9L3 10l3.6-1.4L6 4l3.9 1.6z' },
   { id: 'amis', icon: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z' },
   { id: 'mods', icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
   { id: 'langues', icon: 'M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm7.94 9h-3.05a15.7 15.7 0 0 0-1.32-5.47A8.03 8.03 0 0 1 19.94 11zM12 4.06c.98 1.4 1.72 3.24 2.02 5.94H9.98c.3-2.7 1.04-4.54 2.02-5.94zM4.06 13h3.05c.16 2.05.62 3.9 1.32 5.47A8.03 8.03 0 0 1 4.06 13zm3.05-2H4.06a8.03 8.03 0 0 1 4.37-5.47A15.7 15.7 0 0 0 7.11 11zM12 19.94c-.98-1.4-1.72-3.24-2.02-5.94h4.04c-.3 2.7-1.04 4.54-2.02 5.94zm2.63-1.47c.7-1.57 1.16-3.42 1.32-5.47h3.05a8.03 8.03 0 0 1-4.37 5.47z' },
@@ -586,15 +585,13 @@ const languagesFiltered = computed(() => {
 
 /* ===================== Paramètres (catégories + recherche) ===================== */
 const settingsCategories = [
-  { id: 'compte', key: 'settings.cat.compte' },
   { id: 'jeu', key: 'settings.cat.jeu' },
   { id: 'launcher', key: 'settings.cat.launcher' },
   { id: 'apropos', key: 'settings.cat.apropos' }
 ]
-const settingsSelectedCat = ref('compte')
+const settingsSelectedCat = ref('jeu')
 const settingsSearch = ref('')
 const settingsFieldIndex = [
-  { cat: 'compte', labelKey: 'settings.accountTitle' }, { cat: 'compte', labelKey: 'settings.connectedAs' },
   { cat: 'jeu', labelKey: 'settings.memoryTitle' }, { cat: 'jeu', labelKey: 'settings.ramLabel' },
   { cat: 'jeu', labelKey: 'settings.displayTitle' }, { cat: 'jeu', labelKey: 'settings.resolutionLabel' },
   { cat: 'jeu', labelKey: 'settings.folderTitle' }, { cat: 'jeu', labelKey: 'settings.javaTitle' },
@@ -822,7 +819,7 @@ onUnmounted(() => {
             <transition name="pop">
               <div v-if="acctOpen" class="acct-pop" @click.stop>
                 <div class="ap-head">
-                  <img class="ap-head" :src="`https://mc-heads.net/avatar/${CONFIG.uuid || CONFIG.pseudo}/100`" alt="" draggable="false" @click="toggleAcct" />
+                  <img class="ap-head-img" :src="`https://mc-heads.net/avatar/${CONFIG.uuid || CONFIG.pseudo}/100`" alt="" draggable="false" @click="toggleAcct" />
                   <div class="ap-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</div>
                   <div class="ap-status" :class="{ on: account.online }"><i></i>{{ account.online ? t('account.online') : t('account.offline') }}</div>
                 </div>
@@ -1052,7 +1049,7 @@ onUnmounted(() => {
             <input class="ipt lang-search" type="text" v-model="langSearch" :placeholder="t('langues.searchPlaceholder')" />
             <div class="lang-list">
               <button v-for="l in languagesFiltered" :key="l.code" class="lang-row" :class="{ active: lang === l.code, disabled: !l.enabled }" :disabled="!l.enabled" @click="l.enabled && setLang(l.code)">
-                <span class="lang-chip">{{ l.region }}</span>
+                <span class="lang-flag" :class="'flag-' + l.code" :title="l.region"></span>
                 <span class="lang-name">{{ l.name }}</span>
                 <span class="lang-right">
                   <span v-if="!l.enabled" class="lang-soon">{{ t('common.comingSoon') }}</span>
@@ -1073,17 +1070,6 @@ onUnmounted(() => {
             </aside>
 
             <div class="set-panels">
-              <div v-if="catVisible('compte')" class="panel set-block">
-                <h3>{{ t('settings.accountTitle') }}</h3>
-                <div v-show="fieldVisible('settings.connectedAs', 'compte')" class="set-row">
-                  <label>{{ t('settings.accountTitle') }}<span class="set-hint">{{ t('settings.connectedAs').replace('{name}', CONFIG.pseudo) }}</span></label>
-                  <div class="set-control">
-                    <button v-if="account.online" class="btn-sm danger" @click="logout">{{ t('settings.logoutBtn') }}</button>
-                    <button v-else class="btn-sm" @click="login">{{ t('settings.loginBtn') }}</button>
-                  </div>
-                </div>
-              </div>
-
               <div v-if="catVisible('jeu')" class="panel set-block">
                 <h3>{{ t('settings.cat.jeu') }}</h3>
                 <div v-show="fieldVisible('settings.ramLabel', 'jeu')" class="set-row">
@@ -1308,7 +1294,7 @@ onUnmounted(() => {
 /* Live 3D character bust used as the account-chip trigger (replaces the old flat head PNG) */
 .acct-head-3d { width: 54px; height: 54px; flex: 0 0 auto; border-radius: 10px; overflow: hidden; background: radial-gradient(ellipse at 50% 30%, rgba(232,197,106,.1), transparent 72%); }
 .acct-pop { position: absolute; top: 74px; right: 0; width: 250px; z-index: 90; background: rgba(10,11,17,.96); border: 1px solid rgba(232,197,106,.35); border-radius: 12px; padding: 8px; box-shadow: 0 18px 44px rgba(0,0,0,.6); backdrop-filter: blur(14px); cursor: default; }
-.ap-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px 14px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 6px; }
+.ap-head { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 10px 14px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 6px; }
 /* Larger 3D preview inside the open profile panel (the "profile card") */
 .ap-head-3d { width: 128px; height: 148px; border-radius: 12px; overflow: hidden; margin-bottom: 8px; background: radial-gradient(ellipse at 50% 26%, rgba(232,197,106,.12), transparent 72%); }
 .ap-name { font-family: var(--serif, Georgia, serif); font-weight: 700; font-size: 15px; }
@@ -1405,7 +1391,7 @@ onUnmounted(() => {
 .cos-body-img { width: 120px; image-rendering: pixelated; filter: drop-shadow(0 10px 20px rgba(0,0,0,.5)); }
 .cos-viewer { width: 200px; height: 260px; margin: 0 auto; flex: 0 0 auto; }
 .acct-head { width: 38px; height: 38px; border-radius: 8px; image-rendering: pixelated; flex: 0 0 auto; }
-.ap-head { width: 96px; height: 96px; border-radius: 10px; image-rendering: pixelated; cursor: pointer; align-self: center; }
+.ap-head-img { width: 64px; height: 64px; border-radius: 10px; image-rendering: pixelated; cursor: pointer; align-self: center; display: block; }
 .cos-preview-name { font-weight: 700; font-size: 14px; margin-top: 4px; }
 .cos-preview-sub { font-size: 11.5px; color: #8A85A0; }
 .cos-equipped-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 8px; }
@@ -1494,8 +1480,21 @@ onUnmounted(() => {
 .lang-row.active { border-color: rgba(232,197,106,.65); background: linear-gradient(180deg, rgba(232,197,106,.18), rgba(232,197,106,.05)); box-shadow: inset 0 0 0 1px rgba(232,197,106,.25), 0 6px 18px rgba(0,0,0,.35); }
 .lang-row.disabled { opacity: .42; cursor: not-allowed; }
 .lang-row.disabled:hover { border-color: rgba(255,255,255,.07); transform: none; }
-.lang-chip { flex: 0 0 auto; min-width: 38px; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .5px; color: var(--gold, #E8C56A); background: rgba(232,197,106,.14); border: 1px solid rgba(232,197,106,.3); border-radius: 7px; padding: 5px 8px; }
-.lang-row.active .lang-chip { background: rgba(232,197,106,.3); border-color: rgba(232,197,106,.6); }
+.lang-flag { position: relative; flex: 0 0 auto; display: inline-block; width: 22px; height: 15px; border-radius: 3px; overflow: hidden; background-repeat: no-repeat; box-shadow: 0 0 0 1px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.08); }
+.lang-row.active .lang-flag { box-shadow: 0 0 0 1px rgba(232,197,106,.6), inset 0 0 0 1px rgba(255,255,255,.12); }
+.flag-fr { background-image: linear-gradient(90deg, #0055A4 0 33.33%, #FFFFFF 33.33% 66.66%, #EF4135 66.66% 100%); }
+.flag-en { background-color: #00247D; background-image: linear-gradient(#fff,#fff), linear-gradient(#fff,#fff), linear-gradient(#CF142B,#CF142B), linear-gradient(#CF142B,#CF142B); background-size: 100% 5px, 6px 100%, 100% 3px, 4px 100%; background-position: center, center, center, center; }
+.flag-es { background-image: linear-gradient(180deg, #AA151B 0 25%, #F1BF00 25% 75%, #AA151B 75% 100%); }
+.flag-de { background-image: linear-gradient(180deg, #000000 0 33.33%, #DD0000 33.33% 66.66%, #FFCE00 66.66% 100%); }
+.flag-it { background-image: linear-gradient(90deg, #009246 0 33.33%, #FFFFFF 33.33% 66.66%, #CE2B37 66.66% 100%); }
+.flag-pt { background-image: linear-gradient(90deg, #046A38 0 40%, #DA291C 40% 100%); }
+.flag-nl { background-image: linear-gradient(180deg, #AE1C28 0 33.33%, #FFFFFF 33.33% 66.66%, #21468B 66.66% 100%); }
+.flag-pl { background-image: linear-gradient(180deg, #FFFFFF 0 50%, #DC143C 50% 100%); }
+.flag-ru { background-image: linear-gradient(180deg, #FFFFFF 0 33.33%, #0039A6 33.33% 66.66%, #D52B1E 66.66% 100%); }
+.flag-ja { background-color: #fff; background-image: radial-gradient(circle at 50% 50%, #BC002D 0 32%, transparent 33%); }
+.flag-zh { background-color: #DE2910; background-image: radial-gradient(circle at 28% 30%, #FFDE00 0 22%, transparent 23%); }
+.flag-ko { background-color: #fff; }
+.flag-ko::after { content: ''; position: absolute; inset: 0; margin: auto; width: 9px; height: 9px; border-radius: 50%; background: conic-gradient(#CD2E3A 0deg 180deg, #0047A0 180deg 360deg); }
 .lang-name { flex: 1; font-weight: 600; color: #EDE8DA; letter-spacing: .2px; }
 .lang-row.active .lang-name { color: #FBEBB8; }
 .lang-right { flex: 0 0 auto; display: flex; align-items: center; }
@@ -1503,7 +1502,9 @@ onUnmounted(() => {
 .lang-check { width: 18px; height: 18px; fill: none; stroke: var(--gold, #E8C56A); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ===== Paramètres ===== */
-.set-search { width: min(420px, 100%); margin-bottom: 14px; }
+.pg-settings { margin-top: -12px; }
+.pg-settings .pg-head { margin-bottom: 10px; }
+.set-search { width: min(420px, 100%); margin-bottom: 12px; }
 .set-body { display: flex; gap: 18px; align-items: flex-start; max-width: 1100px; }
 .set-cats { width: 190px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; padding: 10px; max-height: calc(100vh - 300px); overflow-y: auto; }
 .set-cat { text-align: left; background: rgba(9,10,16,.5); border: 1px solid rgba(255,255,255,.06); color: #B9B4C6; border-radius: 9px; padding: 10px 12px; cursor: pointer; font-size: 12.5px; contain: content; }
@@ -1520,7 +1521,7 @@ onUnmounted(() => {
 .set-control { flex: 1 1 200px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 140px; }
 .set-control select, .set-control input[type=range] { flex: 1; min-width: 120px; }
 .set-control input[type=range] { accent-color: var(--gold-dark, #D4AF37); }
-.set-row-stack { flex-direction: column; align-items: stretch; }
+.set-row-stack { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 8px; }
 .set-row-stack label { margin-bottom: 2px; }
 .set-row-toggle { justify-content: space-between; }
 .set-val { width: 56px; text-align: right; color: var(--gold, #E8C56A); font-weight: 700; font-size: 13px; flex: 0 0 auto; }
