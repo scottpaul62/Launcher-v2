@@ -35,5 +35,8 @@ public class HWSoonScreen extends Screen {
 
     public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
 
+    @Override
+    public void close() { this.client.setScreen(parent != null ? parent : new HWTitleScreen()); }
+
     @Override public boolean shouldPause() { return false; }
 }

@@ -4,6 +4,7 @@ import logo from './assets/logo.png'
 import planet from './assets/planet.png'
 import sky from './assets/sky.jpg'
 import comet from './assets/comet.png'
+import CharacterViewer from './components/CharacterViewer.vue'
 
 /* ===================== Traceability helper ===================== */
 function ulog (msg) { try { if (window.hw && window.hw.uiLog) window.hw.uiLog(msg) } catch (_) {} }
@@ -543,15 +544,13 @@ onUnmounted(() => {
         <div class="acct-chip" :class="{ open: acctOpen }" @click="toggleAcct">
           <span class="acct-dot" :class="{ on: account.online }"></span>
           <span class="acct-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</span>
-          <img class="acct-head" :src="headSrc" draggable="false" alt="" />
+          <img class="acct-head" :src="`https://mc-heads.net/avatar/${CONFIG.uuid || CONFIG.pseudo}/64`" alt="" draggable="false" />
           <transition name="pop">
             <div v-if="acctOpen" class="acct-pop" @click.stop>
               <div class="ap-head">
-                <img :src="headSrc" alt="" />
-                <div>
-                  <div class="ap-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</div>
-                  <div class="ap-status" :class="{ on: account.online }"><i></i>{{ account.online ? t('account.online') : t('account.offline') }}</div>
-                </div>
+                <img class="ap-head" :src="`https://mc-heads.net/avatar/${CONFIG.uuid || CONFIG.pseudo}/100`" alt="" draggable="false" @click="toggleAcct" />
+                <div class="ap-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</div>
+                <div class="ap-status" :class="{ on: account.online }"><i></i>{{ account.online ? t('account.online') : t('account.offline') }}</div>
               </div>
               <button v-if="!account.online" class="ap-item login" @click="login">{{ t('account.loginMs') }}</button>
               <template v-else>
@@ -633,7 +632,7 @@ onUnmounted(() => {
               <button v-for="c in cosmeticCategories" :key="c" class="cos-cat" :class="{ active: cosCategory === c }" @click="cosCategory = c">{{ c }}</button>
             </aside>
             <div class="cos-preview panel">
-              <img :src="bodySrc" alt="Aperçu du skin" class="cos-body-img" draggable="false" />
+              <div class="cos-viewer"><CharacterViewer :name="CONFIG.uuid || CONFIG.pseudo" :size="200" /></div>
               <div class="cos-preview-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</div>
               <div class="cos-preview-sub">{{ t('cosmetics.previewSub') }}</div>
             </div>
@@ -861,17 +860,19 @@ onUnmounted(() => {
 
 /* ===== Zone principale / compte ===== */
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
-.topbar { height: 58px; flex: 0 0 auto; display: flex; align-items: center; padding: 0 clamp(16px, 2vw, 32px); gap: 16px; border-bottom: 1px solid rgba(255,255,255,.06); background: rgba(7,7,12,.28); }
+.topbar { height: 78px; flex: 0 0 auto; display: flex; align-items: center; padding: 0 clamp(16px, 2vw, 32px); gap: 16px; border-bottom: 1px solid rgba(255,255,255,.06); background: rgba(7,7,12,.28); }
 .tb-crumb { font-family: var(--serif, Georgia, serif); font-size: 15px; letter-spacing: 1px; color: #CFC7B2; }
-.acct-chip { position: relative; margin-left: auto; display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 14px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); cursor: pointer; transition: background .15s, border-color .15s; }
+.acct-chip { position: relative; margin-left: auto; display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 16px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); cursor: pointer; transition: background .15s, border-color .15s; }
 .acct-chip:hover, .acct-chip.open { background: rgba(232,197,106,.1); border-color: rgba(232,197,106,.3); }
 .acct-dot { width: 8px; height: 8px; border-radius: 50%; background: #6b6b78; }
 .acct-dot.on { background: #7CCB6E; box-shadow: 0 0 7px #7CCB6E; }
 .acct-name { font-weight: 700; font-size: 13.5px; }
-.acct-head { width: 32px; height: 32px; image-rendering: pixelated; border-radius: 6px; }
-.acct-pop { position: absolute; top: 52px; right: 0; width: 250px; z-index: 90; background: rgba(10,11,17,.96); border: 1px solid rgba(232,197,106,.35); border-radius: 12px; padding: 8px; box-shadow: 0 18px 44px rgba(0,0,0,.6); backdrop-filter: blur(14px); cursor: default; }
-.ap-head { display: flex; align-items: center; gap: 10px; padding: 8px 8px 12px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 6px; }
-.ap-head img { width: 40px; height: 40px; image-rendering: pixelated; border-radius: 8px; }
+/* Live 3D character bust used as the account-chip trigger (replaces the old flat head PNG) */
+.acct-head-3d { width: 54px; height: 54px; flex: 0 0 auto; border-radius: 10px; overflow: hidden; background: radial-gradient(ellipse at 50% 30%, rgba(232,197,106,.1), transparent 72%); }
+.acct-pop { position: absolute; top: 74px; right: 0; width: 250px; z-index: 90; background: rgba(10,11,17,.96); border: 1px solid rgba(232,197,106,.35); border-radius: 12px; padding: 8px; box-shadow: 0 18px 44px rgba(0,0,0,.6); backdrop-filter: blur(14px); cursor: default; }
+.ap-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px 14px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 6px; }
+/* Larger 3D preview inside the open profile panel (the "profile card") */
+.ap-head-3d { width: 128px; height: 148px; border-radius: 12px; overflow: hidden; margin-bottom: 8px; background: radial-gradient(ellipse at 50% 26%, rgba(232,197,106,.12), transparent 72%); }
 .ap-name { font-family: var(--serif, Georgia, serif); font-weight: 700; font-size: 15px; }
 .ap-status { font-size: 11px; color: #9A94A8; display: flex; align-items: center; gap: 6px; }
 .ap-status i { width: 7px; height: 7px; border-radius: 50%; background: #6b6b78; }
@@ -958,6 +959,9 @@ onUnmounted(() => {
 .cos-cat.active { color: var(--gold, #E8C56A); background: rgba(232,197,106,.1); border-color: rgba(232,197,106,.4); }
 .cos-preview { padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
 .cos-body-img { width: 120px; image-rendering: pixelated; filter: drop-shadow(0 10px 20px rgba(0,0,0,.5)); }
+.cos-viewer { width: 200px; height: 300px; margin: 0 auto; }
+.acct-head { width: 38px; height: 38px; border-radius: 8px; image-rendering: pixelated; flex: 0 0 auto; }
+.ap-head { width: 96px; height: 96px; border-radius: 10px; image-rendering: pixelated; cursor: pointer; align-self: center; }
 .cos-preview-name { font-weight: 700; font-size: 14px; margin-top: 4px; }
 .cos-preview-sub { font-size: 11.5px; color: #8A85A0; }
 .cos-grid-wrap { min-width: 0; }
@@ -1081,18 +1085,16 @@ onUnmounted(() => {
   .side-nav { padding: 0 6px; }
   .side-item { justify-content: center; padding: 12px 6px; gap: 0; }
   .side-label { display: none; }
+  .topbar { height: 64px; }
+  .acct-head-3d { width: 40px; height: 40px; }
+  .acct-pop { top: 60px; }
+}
+@media (max-width: 620px) {
+  .acct-name { display: none; }
 }
 @media (max-width: 1100px) {
   .cos-body { grid-template-columns: 130px 1fr; }
   .cos-preview { display: none; }
-  .mods-body { grid-template-columns: 1fr; }
-  .mods-detail { display: none; }
-}
-@media (max-width: 900px) {
-  .actus-body { flex-direction: column; }
-  .actus-list { width: 100%; flex-direction: row; overflow-x: auto; }
-}
-@media (min-width: 1500px) {
-  .content { padding: 44px 56px; }
+  .cos-viewer { width: 150px; height: 220px; }
 }
 </style>
