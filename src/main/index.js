@@ -25,9 +25,11 @@ const MIRROR_LOG = 'C:\\Users\\scott\\OneDrive\\Bureau\\Serveur + IA\\HeroWorld-
 
 function createWindow () {
   win = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    resizable: false,
+    width: 1500,
+    height: 860,
+    minWidth: 1100,
+    minHeight: 680,
+    resizable: true,
     maximizable: true,
     fullscreenable: true,
     frame: false,
@@ -451,7 +453,14 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
       launcherBrand: 'HeroesWorld',
       extraExecOption: { cwd: root }
     }
-    try { const args = await core.generateArguments(launchOpt); console.log('[MC] COMMANDE: ' + args.join(' ')) } catch (ge) { console.log('[MC] generateArguments: ' + String(ge)) }
+    try {
+      const args = await core.generateArguments(launchOpt)
+      // Masque les données sensibles avant de journaliser (token Microsoft, uuid).
+      const safe = args.join(' ')
+        .replace(/(--accessToken\s+)\S+/gi, '$1***MASQUE***')
+        .replace(/(--uuid\s+)\S+/gi, '$1***')
+      console.log('[MC] COMMANDE: ' + safe)
+    } catch (ge) { console.log('[MC] generateArguments: ' + String(ge)) }
     const proc = await core.launch(launchOpt)
     let tail = ''
     const cap = (buf) => { try { tail = (tail + buf.toString()).slice(-4000); console.log('[MC:game]', buf.toString().trim()) } catch (_) {} }

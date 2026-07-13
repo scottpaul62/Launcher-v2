@@ -30,7 +30,7 @@ const settings = reactive(Object.assign(
   {
     ram: 4, res: '1920 × 1080', dir: '%APPDATA%/.heroesworld', java: '',
     updateFreq: 'auto', autoDownload: true, minimizeOnLaunch: true,
-    notifEnabled: true, animations: true, bgQuality: 'high', fpsLimit: '60'
+    notifEnabled: true, animations: true
   },
   JSON.parse(localStorage.getItem('hwSettings') || '{}')
 ))
@@ -81,6 +81,8 @@ const messages = {
     'friends.subtitle': 'Ta liste d\'amis HEROES-WORLD.', 'friends.tabOnline': 'En ligne', 'friends.tabOffline': 'Hors ligne',
     'friends.tabRequests': 'Demandes', 'friends.emptyTitle': 'Aucun ami pour le moment.',
     'friends.emptySub': "La liste d'amis sera disponible avec l'hébergement du serveur HEROES-WORLD.",
+    'friends.addPlaceholder': 'Pseudo…', 'friends.addBtn': 'Ajouter',
+    'friends.addSent': "Demande d'ami envoyée (bientôt disponible)", 'friends.searchPlaceholder': 'Rechercher un joueur…',
     'mods.subtitle': 'Fabric 0.19.3 · Minecraft 1.20.6', 'mods.searchPlaceholder': 'Rechercher un mod…',
     'mods.openFolderBtn': 'Ouvrir le dossier des mods', 'mods.restartHint': 'Redémarrage du launcher requis pour appliquer les changements.',
     'mods.groupClient': 'Client', 'mods.groupMinecraft': 'Minecraft', 'mods.groupLibraries': 'Bibliothèques',
@@ -103,7 +105,7 @@ const messages = {
     'settings.loginBtn': 'Se connecter', 'settings.launcherTitle': 'Launcher', 'settings.versionLabel': 'Version {v}',
     'settings.checkUpdateBtn': 'Vérifier les mises à jour',
     'settings.searchPlaceholder': 'Rechercher un réglage…',
-    'settings.cat.compte': 'Compte', 'settings.cat.minecraft': 'Minecraft', 'settings.cat.java': 'Java',
+    'settings.cat.compte': 'Compte', 'settings.cat.jeu': 'Jeu', 'settings.cat.minecraft': 'Minecraft', 'settings.cat.java': 'Java',
     'settings.cat.launcher': 'Launcher', 'settings.cat.notifications': 'Notifications', 'settings.cat.apparence': 'Apparence',
     'settings.cat.performances': 'Performances', 'settings.cat.apropos': 'À propos',
     'settings.updateFreqLabel': 'Fréquence des mises à jour', 'settings.updateFreqAuto': 'Automatique',
@@ -176,6 +178,8 @@ const messages = {
     'friends.subtitle': 'Your HEROES-WORLD friends list.', 'friends.tabOnline': 'Online', 'friends.tabOffline': 'Offline',
     'friends.tabRequests': 'Requests', 'friends.emptyTitle': 'No friends yet.',
     'friends.emptySub': 'The friends list will be available once the HEROES-WORLD server is hosted.',
+    'friends.addPlaceholder': 'Username…', 'friends.addBtn': 'Add',
+    'friends.addSent': 'Friend request sent (coming soon)', 'friends.searchPlaceholder': 'Search a player…',
     'mods.subtitle': 'Fabric 0.19.3 · Minecraft 1.20.6', 'mods.searchPlaceholder': 'Search a mod…',
     'mods.openFolderBtn': 'Open mods folder', 'mods.restartHint': 'Restart the launcher to apply the changes.',
     'mods.groupClient': 'Client', 'mods.groupMinecraft': 'Minecraft', 'mods.groupLibraries': 'Libraries',
@@ -198,7 +202,7 @@ const messages = {
     'settings.loginBtn': 'Log in', 'settings.launcherTitle': 'Launcher', 'settings.versionLabel': 'Version {v}',
     'settings.checkUpdateBtn': 'Check for updates',
     'settings.searchPlaceholder': 'Search a setting…',
-    'settings.cat.compte': 'Account', 'settings.cat.minecraft': 'Minecraft', 'settings.cat.java': 'Java',
+    'settings.cat.compte': 'Account', 'settings.cat.jeu': 'Game', 'settings.cat.minecraft': 'Minecraft', 'settings.cat.java': 'Java',
     'settings.cat.launcher': 'Launcher', 'settings.cat.notifications': 'Notifications', 'settings.cat.apparence': 'Appearance',
     'settings.cat.performances': 'Performance', 'settings.cat.apropos': 'About',
     'settings.updateFreqLabel': 'Update frequency', 'settings.updateFreqAuto': 'Automatic',
@@ -554,47 +558,49 @@ const cosItemsFiltered = computed(() => {
 
 /* ===================== Amis (aucune donnée fictive) ===================== */
 const friendsTab = ref('online')
+const friendAddName = ref('')
+const friendSearch = ref('')
+function addFriend () {
+  const name = friendAddName.value.trim()
+  if (!name) return
+  toast(t('friends.addSent'))
+  ulog('add friend -> ' + name)
+  friendAddName.value = ''
+}
 
 /* ===================== Langues ===================== */
 const languages = [
-  { code: 'fr', name: 'Français', flag: '🇫🇷', enabled: true }, { code: 'en', name: 'English', flag: '🇬🇧', enabled: true },
-  { code: 'es', name: 'Español', flag: '🇪🇸', enabled: false }, { code: 'de', name: 'Deutsch', flag: '🇩🇪', enabled: false },
-  { code: 'it', name: 'Italiano', flag: '🇮🇹', enabled: false }, { code: 'pt', name: 'Português', flag: '🇵🇹', enabled: false },
-  { code: 'nl', name: 'Nederlands', flag: '🇳🇱', enabled: false }, { code: 'pl', name: 'Polski', flag: '🇵🇱', enabled: false },
-  { code: 'ru', name: 'Русский', flag: '🇷🇺', enabled: false }, { code: 'ja', name: '日本語', flag: '🇯🇵', enabled: false },
-  { code: 'zh', name: '简体中文', flag: '🇨🇳', enabled: false }, { code: 'ko', name: '한국어', flag: '🇰🇷', enabled: false }
+  { code: 'fr', name: 'Français', region: 'FR', enabled: true }, { code: 'en', name: 'English', region: 'GB', enabled: true },
+  { code: 'es', name: 'Español', region: 'ES', enabled: false }, { code: 'de', name: 'Deutsch', region: 'DE', enabled: false },
+  { code: 'it', name: 'Italiano', region: 'IT', enabled: false }, { code: 'pt', name: 'Português', region: 'PT', enabled: false },
+  { code: 'nl', name: 'Nederlands', region: 'NL', enabled: false }, { code: 'pl', name: 'Polski', region: 'PL', enabled: false },
+  { code: 'ru', name: 'Русский', region: 'RU', enabled: false }, { code: 'ja', name: '日本語', region: 'JP', enabled: false },
+  { code: 'zh', name: '简体中文', region: 'CN', enabled: false }, { code: 'ko', name: '한국어', region: 'KR', enabled: false }
 ]
 const langSearch = ref('')
 const languagesFiltered = computed(() => {
   const q = langSearch.value.trim().toLowerCase()
-  return q ? languages.filter(l => l.name.toLowerCase().includes(q)) : languages
+  if (!q) return languages
+  return languages.filter(l => l.name.toLowerCase().includes(q) || l.code.includes(q) || (l.region || '').toLowerCase().includes(q))
 })
 
 /* ===================== Paramètres (catégories + recherche) ===================== */
 const settingsCategories = [
   { id: 'compte', key: 'settings.cat.compte' },
-  { id: 'minecraft', key: 'settings.cat.minecraft' },
-  { id: 'java', key: 'settings.cat.java' },
+  { id: 'jeu', key: 'settings.cat.jeu' },
   { id: 'launcher', key: 'settings.cat.launcher' },
-  { id: 'notifications', key: 'settings.cat.notifications' },
-  { id: 'apparence', key: 'settings.cat.apparence' },
-  { id: 'performances', key: 'settings.cat.performances' },
   { id: 'apropos', key: 'settings.cat.apropos' }
 ]
 const settingsSelectedCat = ref('compte')
 const settingsSearch = ref('')
 const settingsFieldIndex = [
   { cat: 'compte', labelKey: 'settings.accountTitle' }, { cat: 'compte', labelKey: 'settings.connectedAs' },
-  { cat: 'minecraft', labelKey: 'settings.memoryTitle' }, { cat: 'minecraft', labelKey: 'settings.ramLabel' },
-  { cat: 'minecraft', labelKey: 'settings.displayTitle' }, { cat: 'minecraft', labelKey: 'settings.resolutionLabel' },
-  { cat: 'minecraft', labelKey: 'settings.folderTitle' },
-  { cat: 'java', labelKey: 'settings.javaTitle' },
+  { cat: 'jeu', labelKey: 'settings.memoryTitle' }, { cat: 'jeu', labelKey: 'settings.ramLabel' },
+  { cat: 'jeu', labelKey: 'settings.displayTitle' }, { cat: 'jeu', labelKey: 'settings.resolutionLabel' },
+  { cat: 'jeu', labelKey: 'settings.folderTitle' }, { cat: 'jeu', labelKey: 'settings.javaTitle' },
   { cat: 'launcher', labelKey: 'settings.updateFreqLabel' }, { cat: 'launcher', labelKey: 'settings.autoDownloadLabel' },
-  { cat: 'launcher', labelKey: 'settings.minimizeOnLaunchLabel' },
-  { cat: 'notifications', labelKey: 'settings.notifEnabledLabel' },
-  { cat: 'apparence', labelKey: 'settings.animationsLabel' }, { cat: 'apparence', labelKey: 'settings.bgQualityLabel' },
-  { cat: 'apparence', labelKey: 'settings.themeTitle' },
-  { cat: 'performances', labelKey: 'settings.fpsLimitLabel' },
+  { cat: 'launcher', labelKey: 'settings.minimizeOnLaunchLabel' }, { cat: 'launcher', labelKey: 'settings.notifEnabledLabel' },
+  { cat: 'launcher', labelKey: 'settings.animationsLabel' },
   { cat: 'apropos', labelKey: 'settings.launcherTitle' }, { cat: 'apropos', labelKey: 'settings.checkUpdateBtn' },
   { cat: 'apropos', labelKey: 'settings.openFolderBtn' }
 ]
@@ -755,7 +761,7 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <div class="bg" :class="['theme-' + theme, 'bg-quality-' + settings.bgQuality, { switching: themeSwitching, 'anim-off': !settings.animations }]">
+  <div class="bg" :class="['theme-' + theme, { switching: themeSwitching, 'anim-off': !settings.animations }]">
     <div class="sky" :style="{ backgroundImage: `url(${sky})` }"></div>
     <div class="stars" :style="stars1"></div>
     <div class="stars s2" :style="stars2"></div>
@@ -982,11 +988,16 @@ onUnmounted(() => {
         <!-- AMIS -->
         <section v-else-if="page === 'amis'" class="pg">
           <div class="pg-head"><h1>{{ t('nav.amis') }}</h1><p>{{ t('friends.subtitle') }}</p></div>
+          <div class="friends-add panel">
+            <input class="ipt" type="text" v-model="friendAddName" :placeholder="t('friends.addPlaceholder')" @keyup.enter="addFriend" />
+            <button class="btn-sm" @click="addFriend">{{ t('friends.addBtn') }}</button>
+          </div>
           <div class="friends-tabs">
             <button :class="{ active: friendsTab === 'online' }" @click="friendsTab = 'online'">{{ t('friends.tabOnline') }}</button>
             <button :class="{ active: friendsTab === 'offline' }" @click="friendsTab = 'offline'">{{ t('friends.tabOffline') }}</button>
             <button :class="{ active: friendsTab === 'demandes' }" @click="friendsTab = 'demandes'">{{ t('friends.tabRequests') }}</button>
           </div>
+          <input class="ipt friends-search" type="text" v-model="friendSearch" :placeholder="t('friends.searchPlaceholder')" />
           <div class="friends-list">
             <div class="friends-empty panel">
               <p class="fe-title">{{ t('friends.emptyTitle') }}</p>
@@ -1037,13 +1048,18 @@ onUnmounted(() => {
         <!-- LANGUES -->
         <section v-else-if="page === 'langues'" class="pg">
           <div class="pg-head"><h1>{{ t('nav.langues') }}</h1><p>{{ t('langues.subtitle') }}</p></div>
-          <input class="ipt lang-search" type="text" v-model="langSearch" :placeholder="t('langues.searchPlaceholder')" />
-          <div class="lang-list">
-            <button v-for="l in languagesFiltered" :key="l.code" class="lang-row" :class="{ active: lang === l.code, disabled: !l.enabled }" :disabled="!l.enabled" @click="l.enabled && setLang(l.code)">
-              <span class="lang-main"><span class="lang-flag">{{ l.flag }}</span>{{ l.name }}</span>
-              <span v-if="!l.enabled" class="lang-soon">{{ t('common.comingSoon') }}</span>
-              <svg v-else-if="lang === l.code" class="lang-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
-            </button>
+          <div class="lang-wrap">
+            <input class="ipt lang-search" type="text" v-model="langSearch" :placeholder="t('langues.searchPlaceholder')" />
+            <div class="lang-list">
+              <button v-for="l in languagesFiltered" :key="l.code" class="lang-row" :class="{ active: lang === l.code, disabled: !l.enabled }" :disabled="!l.enabled" @click="l.enabled && setLang(l.code)">
+                <span class="lang-chip">{{ l.region }}</span>
+                <span class="lang-name">{{ l.name }}</span>
+                <span class="lang-right">
+                  <span v-if="!l.enabled" class="lang-soon">{{ t('common.comingSoon') }}</span>
+                  <svg v-else-if="lang === l.code" class="lang-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
+                </span>
+              </button>
+            </div>
           </div>
         </section>
 
@@ -1059,92 +1075,75 @@ onUnmounted(() => {
             <div class="set-panels">
               <div v-if="catVisible('compte')" class="panel set-block">
                 <h3>{{ t('settings.accountTitle') }}</h3>
-                <p v-show="fieldVisible('settings.connectedAs', 'compte')" class="set-note">{{ t('settings.connectedAs').replace('{name}', CONFIG.pseudo) }}</p>
-                <div class="set-row"><button v-if="account.online" class="btn-sm danger" @click="logout">{{ t('settings.logoutBtn') }}</button><button v-else class="btn-sm" @click="login">{{ t('settings.loginBtn') }}</button></div>
-              </div>
-
-              <div v-if="catVisible('minecraft')" class="panel set-block">
-                <h3>{{ t('settings.cat.minecraft') }}</h3>
-                <div v-show="fieldVisible('settings.ramLabel', 'minecraft')" class="set-row"><label>{{ t('settings.ramLabel') }}</label><input type="range" min="2" max="12" v-model.number="settings.ram" /><span class="set-val">{{ settings.ram }} {{ t('settings.ramUnit') }}</span></div>
-                <p v-show="fieldVisible('settings.ramLabel', 'minecraft')" class="set-note">{{ t('settings.ramNote') }}</p>
-                <div v-show="fieldVisible('settings.resolutionLabel', 'minecraft')" class="set-row"><label>{{ t('settings.resolutionLabel') }}</label>
-                  <select v-model="settings.res"><option>1920 × 1080</option><option>2560 × 1440</option><option>1600 × 900</option><option>1366 × 768</option></select>
-                </div>
-                <div v-show="fieldVisible('settings.folderTitle', 'minecraft')" class="set-row"><label>{{ t('settings.folderTitle') }}</label><input class="ipt full" type="text" v-model="settings.dir" spellcheck="false" /></div>
-                <div v-show="fieldVisible('settings.folderTitle', 'minecraft')" class="set-row"><button class="btn-sm ghost" @click="openGameFolderBtn">{{ t('settings.openFolderBtn') }}</button></div>
-              </div>
-
-              <div v-if="catVisible('java')" class="panel set-block">
-                <h3>{{ t('settings.javaTitle') }}</h3>
-                <div class="set-row"><input class="ipt full" type="text" v-model="settings.java" :placeholder="t('settings.javaPlaceholder')" spellcheck="false" /></div>
-              </div>
-
-              <div v-if="catVisible('launcher')" class="panel set-block">
-                <h3>{{ t('settings.cat.launcher') }}</h3>
-                <div v-show="fieldVisible('settings.updateFreqLabel', 'launcher')" class="set-row"><label>{{ t('settings.updateFreqLabel') }}</label>
-                  <select v-model="settings.updateFreq">
-                    <option value="auto">{{ t('settings.updateFreqAuto') }}</option>
-                    <option value="daily">{{ t('settings.updateFreqDaily') }}</option>
-                    <option value="manual">{{ t('settings.updateFreqManual') }}</option>
-                  </select>
-                </div>
-                <div v-show="fieldVisible('settings.autoDownloadLabel', 'launcher')" class="set-row set-row-toggle"><label>{{ t('settings.autoDownloadLabel') }}</label>
-                  <label class="switch"><input type="checkbox" v-model="settings.autoDownload" /><span class="switch-track"></span></label>
-                </div>
-                <div v-show="fieldVisible('settings.minimizeOnLaunchLabel', 'launcher')" class="set-row set-row-toggle"><label>{{ t('settings.minimizeOnLaunchLabel') }}</label>
-                  <label class="switch"><input type="checkbox" v-model="settings.minimizeOnLaunch" /><span class="switch-track"></span></label>
-                </div>
-              </div>
-
-              <div v-if="catVisible('notifications')" class="panel set-block">
-                <h3>{{ t('settings.cat.notifications') }}</h3>
-                <div v-show="fieldVisible('settings.notifEnabledLabel', 'notifications')" class="set-row set-row-toggle"><label>{{ t('settings.notifEnabledLabel') }}</label>
-                  <label class="switch"><input type="checkbox" v-model="settings.notifEnabled" /><span class="switch-track"></span></label>
-                </div>
-              </div>
-
-              <div v-if="catVisible('apparence')" class="panel set-block">
-                <h3>{{ t('settings.cat.apparence') }}</h3>
-                <div v-show="fieldVisible('settings.animationsLabel', 'apparence')" class="set-row set-row-toggle"><label>{{ t('settings.animationsLabel') }}</label>
-                  <label class="switch"><input type="checkbox" v-model="settings.animations" /><span class="switch-track"></span></label>
-                </div>
-                <div v-show="fieldVisible('settings.bgQualityLabel', 'apparence')" class="set-row"><label>{{ t('settings.bgQualityLabel') }}</label>
-                  <select v-model="settings.bgQuality">
-                    <option value="high">{{ t('settings.bgQualityHigh') }}</option>
-                    <option value="medium">{{ t('settings.bgQualityMedium') }}</option>
-                    <option value="low">{{ t('settings.bgQualityLow') }}</option>
-                  </select>
-                </div>
-                <div v-show="fieldVisible('settings.themeTitle', 'apparence')" class="set-themes">
-                  <label class="set-themes-label">{{ t('settings.themeTitle') }}</label>
-                  <div class="themes-grid-mini">
-                    <button v-for="th in themesList" :key="th.id" class="theme-card" :class="{ active: theme === th.id }" @click="setTheme(th.id)">
-                      <div class="tc-preview" :class="'prev-' + th.id"></div>
-                      <div class="tc-name">{{ t('theme.' + th.id + '.name') }}</div>
-                      <div class="tc-desc">{{ t('theme.' + th.id + '.desc') }}</div>
-                      <span v-if="theme === th.id" class="tc-badge">{{ t('themes.active') }}</span>
-                    </button>
+                <div v-show="fieldVisible('settings.connectedAs', 'compte')" class="set-row">
+                  <label>{{ t('settings.accountTitle') }}<span class="set-hint">{{ t('settings.connectedAs').replace('{name}', CONFIG.pseudo) }}</span></label>
+                  <div class="set-control">
+                    <button v-if="account.online" class="btn-sm danger" @click="logout">{{ t('settings.logoutBtn') }}</button>
+                    <button v-else class="btn-sm" @click="login">{{ t('settings.loginBtn') }}</button>
                   </div>
                 </div>
               </div>
 
-              <div v-if="catVisible('performances')" class="panel set-block">
-                <h3>{{ t('settings.cat.performances') }}</h3>
-                <div v-show="fieldVisible('settings.fpsLimitLabel', 'performances')" class="set-row"><label>{{ t('settings.fpsLimitLabel') }}</label>
-                  <select v-model="settings.fpsLimit">
-                    <option value="60">60</option>
-                    <option value="120">120</option>
-                    <option value="144">144</option>
-                    <option value="unlimited">{{ t('settings.fpsUnlimited') }}</option>
-                  </select>
+              <div v-if="catVisible('jeu')" class="panel set-block">
+                <h3>{{ t('settings.cat.jeu') }}</h3>
+                <div v-show="fieldVisible('settings.ramLabel', 'jeu')" class="set-row">
+                  <label>{{ t('settings.ramLabel') }}<span class="set-hint">{{ t('settings.ramNote') }}</span></label>
+                  <div class="set-control"><input type="range" min="2" max="12" v-model.number="settings.ram" /><span class="set-val">{{ settings.ram }} {{ t('settings.ramUnit') }}</span></div>
+                </div>
+                <div v-show="fieldVisible('settings.resolutionLabel', 'jeu')" class="set-row">
+                  <label>{{ t('settings.resolutionLabel') }}</label>
+                  <div class="set-control"><select v-model="settings.res"><option>1920 × 1080</option><option>2560 × 1440</option><option>1600 × 900</option><option>1366 × 768</option></select></div>
+                </div>
+                <div v-show="fieldVisible('settings.folderTitle', 'jeu')" class="set-row set-row-stack">
+                  <label>{{ t('settings.folderTitle') }}</label>
+                  <input class="ipt full" type="text" v-model="settings.dir" spellcheck="false" />
+                </div>
+                <div v-show="fieldVisible('settings.javaTitle', 'jeu')" class="set-row set-row-stack">
+                  <label>{{ t('settings.javaTitle') }}</label>
+                  <input class="ipt full" type="text" v-model="settings.java" :placeholder="t('settings.javaPlaceholder')" spellcheck="false" />
+                </div>
+              </div>
+
+              <div v-if="catVisible('launcher')" class="panel set-block">
+                <h3>{{ t('settings.cat.launcher') }}</h3>
+                <div v-show="fieldVisible('settings.updateFreqLabel', 'launcher')" class="set-row">
+                  <label>{{ t('settings.updateFreqLabel') }}</label>
+                  <div class="set-control">
+                    <select v-model="settings.updateFreq">
+                      <option value="auto">{{ t('settings.updateFreqAuto') }}</option>
+                      <option value="daily">{{ t('settings.updateFreqDaily') }}</option>
+                      <option value="manual">{{ t('settings.updateFreqManual') }}</option>
+                    </select>
+                  </div>
+                </div>
+                <div v-show="fieldVisible('settings.autoDownloadLabel', 'launcher')" class="set-row set-row-toggle">
+                  <label>{{ t('settings.autoDownloadLabel') }}</label>
+                  <label class="switch"><input type="checkbox" v-model="settings.autoDownload" /><span class="switch-track"></span></label>
+                </div>
+                <div v-show="fieldVisible('settings.minimizeOnLaunchLabel', 'launcher')" class="set-row set-row-toggle">
+                  <label>{{ t('settings.minimizeOnLaunchLabel') }}</label>
+                  <label class="switch"><input type="checkbox" v-model="settings.minimizeOnLaunch" /><span class="switch-track"></span></label>
+                </div>
+                <div v-show="fieldVisible('settings.notifEnabledLabel', 'launcher')" class="set-row set-row-toggle">
+                  <label>{{ t('settings.notifEnabledLabel') }}</label>
+                  <label class="switch"><input type="checkbox" v-model="settings.notifEnabled" /><span class="switch-track"></span></label>
+                </div>
+                <div v-show="fieldVisible('settings.animationsLabel', 'launcher')" class="set-row set-row-toggle">
+                  <label>{{ t('settings.animationsLabel') }}</label>
+                  <label class="switch"><input type="checkbox" v-model="settings.animations" /><span class="switch-track"></span></label>
                 </div>
               </div>
 
               <div v-if="catVisible('apropos')" class="panel set-block">
                 <h3>{{ t('settings.launcherTitle') }}</h3>
-                <p class="set-note">{{ t('settings.versionLabel').replace('{v}', APP_VERSION) }}</p>
-                <div class="set-row"><button class="btn-sm ghost" @click="checkUpdate">{{ t('settings.checkUpdateBtn') }}</button></div>
-                <div class="set-row"><button class="btn-sm ghost" @click="openGameFolderBtn">{{ t('settings.openFolderBtn') }}</button></div>
+                <div v-show="fieldVisible('settings.checkUpdateBtn', 'apropos')" class="set-row">
+                  <label>{{ t('settings.launcherTitle') }}<span class="set-hint">{{ t('settings.versionLabel').replace('{v}', APP_VERSION) }}</span></label>
+                  <div class="set-control"><button class="btn-sm ghost" @click="checkUpdate">{{ t('settings.checkUpdateBtn') }}</button></div>
+                </div>
+                <div v-show="fieldVisible('settings.openFolderBtn', 'apropos')" class="set-row">
+                  <label>{{ t('settings.folderTitle') }}</label>
+                  <div class="set-control"><button class="btn-sm ghost" @click="openGameFolderBtn">{{ t('settings.openFolderBtn') }}</button></div>
+                </div>
               </div>
 
               <p v-if="settingsNoResults" class="set-empty">{{ t('settings.noResults') }}</p>
@@ -1448,6 +1447,9 @@ onUnmounted(() => {
 .cos-empty { grid-column: 1 / -1; color: #8A85A0; font-size: 13px; padding: 20px 0; }
 
 /* ===== Amis ===== */
+.friends-add { display: flex; gap: 10px; padding: 14px 16px; margin-bottom: 16px; max-width: 640px; }
+.friends-add .ipt { flex: 1; }
+.friends-search { width: min(320px, 100%); margin-bottom: 14px; }
 .friends-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
 .friends-tabs button { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: #B9B4C6; border-radius: 999px; padding: 8px 16px; cursor: pointer; font-size: 12.5px; }
 .friends-tabs button.active { background: rgba(232,197,106,.14); color: var(--gold, #E8C56A); border-color: rgba(232,197,106,.4); }
@@ -1484,54 +1486,46 @@ onUnmounted(() => {
 .md-empty { color: #6b6b78; font-size: 12.5px; }
 
 /* ===== Langues ===== */
-.lang-search { width: min(360px, 100%); margin-bottom: 14px; }
-.lang-list { display: flex; flex-direction: column; gap: 4px; max-width: 420px; max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
-.lang-row { display: flex; align-items: center; justify-content: space-between; background: rgba(9,10,16,.5); border: 1px solid rgba(255,255,255,.06); border-radius: 9px; padding: 11px 14px; cursor: pointer; color: #C9C4D6; font-size: 13px; contain: content; }
-.lang-row:hover { border-color: rgba(232,197,106,.3); }
-.lang-row.active { color: var(--gold, #E8C56A); border-color: rgba(232,197,106,.45); background: rgba(232,197,106,.08); }
-.lang-row.disabled { opacity: .45; cursor: not-allowed; }
-.lang-row.disabled:hover { border-color: rgba(255,255,255,.06); }
-.lang-soon { font-size: 9.5px; letter-spacing: .5px; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); color: #9A94A8; }
-.lang-check { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.lang-main { display: flex; align-items: center; gap: 10px; }
-.lang-flag { font-size: 16px; line-height: 1; }
-
-/* ===== Thèmes ===== */
-.themes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; max-width: 900px; }
-.theme-card { position: relative; display: flex; flex-direction: column; gap: 8px; background: rgba(9,10,16,.6); border: 1px solid rgba(255,255,255,.07); border-radius: 14px; padding: 12px; cursor: pointer; text-align: left; contain: content; }
-.theme-card:hover { border-color: rgba(232,197,106,.35); }
-.theme-card.active { border-color: rgba(232,197,106,.6); }
-.tc-preview { height: 90px; border-radius: 10px; }
-.tc-preview.prev-olympe { background: radial-gradient(circle at 70% 30%, #E8C56A, #241a06 72%); }
-.tc-preview.prev-jupiter { background: radial-gradient(circle at 65% 40%, #5AA9E6, #0E1018 65%); }
-.tc-preview.prev-nuit { background: linear-gradient(155deg, #090a16, #1b1f3a); }
-.tc-preview.prev-aurore { background: linear-gradient(155deg, #0a1a14, #1c3a2c 45%, #123a3a 85%); }
-.tc-preview.prev-sombre { background: linear-gradient(155deg, #0a0a0e, #17171d); }
-.tc-name { font-family: var(--serif, Georgia, serif); font-size: 14px; color: #EDE8DA; }
-.tc-desc { font-size: 11.5px; color: #8A85A0; }
-.tc-badge { position: absolute; top: 10px; right: 10px; background: rgba(124,203,110,.2); color: #7CCB6E; font-size: 10px; padding: 2px 8px; border-radius: 999px; }
+.lang-wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.lang-search { width: 100%; margin-bottom: 0; padding: 11px 15px; font-size: 14px; }
+.lang-list { display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 340px); overflow-y: auto; padding: 2px 4px 2px 2px; }
+.lang-row { display: flex; align-items: center; gap: 14px; width: 100%; background: linear-gradient(180deg, rgba(20,22,32,.8), rgba(10,11,18,.8)); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 13px 16px; cursor: pointer; color: #C9C4D6; font-size: 14px; text-align: left; transition: border-color .15s ease, background .15s ease, transform .12s ease; contain: content; }
+.lang-row:hover:not(.disabled) { border-color: rgba(232,197,106,.4); background: linear-gradient(180deg, rgba(232,197,106,.1), rgba(20,22,32,.8)); transform: translateY(-1px); }
+.lang-row.active { border-color: rgba(232,197,106,.65); background: linear-gradient(180deg, rgba(232,197,106,.18), rgba(232,197,106,.05)); box-shadow: inset 0 0 0 1px rgba(232,197,106,.25), 0 6px 18px rgba(0,0,0,.35); }
+.lang-row.disabled { opacity: .42; cursor: not-allowed; }
+.lang-row.disabled:hover { border-color: rgba(255,255,255,.07); transform: none; }
+.lang-chip { flex: 0 0 auto; min-width: 38px; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .5px; color: var(--gold, #E8C56A); background: rgba(232,197,106,.14); border: 1px solid rgba(232,197,106,.3); border-radius: 7px; padding: 5px 8px; }
+.lang-row.active .lang-chip { background: rgba(232,197,106,.3); border-color: rgba(232,197,106,.6); }
+.lang-name { flex: 1; font-weight: 600; color: #EDE8DA; letter-spacing: .2px; }
+.lang-row.active .lang-name { color: #FBEBB8; }
+.lang-right { flex: 0 0 auto; display: flex; align-items: center; }
+.lang-soon { font-size: 9.5px; letter-spacing: .5px; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.07); color: #8A85A0; border: 1px solid rgba(255,255,255,.08); }
+.lang-check { width: 18px; height: 18px; fill: none; stroke: var(--gold, #E8C56A); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ===== Paramètres ===== */
 .set-search { width: min(420px, 100%); margin-bottom: 14px; }
-.set-body { display: flex; gap: 18px; align-items: flex-start; max-width: 1200px; }
+.set-body { display: flex; gap: 18px; align-items: flex-start; max-width: 1100px; }
 .set-cats { width: 190px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; padding: 10px; max-height: calc(100vh - 300px); overflow-y: auto; }
 .set-cat { text-align: left; background: rgba(9,10,16,.5); border: 1px solid rgba(255,255,255,.06); color: #B9B4C6; border-radius: 9px; padding: 10px 12px; cursor: pointer; font-size: 12.5px; contain: content; }
 .set-cat:hover { border-color: rgba(232,197,106,.3); }
 .set-cat.active { color: var(--gold, #E8C56A); background: rgba(232,197,106,.1); border-color: rgba(232,197,106,.4); }
-.set-panels { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; max-width: 760px; max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
-.set-block { padding: 18px 20px; }
-.set-block h3 { font-family: var(--serif, Georgia, serif); font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #CFC7B2; margin-bottom: 12px; }
-.set-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; flex-wrap: wrap; }
-.set-row label { min-width: 160px; flex: 1 1 160px; font-size: 13px; }
-.set-row select, .set-row input[type=range] { flex: 2 1 160px; min-width: 120px; }
-.set-row input[type=range] { accent-color: var(--gold-dark, #D4AF37); }
+.set-panels { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; max-width: 720px; max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
+.set-block { padding: 20px 22px; }
+.set-block h3 { font-family: var(--serif, Georgia, serif); font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #CFC7B2; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(232,197,106,.15); }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 10px 0; padding: 14px 16px; background: rgba(15,17,26,.7); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; flex-wrap: wrap; transition: border-color .15s, background .15s; }
+.set-row:first-of-type { margin-top: 0; }
+.set-row:hover { border-color: rgba(232,197,106,.22); }
+.set-row label { display: flex; flex-direction: column; gap: 4px; min-width: 180px; flex: 1 1 220px; font-size: 13px; color: #EDE8DA; font-weight: 600; }
+.set-hint { font-size: 11px; color: #8A85A0; font-weight: 400; }
+.set-control { flex: 1 1 200px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 140px; }
+.set-control select, .set-control input[type=range] { flex: 1; min-width: 120px; }
+.set-control input[type=range] { accent-color: var(--gold-dark, #D4AF37); }
+.set-row-stack { flex-direction: column; align-items: stretch; }
+.set-row-stack label { margin-bottom: 2px; }
 .set-row-toggle { justify-content: space-between; }
-.set-val { width: 56px; text-align: right; color: var(--gold, #E8C56A); font-weight: 700; font-size: 13px; }
+.set-val { width: 56px; text-align: right; color: var(--gold, #E8C56A); font-weight: 700; font-size: 13px; flex: 0 0 auto; }
 .set-note { font-size: 11.5px; color: #8A85A0; margin-top: 6px; }
 .set-empty { color: #8A85A0; font-size: 13px; padding: 20px 0; }
-.set-themes { margin-top: 10px; }
-.set-themes-label { display: block; font-size: 13px; color: #CFC7B2; margin-bottom: 10px; }
-.themes-grid-mini { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
 
 /* ===== Overlay de lancement ===== */
 .launch-ov { position: fixed; inset: 0; z-index: 500; display: grid; place-items: center; }
