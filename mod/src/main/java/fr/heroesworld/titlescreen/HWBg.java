@@ -8,7 +8,11 @@ import net.minecraft.util.Identifier;
 
 import java.io.InputStream;
 
-/** Fond du menu : image chargée au runtime, affichée en COVER (ratio préservé, remplit l'écran). */
+/**
+ * Fond du menu. L'image (résolution fixe) est affichée ENTIÈRE et NETTE (contain :
+ * proportions exactes, aucun zoom, aucune déformation), centrée. Les bords sont comblés
+ * par une version sombre de la même image (jamais de bandes noires) -> s'adapte à tout écran.
+ */
 public final class HWBg {
     private static final Identifier ID = new Identifier("heroworld", "hw_background_dyn");
     private static boolean tried = false, ok = false;
@@ -38,10 +42,15 @@ public final class HWBg {
     public static boolean draw(DrawContext ctx, int w, int h) {
         ensure();
         if (!ok) return false;
-        float scale = Math.max((float) w / tw, (float) h / th); // COVER : pas de déformation
-        int dw = Math.round(tw * scale), dh = Math.round(th * scale);
-        int dx = (w - dw) / 2, dy = (h - dh) / 2;
-        ctx.drawTexture(ID, dx, dy, dw, dh, 0f, 0f, tw, th, tw, th);
+        // 1. Remplissage des bords : image en COVER, assombrie (jamais de bandes noires).
+        float sc = Math.max((float) w / tw, (float) h / th);
+        int cw = Math.round(tw * sc), ch = Math.round(th * sc);
+        ctx.drawTexture(ID, (w - cw) / 2, (h - ch) / 2, cw, ch, 0f, 0f, tw, th, tw, th);
+        ctx.fill(0, 0, w, h, 0x99000000);
+        // 2. Image ENTIÈRE et nette (CONTAIN), centrée : proportions exactes, aucun zoom.
+        float sf = Math.min((float) w / tw, (float) h / th);
+        int fw = Math.round(tw * sf), fh = Math.round(th * sf);
+        ctx.drawTexture(ID, (w - fw) / 2, (h - fh) / 2, fw, fh, 0f, 0f, tw, th, tw, th);
         return true;
     }
 }
