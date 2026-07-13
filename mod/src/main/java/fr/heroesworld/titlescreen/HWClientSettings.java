@@ -42,8 +42,12 @@ public class HWClientSettings extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        HWScene.draw(ctx, this.width, this.height);
-        ctx.fill(0, 0, this.width, this.height, 0xB0000000);
+        if (this.client.world != null) {
+            super.renderBackground(ctx, mouseX, mouseY, delta); // en jeu : flou du monde (comme le menu pause)
+        } else {
+            HWScene.draw(ctx, this.width, this.height);
+            ctx.fill(0, 0, this.width, this.height, 0xB0000000);
+        }
         int cx = this.width / 2, top = (int) (this.height * 0.24);
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§ePARAMÈTRES DU CLIENT"), cx, top - 34, 0xFFE8C56A);
         ctx.drawCenteredTextWithShadow(this.textRenderer,

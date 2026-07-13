@@ -40,8 +40,12 @@ public class HWThemeScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        HWScene.draw(ctx, this.width, this.height);
-        ctx.fill(0, 0, this.width, this.height, 0xB0000000); // assombrit le décor
+        if (this.client.world != null) {
+            super.renderBackground(ctx, mouseX, mouseY, delta); // en jeu : flou du monde (comme le menu pause)
+        } else {
+            HWScene.draw(ctx, this.width, this.height);
+            ctx.fill(0, 0, this.width, this.height, 0xB0000000);
+        } // assombrit le décor
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§eThèmes du menu"),
             this.width / 2, cardY() - 40, 0xFFE8C56A);
 
