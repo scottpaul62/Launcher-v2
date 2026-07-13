@@ -42,15 +42,11 @@ public final class HWBg {
     public static boolean draw(DrawContext ctx, int w, int h) {
         ensure();
         if (!ok) return false;
-        // 1. Remplissage des bords : image en COVER, assombrie (jamais de bandes noires).
-        float sc = Math.max((float) w / tw, (float) h / th);
-        int cw = Math.round(tw * sc), ch = Math.round(th * sc);
-        ctx.drawTexture(ID, (w - cw) / 2, (h - ch) / 2, cw, ch, 0f, 0f, tw, th, tw, th);
-        ctx.fill(0, 0, w, h, 0x99000000);
-        // 2. Image ENTIÈRE et nette (CONTAIN), centrée : proportions exactes, aucun zoom.
-        float sf = Math.min((float) w / tw, (float) h / th);
-        int fw = Math.round(tw * sf), fh = Math.round(th * sf);
-        ctx.drawTexture(ID, (w - fw) / 2, (h - fh) / 2, fw, fh, 0f, 0f, tw, th, tw, th);
+        // COVER : remplit tout l'ecran bord-a-bord, ratio preserve (leger recadrage haut/bas).
+        float scale = Math.max((float) w / tw, (float) h / th);
+        int dw = Math.round(tw * scale), dh = Math.round(th * scale);
+        int dx = (w - dw) / 2, dy = (h - dh) / 2;
+        ctx.drawTexture(ID, dx, dy, dw, dh, 0f, 0f, tw, th, tw, th);
         return true;
     }
 }
