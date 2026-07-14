@@ -74,6 +74,13 @@ public class HWHudEditScreen extends Screen {
                 ctx.drawTextWithShadow(this.textRenderer, Text.literal("§e" + e.name + " §7[" + HWHudManager.anchorName(e.anchor) + "]"), ax, ly, 0xFFFFFFFF);
             }
         }
+        drawBorder(ctx, 0, 0, this.width, this.height, 0x9940A0FF); // cadre bleu de la zone editable
+        if (dragging != null) {
+            int dw = HWHudManager.width(mc, dragging), dh = HWHudManager.height(dragging);
+            int dax = HWHudManager.actualX(dragging, this.width, dw), day = HWHudManager.actualY(dragging, this.height, dh);
+            if (Math.abs(dax + dw / 2 - this.width / 2) <= 1) ctx.fill(this.width / 2, 0, this.width / 2 + 1, this.height, 0xFFE8A020);
+            if (Math.abs(day + dh / 2 - this.height / 2) <= 1) ctx.fill(0, this.height / 2, this.width, this.height / 2 + 1, 0xFFE8A020);
+        }
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§eEditeur de HUD §7- glisse les elements, ils s'ancrent au coin le plus proche - Echap pour sauver"), this.width / 2, 8, 0xFFE8C56A);
         super.render(ctx, mouseX, mouseY, delta);
     }
@@ -99,7 +106,15 @@ public class HWHudEditScreen extends Screen {
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
         if (dragging != null) {
             int w = HWHudManager.width(this.client, dragging), h = HWHudManager.height(dragging);
-            setPos(dragging, (int) mx - offX, (int) my - offY, w, h);
+            int nx = (int) mx - offX, ny = (int) my - offY;
+            int sw = this.width, sh = this.height, snap = 6;
+            if (Math.abs(nx + w / 2 - sw / 2) < snap) nx = sw / 2 - w / 2;
+            else if (nx < snap) nx = 0;
+            else if (Math.abs(nx + w - sw) < snap) nx = sw - w;
+            if (Math.abs(ny + h / 2 - sh / 2) < snap) ny = sh / 2 - h / 2;
+            else if (ny < snap) ny = 0;
+            else if (Math.abs(ny + h - sh) < snap) ny = sh - h;
+            setPos(dragging, nx, ny, w, h);
             return true;
         }
         return super.mouseDragged(mx, my, button, dx, dy);

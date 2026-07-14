@@ -53,8 +53,11 @@ public class HWButton extends ButtonWidget {
         int iconCol = lerp(0xFFCBB98A, 0xFFF3D889, hover);
         if (!HWIcons.draw(ctx, icon, x + w / 2, y + 14, 20)) drawIcon(ctx, icon, x + w / 2, y + 13, iconCol);
         ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + h - 12, lerp(0xFFB9B3C4, 0xFFFFFFFF, hover));
-        int uw = (int) ((w - 24) * hover);
-        if (uw > 1) ctx.fill(x + w / 2 - uw / 2, y + h - 3, x + w / 2 + uw / 2, y + h - 2, 0xCCE8C56A);
+        int uw = (int) ((w - 18) * hover);
+        if (uw > 1) {
+            ctx.fill(x + w / 2 - uw / 2, y + h - 3, x + w / 2 + uw / 2, y + h - 1, 0xFFE8C56A);
+            ctx.fill(x + w / 2 - uw / 2, y + h - 1, x + w / 2 + uw / 2, y + h, 0x66E8C56A);
+        }
     }
 
     private static void drawIcon(DrawContext ctx, int kind, int cx, int cy, int col) {

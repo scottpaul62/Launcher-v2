@@ -20,10 +20,14 @@ public class HWTitleScreen extends Screen {
     protected void init() {
         int cx = this.width / 2;
 
-        int ry = (int) (this.height * 0.44);
+        int ry = (int) (this.height * 0.42);
         int joinW = Math.min(340, this.width - 60);
-        this.addDrawableChild(new HWButton(cx - joinW / 2, ry, joinW, 40, Text.literal("Rejoindre"), HWButton.PRIMARY, 0, b -> this.connect()));
-        this.addDrawableChild(new HWButton(cx - 100, ry + 50, 200, 22, Text.literal("Quitter"), HWButton.SECONDARY, 0, b -> this.client.scheduleStop()));
+        this.addDrawableChild(new HWButton(cx - joinW / 2, ry, joinW, 36, Text.literal("Rejoindre"), HWButton.PRIMARY, 0, b -> this.connect()));
+        this.addDrawableChild(new HWButton(cx - joinW / 2, ry + 42, joinW, 22, Text.literal("Solo"), HWButton.SECONDARY, 0,
+            b -> this.client.setScreen(new HWSoonScreen(this, "Solo", "Le mode Solo personnalise HERO WORLD arrivera bientot."))));
+        this.addDrawableChild(new HWButton(cx - joinW / 2, ry + 68, joinW, 22, Text.literal("Boutique"), HWButton.SECONDARY, 0,
+            b -> this.client.setScreen(new HWSoonScreen(this, "Boutique", "La boutique HERO WORLD arrivera bientot."))));
+        this.addDrawableChild(new HWButton(cx - 70, ry + 96, 140, 20, Text.literal("Quitter"), HWButton.SECONDARY, 0, b -> this.client.scheduleStop()));
 
         int gap = 6, n = 5;
         int itemW = Math.min(122, (this.width - 24 - (n - 1) * gap) / n);
@@ -60,20 +64,20 @@ public class HWTitleScreen extends Screen {
 
         int cx = this.width / 2;
 
-        // Statut sous le logo (l'image contient déjà HEROES-WORLD)
+        // Logo anime Jupiter + satellites
+        HWLogo.draw(ctx, cx, (int) (this.height * 0.20), 64);
+        // Statut sous le logo
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§6◆ §eL'OLYMPE VOUS ATTEND §6◆"),
-            cx, (int) (this.height * 0.44) - 22, 0xFFE8C56A);
+            cx, (int) (this.height * 0.42) - 22, 0xFFE8C56A);
 
         // Puce compte (haut-droite)
         String who = (this.client.getSession() != null) ? this.client.getSession().getUsername() : "";
         if (who != null && !who.isEmpty()) {
             int tw = this.textRenderer.getWidth(who);
-            int pw = tw + 40, ph = 22, px = this.width - pw - 12, py = 10;
-            ctx.fillGradient(px, py, px + pw, py + ph, 0xB00A0C14, 0xB00A0C14);
-            ctx.fill(px, py, px + pw, py + 1, 0x55E8C56A);
-            ctx.fill(px, py + ph - 1, px + pw, py + ph, 0x33000000);
-            ctx.fill(px + 12, py + ph / 2 - 3, px + 18, py + ph / 2 + 3, 0xFF7CCB6E); // pastille en ligne
-            ctx.drawTextWithShadow(this.textRenderer, Text.literal("§f" + who), px + 24, py + 7, 0xFFFFFFFF);
+            int pw = tw + 30, ph = 20, px = this.width - pw - 12, py = 10;
+            ctx.fill(px, py, px + pw, py + ph, 0x55000000); // pilule sobre, plate (fini le fond noir + trait dore)
+            ctx.fill(px + 11, py + ph / 2 - 3, px + 17, py + ph / 2 + 3, 0xFF7CCB6E); // pastille en ligne
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal("§f" + who), px + 22, py + 6, 0xFFFFFFFF);
         }
 
         // Version discrète (bas-gauche)

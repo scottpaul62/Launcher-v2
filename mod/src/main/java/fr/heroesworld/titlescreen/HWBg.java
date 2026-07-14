@@ -50,13 +50,14 @@ public final class HWBg {
     public static boolean draw(DrawContext ctx, int w, int h) {
         ensure();
         if (count == 0) return false;
+        ctx.fill(0, 0, w, h, 0xFF0A0E1A); // matte sobre : jamais de bord gris/noir, quelle que soit la resolution
         float screen = (float) w / h;
         int best = 0; float bestDiff = Float.MAX_VALUE;
         for (int i = 0; i < count; i++) {
             float diff = Math.abs(((float) tws[i] / ths[i]) - screen);
             if (diff < bestDiff) { bestDiff = diff; best = i; }
         }
-        float scale = Math.max((float) w / tws[best], (float) h / ths[best]); // COVER
+        float scale = Math.max((float) w / tws[best], (float) h / ths[best]) * 1.06f; // COVER + leger recadrage (coupe les bords sombres)
         int dw = Math.round(tws[best] * scale), dh = Math.round(ths[best] * scale);
         ctx.drawTexture(ids[best], (w - dw) / 2, (h - dh) / 2, dw, dh, 0f, 0f, tws[best], ths[best], tws[best], ths[best]);
         return true;
