@@ -12,6 +12,7 @@ public class HeroworldClient implements ClientModInitializer {
     public void onInitializeClient() {
         HWConfig.load();
         HWCosmetics.load();
+        HWProfiles.load();
         HWHudManager.load();
         HWHudManager.LOG.info("[HERO WORLD] client initialise - {} mods HUD", HWHudManager.ELEMENTS.size());
     }

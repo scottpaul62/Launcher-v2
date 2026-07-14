@@ -24,13 +24,14 @@ public class HWHudEditScreen extends Screen {
 
     @Override
     protected void init() {
-        int by = this.height - 28;
-        this.addDrawableChild(new HWButton(this.width / 2 - 70, by, 140, 22, Text.literal("Termine"), HWButton.PRIMARY, 0, b -> done()));
-        this.addDrawableChild(new HWButton(this.width / 2 - 226, by, 150, 22, Text.literal("Reinit. widget"), HWButton.SECONDARY, 0,
+        int bw = 82, g = 4, by = this.height - 22;
+        int total = 4 * bw + 3 * g, sx = this.width / 2 - total / 2;
+        this.addDrawableChild(new HWButton(sx, by, bw, 16, Text.literal("Annuler"), HWButton.SECONDARY, 0, b -> undo()));
+        this.addDrawableChild(new HWButton(sx + (bw + g), by, bw, 16, Text.literal("Reinit. widget"), HWButton.SECONDARY, 0,
             b -> { if (selected != null) { pushUndo(selected); HWHudManager.resetPos(selected); HWHudManager.save(); } }));
-        this.addDrawableChild(new HWButton(this.width / 2 + 76, by, 150, 22, Text.literal("Reinit. page"), HWButton.SECONDARY, 0,
+        this.addDrawableChild(new HWButton(sx + 2 * (bw + g), by, bw, 16, Text.literal("Reinit. page"), HWButton.SECONDARY, 0,
             b -> { HWHudManager.resetAll(); HWHudManager.save(); }));
-        this.addDrawableChild(new HWButton(this.width / 2 - 306, by, 74, 22, Text.literal("Annuler"), HWButton.SECONDARY, 0, b -> undo()));
+        this.addDrawableChild(new HWButton(sx + 3 * (bw + g), by, bw, 16, Text.literal("Termine"), HWButton.PRIMARY, 0, b -> done()));
     }
 
     private void done() { HWHudManager.save(); this.client.setScreen(parent != null ? parent : new HWModsScreen(null)); }
@@ -147,8 +148,8 @@ public class HWHudEditScreen extends Screen {
         // cadre de la fenetre + aide
         drawBorder(ctx, 0, 0, this.width, this.height, 0x5549BDF2);
         ctx.drawCenteredTextWithShadow(this.textRenderer,
-            Text.literal("§bEditeur HUD §7- clic: selectionner - glisser: deplacer - poignee: redimensionner - fleches: 1px, Maj: 10px - Alt: sans aimant - Echap: sortir"),
-            this.width / 2, 8, 0xFFFFFFFF);
+            Text.literal("§7glisser: deplacer · poignee: taille · fleches 1px / Maj 10px · Alt: sans aimant · Echap: sortir"),
+            this.width / 2, 7, 0xFFB9C2CC);
         super.render(ctx, mouseX, mouseY, delta);
     }
 

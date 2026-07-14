@@ -96,7 +96,11 @@ public final class HWHudManager {
     public static int scaledH(El e) { return Math.max(1, Math.round(height(e) * e.scale)); }
     public static float clampScale(float s) { return Math.max(MIN_SCALE, Math.min(MAX_SCALE, s)); }
 
-    private static Path file() { return FabricLoader.getInstance().getConfigDir().resolve("heroworld_hud.json"); }
+    private static Path file() {
+        String a = HWProfiles.active;
+        String fn = (a == null || a.equals("Par defaut")) ? "heroworld_hud.json" : "heroworld_hud_" + HWProfiles.slug(a) + ".json";
+        return FabricLoader.getInstance().getConfigDir().resolve(fn);
+    }
 
     public static void load() {
         try {
@@ -142,7 +146,7 @@ public final class HWHudManager {
                 arr.add(o);
             }
             root.add("widgets", arr);
-            Path f = file(), tmp = f.resolveSibling("heroworld_hud.json.tmp");
+            Path f = file(), tmp = f.resolveSibling(f.getFileName().toString() + ".tmp");
             Files.writeString(tmp, GSON.toJson(root), StandardCharsets.UTF_8);
             try { Files.move(tmp, f, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE); }
             catch (Exception atomicFail) { Files.move(tmp, f, StandardCopyOption.REPLACE_EXISTING); }

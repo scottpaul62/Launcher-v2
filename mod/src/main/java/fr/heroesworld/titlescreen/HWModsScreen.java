@@ -8,13 +8,22 @@ import net.minecraft.text.Text;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Menu central du client HERO WORLD (facon Lunar) : mods HUD en cartes, onglets, editeur de HUD. */
+/** Centre Heroes-World : onglets Mods / Reglages / Waypoints, colonne profils, categories, grille de widgets. */
 public class HWModsScreen extends Screen {
     private final Screen parent;
-    private static String activeCat = "Tous";
+    // DESIGN_TOKENS
+    private static final int SURF = 0xF2111318, RAISED = 0xFF181B22, BORDER = 0xFF323844,
+            FOCUS = 0xFF49BDF2, GOLD = 0xFFD6B85B, TXT = 0xFFF4F5F7, TXT2 = 0xFFA9AFBA, OVERLAY = 0xB8080A0D;
+
+    private static int tab = 0;                 // 0 Mods, 1 Reglages, 2 Waypoints
+    private static String cat = "Tous";
+    private static final String[] TABS = {"MODS", "REGLAGES", "WAYPOINTS"};
     private static final String[] CATS = {"Tous", "Performance", "Info", "Mecanique", "Combat"};
 
-    public HWModsScreen(Screen parent) { super(Text.literal("Mods HERO WORLD")); this.parent = parent; }
+    private int pw, ph, px, py, mainX, mainW;
+    private boolean showProfiles;
+
+    public HWModsScreen(Screen parent) { super(Text.literal("Centre Heroes-World")); this.parent = parent; }
 
     private void back() {
         if (parent != null) this.client.setScreen(parent);
@@ -23,80 +32,118 @@ public class HWModsScreen extends Screen {
     }
     private void reopen() { this.client.setScreen(new HWModsScreen(parent)); }
 
-    private int pw, ph, px, py;
-
     @Override
     protected void init() {
-        pw = Math.min(this.width - 40, 640);
-        ph = Math.min(this.height - 40, 430);
-        px = (this.width - pw) / 2;
-        py = (this.height - ph) / 2;
+        pw = Math.min(this.width - 60, 1000);
+        ph = Math.min(this.height - 60, 600);
+        px = (this.width - pw) / 2; py = (this.height - ph) / 2;
+        showProfiles = pw >= 560;
+        mainX = showProfiles ? px + 158 : px + 14;
+        mainW = px + pw - 14 - mainX;
 
-        // Onglets de categories
-        int tabW = Math.min(112, (pw - 24) / CATS.length);
-        int tx = px + 12;
-        int tyTab = py + 40;
-        for (String c : CATS) {
-            final String cat = c;
-            int style = c.equals(activeCat) ? HWButton.PRIMARY : HWButton.SECONDARY;
-            this.addDrawableChild(new HWButton(tx, tyTab, tabW - 4, 18, Text.literal(c), style, 0,
-                b -> { activeCat = cat; reopen(); }));
-            tx += tabW;
+        // onglets
+        int tw = 96, tg = 6, tx = px + pw / 2 - (TABS.length * tw + (TABS.length - 1) * tg) / 2, ty = py + 8;
+        for (int i = 0; i < TABS.length; i++) {
+            final int t = i;
+            this.addDrawableChild(new HWButton(tx + i * (tw + tg), ty, tw, 20, Text.literal(TABS[i]),
+                i == tab ? HWButton.PRIMARY : HWButton.SECONDARY, 0, b -> { tab = t; reopen(); }));
+        }
+        // fermer
+        this.addDrawableChild(new HWButton(px + pw - 30, py + 8, 20, 20, Text.literal("X"), HWButton.SECONDARY, 0, b -> back()));
+
+        // colonne profils
+        if (showProfiles) {
+            int y = py + 62;
+            for (String name : HWProfiles.names) {
+                final String n = name;
+                boolean act = n.equals(HWProfiles.active);
+                this.addDrawableChild(new HWButton(px + 12, y, 138, 22, Text.literal((act ? "§f" : "§7") + n),
+                    act ? HWButton.PRIMARY : HWButton.SECONDARY, 0, b -> { HWProfiles.switchTo(n); reopen(); }));
+                y += 26;
+            }
+            this.addDrawableChild(new HWButton(px + 12, y + 2, 138, 20, Text.literal("+ Nouveau profil"), HWButton.SECONDARY, 0,
+                b -> { HWProfiles.create("Profil " + (HWProfiles.names.size() + 1)); reopen(); }));
         }
 
-        // Cartes de mods (2 colonnes)
-        List<HWHudManager.El> vis = new ArrayList<>();
-        for (HWHudManager.El e : HWHudManager.ELEMENTS)
-            if (activeCat.equals("Tous") || e.category.equals(activeCat)) vis.add(e);
+        if (tab == 0) initMods();
+        else if (tab == 1) initSettings();
+        // tab 2 : waypoints -> etat vide dessine dans render()
 
-        int gap = 8, cols = 2;
-        int gridTop = py + 68;
-        int gridBottom = py + ph - 40;
-        int cardW = (pw - 24 - gap) / cols;
+        // fermer (bas)
+        this.addDrawableChild(new HWButton(px + pw - 110, py + ph - 30, 96, 22, Text.literal("Fermer"), HWButton.SECONDARY, 0, b -> back()));
+    }
+
+    private void initMods() {
+        // categories
+        int cx = mainX, cy = py + 44, cw = Math.min(104, (mainW - 4 * 6) / CATS.length);
+        for (String c : CATS) {
+            final String cc = c;
+            this.addDrawableChild(new HWButton(cx, cy, cw, 18, Text.literal(c), c.equals(cat) ? HWButton.PRIMARY : HWButton.SECONDARY, 0,
+                b -> { cat = cc; reopen(); }));
+            cx += cw + 6;
+        }
+        // grille de widgets
+        List<HWHudManager.El> vis = new ArrayList<>();
+        for (HWHudManager.El e : HWHudManager.ELEMENTS) if (cat.equals("Tous") || e.category.equals(cat)) vis.add(e);
+        int cols = mainW > 520 ? 2 : 1, gap = 8;
+        int gridTop = py + 70, gridBottom = py + ph - 42;
+        int cardW = (mainW - (cols - 1) * gap) / cols;
         int rows = Math.max(1, (vis.size() + cols - 1) / cols);
-        int cardH = Math.max(18, Math.min(28, (gridBottom - gridTop - (rows - 1) * gap) / rows));
+        int cardH = Math.max(20, Math.min(30, (gridBottom - gridTop - (rows - 1) * gap) / rows));
         for (int i = 0; i < vis.size(); i++) {
             final HWHudManager.El e = vis.get(i);
             int col = i % cols, row = i / cols;
-            int cxp = px + 12 + col * (cardW + gap);
-            int cyp = gridTop + row * (cardH + gap);
-            if (cyp + cardH > gridBottom) break;
+            int x = mainX + col * (cardW + gap), y = gridTop + row * (cardH + gap);
+            if (y + cardH > gridBottom) break;
             String lbl = "§f" + e.name + "   " + (e.enabled ? "§aON" : "§8OFF");
-            this.addDrawableChild(new HWButton(cxp, cyp, cardW - 26, cardH, Text.literal(lbl), HWButton.SECONDARY, iconKind(e.id),
+            this.addDrawableChild(new HWButton(x, y, cardW - 24, cardH, Text.literal(lbl), HWButton.SECONDARY, iconKind(e.id),
                 b -> { e.enabled = !e.enabled; HWHudManager.save(); reopen(); }));
-            this.addDrawableChild(new HWButton(cxp + cardW - 24, cyp, 24, cardH, Text.literal(""), HWButton.SECONDARY, 5,
+            this.addDrawableChild(new HWButton(x + cardW - 22, y, 22, cardH, Text.literal(""), HWButton.SECONDARY, 5,
                 b -> this.client.setScreen(new HWModSettingsScreen(this, e))));
         }
+        // editer le HUD
+        this.addDrawableChild(new HWButton(mainX, py + ph - 30, 150, 22, Text.literal("Editer le HUD"), HWButton.PRIMARY, 0,
+            b -> this.client.setScreen(new HWHudEditScreen(this))));
+    }
 
-        // Barre du bas
-        int by = py + ph - 30;
-        int n = 5;
-        int bw = (pw - 24 - (n - 1) * 6) / n;
-        int bx = px + 12;
-        this.addDrawableChild(new HWButton(bx, by, bw, 22, Text.literal("Editer le HUD"), HWButton.PRIMARY, 0,
-            b -> this.client.setScreen(new HWHudEditScreen(this)))); bx += bw + 6;
-        this.addDrawableChild(new HWButton(bx, by, bw, 22, Text.literal("Cosmetiques"), HWButton.SECONDARY, 0,
-            b -> this.client.setScreen(new HWCosmeticsScreen(this)))); bx += bw + 6;
-        this.addDrawableChild(new HWButton(bx, by, bw, 22, Text.literal("Theme"), HWButton.SECONDARY, 0,
-            b -> this.client.setScreen(new HWThemeScreen(this)))); bx += bw + 6;
-        this.addDrawableChild(new HWButton(bx, by, bw, 22, Text.literal("Options MC"), HWButton.SECONDARY, 0,
-            b -> this.client.setScreen(new OptionsScreen(this, this.client.options)))); bx += bw + 6;
-        this.addDrawableChild(new HWButton(bx, by, bw, 22, Text.literal("Fermer"), HWButton.SECONDARY, 0, b -> back()));
+    private void initSettings() {
+        int x = mainX, y = py + 48, w = Math.min(320, mainW);
+        this.addDrawableChild(new HWButton(x, y, w, 24, Text.literal("Options Minecraft"), HWButton.SECONDARY, 0,
+            b -> this.client.setScreen(new OptionsScreen(this, this.client.options)))); y += 28;
+        this.addDrawableChild(new HWButton(x, y, w, 24, Text.literal("Theme du menu"), HWButton.SECONDARY, 0,
+            b -> this.client.setScreen(new HWThemeScreen(this)))); y += 28;
+        this.addDrawableChild(new HWButton(x, y, w, 24, Text.literal("Cosmetiques (vestiaire)"), HWButton.SECONDARY, 0,
+            b -> this.client.setScreen(new HWCosmeticsScreen(this)))); y += 28;
+        boolean hud = !(this.client.options != null && this.client.options.hudHidden);
+        this.addDrawableChild(new HWButton(x, y, w, 24, Text.literal("Afficher le HUD : " + (hud ? "§aON" : "§8OFF")), HWButton.SECONDARY, 0,
+            b -> { if (this.client.options != null) this.client.options.hudHidden = !this.client.options.hudHidden; reopen(); }));
     }
 
     public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        if (this.client.world != null) super.renderBackground(ctx, mouseX, mouseY, delta);
+        if (this.client.world != null) ctx.fill(0, 0, this.width, this.height, OVERLAY); // voile sombre leger uniforme
         else { HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0xB0000000); }
 
-        ctx.fill(px, py, px + pw, py + ph, 0xE60E0C14);
-        drawBorder(ctx, px, py, pw, ph, 0xFFE8C56A);
-        ctx.fill(px, py + 30, px + pw, py + 31, 0x66E8C56A);
-        ctx.drawTextWithShadow(this.textRenderer, Text.literal("§6HERO WORLD §7Client"), px + 12, py + 11, 0xFFFFFFFF);
-        ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8v1.1.6"), px + pw - 44, py + 11, 0xFF888888);
+        ctx.fill(px, py, px + pw, py + ph, SURF);
+        border(ctx, px, py, pw, ph, BORDER);
+        ctx.fill(px, py + 32, px + pw, py + 33, 0x33D6B85B);
+        ctx.drawTextWithShadow(this.textRenderer, Text.literal("§6HEROES-WORLD"), px + 14, py + 13, GOLD);
+        ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8v1.1.6"), px + 14 + this.textRenderer.getWidth("HEROES-WORLD") + 8, py + 14, TXT2);
 
+        if (showProfiles) {
+            ctx.fill(px + 8, py + 40, px + 152, py + ph - 8, RAISED);
+            border(ctx, px + 8, py + 40, 144, ph - 48, BORDER);
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal("§7PROFILS"), px + 14, py + 48, TXT2);
+        }
+
+        if (tab == 2) {
+            ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§7Aucun waypoint pour l'instant."), mainX + mainW / 2, py + ph / 2 - 8, TXT2);
+            ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8Les waypoints (par dimension, couleur, distance) arrivent bientot."), mainX + mainW / 2, py + ph / 2 + 6, TXT2);
+        } else if (tab == 1) {
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal("§7Reglages"), mainX, py + 40, TXT2);
+        }
         super.render(ctx, mouseX, mouseY, delta);
     }
 
@@ -109,11 +156,11 @@ public class HWModsScreen extends Screen {
         }
     }
 
-    private static void drawBorder(DrawContext ctx, int x, int y, int w, int h, int col) {
-        ctx.fill(x, y, x + w, y + 1, col);
-        ctx.fill(x, y + h - 1, x + w, y + h, col);
-        ctx.fill(x, y, x + 1, y + h, col);
-        ctx.fill(x + w - 1, y, x + w, y + h, col);
+    private static void border(DrawContext ctx, int x, int y, int w, int h, int c) {
+        ctx.fill(x, y, x + w, y + 1, c);
+        ctx.fill(x, y + h - 1, x + w, y + h, c);
+        ctx.fill(x, y, x + 1, y + h, c);
+        ctx.fill(x + w - 1, y, x + w, y + h, c);
     }
 
     @Override public void close() { back(); }
