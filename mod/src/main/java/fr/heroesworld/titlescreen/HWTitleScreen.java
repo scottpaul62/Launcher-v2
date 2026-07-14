@@ -21,10 +21,12 @@ public class HWTitleScreen extends Screen {
         int cx = this.width / 2;
 
         int ry = (int) (this.height * 0.44);
-        this.addDrawableChild(new HWButton(cx - 170, ry, 340, 40, Text.literal("Rejoindre"), HWButton.PRIMARY, 0, b -> this.connect()));
+        int joinW = Math.min(340, this.width - 60);
+        this.addDrawableChild(new HWButton(cx - joinW / 2, ry, joinW, 40, Text.literal("Rejoindre"), HWButton.PRIMARY, 0, b -> this.connect()));
         this.addDrawableChild(new HWButton(cx - 100, ry + 50, 200, 22, Text.literal("Quitter"), HWButton.SECONDARY, 0, b -> this.client.scheduleStop()));
 
-        int itemW = 122, gap = 6, n = 5;
+        int gap = 6, n = 5;
+        int itemW = Math.min(122, (this.width - 24 - (n - 1) * gap) / n);
         dockW = n * itemW + (n - 1) * gap;
         dockH = 44;
         dockX = cx - dockW / 2;
@@ -61,12 +63,6 @@ public class HWTitleScreen extends Screen {
         // Statut sous le logo (l'image contient déjà HEROES-WORLD)
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§6◆ §eL'OLYMPE VOUS ATTEND §6◆"),
             cx, (int) (this.height * 0.44) - 22, 0xFFE8C56A);
-
-        // Fond du dock (barre premium)
-        int x1 = dockX - 12, y1 = dockY - 8, x2 = dockX + dockW + 12, y2 = dockY + dockH + 8;
-        ctx.fillGradient(x1, y1, x2, y2, 0x99070912, 0xC0070912);
-        ctx.fill(x1, y1, x2, y1 + 1, 0x55E8C56A);
-        ctx.fill(x1, y2 - 1, x2, y2, 0x33000000);
 
         // Puce compte (haut-droite)
         String who = (this.client.getSession() != null) ? this.client.getSession().getUsername() : "";

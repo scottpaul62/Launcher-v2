@@ -53,7 +53,8 @@ public class HWModsScreen extends Screen {
         int gridTop = py + 68;
         int gridBottom = py + ph - 40;
         int cardW = (pw - 24 - gap) / cols;
-        int cardH = 26;
+        int rows = Math.max(1, (vis.size() + cols - 1) / cols);
+        int cardH = Math.max(18, Math.min(28, (gridBottom - gridTop - (rows - 1) * gap) / rows));
         for (int i = 0; i < vis.size(); i++) {
             final HWHudManager.El e = vis.get(i);
             int col = i % cols, row = i / cols;

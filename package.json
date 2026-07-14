@@ -1,6 +1,6 @@
 {
   "name": "heroesworld-launcher",
-  "version": "2.14.0",
+  "version": "2.15.0",
   "description": "Launcher officiel HEROES-WORLD (Electron + Vue 3 + XMCL)",
   "author": "Scott Paul (HEROES-WORLD)",
   "license": "UNLICENSED",
