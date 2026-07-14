@@ -33,16 +33,16 @@ public class HWButton extends ButtonWidget {
     }
 
     private void renderPrimary(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
+        if (hover > 0.02f) HWDraw.glow(ctx, x, y, w, h, 5, 0xE8C56A, hover);
         int fill = lerp(0xE01E1710, 0xE02C2114, hover);
-        rflat(ctx, x, y, w, h, fill);
-        border(ctx, x, y, w, h, lerp(0xFFCBA24E, 0xFFE8C56A, hover));
+        HWDraw.panel(ctx, x, y, w, h, 5, fill, lerp(0xFFCBA24E, 0xFFE8C56A, hover));
         ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + (h - 8) / 2, lerp(0xFFE9D4A0, 0xFFFFEFC6, hover));
     }
 
     private void renderSecondary(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
+        if (hover > 0.02f) HWDraw.glow(ctx, x, y, w, h, 4, 0x49BDF2, hover * 0.55f);
         int fill = lerp(0x9014121C, 0xC0221D2A, hover);
-        rflat(ctx, x, y, w, h, fill);
-        border(ctx, x, y, w, h, lerp(0x33FFFFFF, 0xAAE8C56A, hover));
+        HWDraw.panel(ctx, x, y, w, h, 4, fill, lerp(0x33FFFFFF, 0xB049BDF2, hover));
         boolean hasText = !getMessage().getString().isEmpty();
         if (icon > 0) HWIcons.draw(ctx, icon, hasText ? x + 15 : x + w / 2, y + h / 2, 16);
         ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + (h - 8) / 2, lerp(0xFFCFC9DA, 0xFFFFFFFF, hover));

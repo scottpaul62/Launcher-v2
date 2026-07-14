@@ -128,15 +128,13 @@ public class HWModsScreen extends Screen {
         if (this.client.world != null) ctx.fill(0, 0, this.width, this.height, OVERLAY); // voile sombre leger uniforme
         else { HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0xB0000000); }
 
-        ctx.fill(px, py, px + pw, py + ph, SURF);
-        border(ctx, px, py, pw, ph, BORDER);
+        HWDraw.panel(ctx, px, py, pw, ph, 8, SURF, BORDER);
         ctx.fill(px, py + 32, px + pw, py + 33, 0x33D6B85B);
         ctx.drawTextWithShadow(this.textRenderer, Text.literal("§6HEROES-WORLD"), px + 14, py + 13, GOLD);
         ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8v1.1.6"), px + 14 + this.textRenderer.getWidth("HEROES-WORLD") + 8, py + 14, TXT2);
 
         if (showProfiles) {
-            ctx.fill(px + 8, py + 40, px + 152, py + ph - 8, RAISED);
-            border(ctx, px + 8, py + 40, 144, ph - 48, BORDER);
+            HWDraw.panel(ctx, px + 8, py + 40, 144, ph - 48, 6, RAISED, BORDER);
             ctx.drawTextWithShadow(this.textRenderer, Text.literal("§7PROFILS"), px + 14, py + 48, TXT2);
         }
 

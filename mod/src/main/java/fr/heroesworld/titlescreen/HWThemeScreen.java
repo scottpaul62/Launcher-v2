@@ -47,8 +47,7 @@ public class HWThemeScreen extends Screen {
         if (this.client.world != null) super.renderBackground(ctx, mouseX, mouseY, delta);
         else { HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0xB0000000); }
 
-        ctx.fill(px, py, px + pw, py + ph, 0xE60E0C14);
-        border(ctx, px, py, pw, ph, 0xFFE8C56A);
+        HWDraw.panel(ctx, px, py, pw, ph, 8, 0xE60E0C14, 0xFFE8C56A);
         ctx.fill(px, py + 34, px + pw, py + 35, 0x66E8C56A);
         ctx.drawTextWithShadow(this.textRenderer, Text.literal("§eSelectionner un theme"), px + 12, py + 13, 0xFFFFFFFF);
 
