@@ -64,9 +64,7 @@ public class HWTitleScreen extends Screen {
 
         int cx = this.width / 2;
 
-        // Logo anime Jupiter + satellites
-        HWLogo.draw(ctx, cx, (int) (this.height * 0.20), 64);
-        // Statut sous le logo
+        // En-tete : le wordmark HEROES-WORLD est deja dans l'image de fond
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§6◆ §eL'OLYMPE VOUS ATTEND §6◆"),
             cx, (int) (this.height * 0.42) - 22, 0xFFE8C56A);
 

@@ -3,118 +3,206 @@ package fr.heroesworld.titlescreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 
-/** Editeur de HUD : glisser-deposer chaque element, re-ancrage au coin le plus proche, sauvegarde. */
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+/** Editeur HUD Heroes-World : selection, deplacement sans saut, redimensionnement (echelle),
+ *  zone sure + hotbar, guides cyan + aimantation, clavier, annuler. */
 public class HWHudEditScreen extends Screen {
     private final Screen parent;
-    private HWHudManager.El dragging;
+    private HWHudManager.El selected;
+    private int mode = 0;               // 0 rien, 1 deplacement, 2 redimensionnement
     private int offX, offY;
+    private float startScale, startDist;
+    private int guideX = Integer.MIN_VALUE, guideY = Integer.MIN_VALUE;
+    private final Deque<float[]> undo = new ArrayDeque<>();
 
-    public HWHudEditScreen(Screen parent) { super(Text.literal("Editeur de HUD")); this.parent = parent; }
+    public HWHudEditScreen(Screen parent) { super(Text.literal("Editeur HUD")); this.parent = parent; }
 
     @Override
     protected void init() {
-        this.addDrawableChild(new HWButton(this.width / 2 - 70, this.height - 28, 140, 22, Text.literal("Termine"), HWButton.PRIMARY, 0,
-            b -> done()));
-        this.addDrawableChild(new HWButton(this.width / 2 - 230, this.height - 28, 150, 22, Text.literal("Tout reinitialiser"), HWButton.SECONDARY, 0,
+        int by = this.height - 28;
+        this.addDrawableChild(new HWButton(this.width / 2 - 70, by, 140, 22, Text.literal("Termine"), HWButton.PRIMARY, 0, b -> done()));
+        this.addDrawableChild(new HWButton(this.width / 2 - 226, by, 150, 22, Text.literal("Reinit. widget"), HWButton.SECONDARY, 0,
+            b -> { if (selected != null) { pushUndo(selected); HWHudManager.resetPos(selected); HWHudManager.save(); } }));
+        this.addDrawableChild(new HWButton(this.width / 2 + 76, by, 150, 22, Text.literal("Reinit. page"), HWButton.SECONDARY, 0,
             b -> { HWHudManager.resetAll(); HWHudManager.save(); }));
+        this.addDrawableChild(new HWButton(this.width / 2 - 306, by, 74, 22, Text.literal("Annuler"), HWButton.SECONDARY, 0, b -> undo()));
     }
 
-    private void done() {
+    private void done() { HWHudManager.save(); this.client.setScreen(parent != null ? parent : new HWModsScreen(null)); }
+
+    private MinecraftClient mc() { return this.client; }
+    private int W(HWHudManager.El e) { return HWHudManager.scaledW(mc(), e); }
+    private int H(HWHudManager.El e) { return HWHudManager.scaledH(e); }
+    private int AX(HWHudManager.El e) { return HWHudManager.actualX(e, this.width, W(e)); }
+    private int AY(HWHudManager.El e) { return HWHudManager.actualY(e, this.height, H(e)); }
+
+    private void pushUndo(HWHudManager.El e) {
+        undo.addLast(new float[]{HWHudManager.ELEMENTS.indexOf(e), e.anchor, e.ox, e.oy, e.scale, e.enabled ? 1 : 0, e.locked ? 1 : 0});
+        while (undo.size() > 20) undo.pollFirst();
+    }
+    private void undo() {
+        if (undo.isEmpty()) return;
+        float[] s = undo.pollLast();
+        HWHudManager.El e = HWHudManager.ELEMENTS.get((int) s[0]);
+        e.anchor = (int) s[1]; e.ox = s[2]; e.oy = s[3]; e.scale = s[4]; e.enabled = s[5] > 0.5f; e.locked = s[6] > 0.5f;
         HWHudManager.save();
-        this.client.setScreen(parent != null ? parent : new HWModsScreen(null));
+    }
+
+    // --- aimantation : renvoie la position collee + memorise le guide ---
+    private int[] snap(int nx, int ny, int w, int h) {
+        guideX = Integer.MIN_VALUE; guideY = Integer.MIN_VALUE;
+        if (Screen.hasAltDown()) return new int[]{nx, ny};
+        int sw = this.width, sh = this.height, T = HWHudManager.SNAP;
+        // candidats X : {nx cible, position du guide}
+        java.util.List<int[]> xc = new java.util.ArrayList<>();
+        xc.add(new int[]{HWHudManager.SAFE, HWHudManager.SAFE});
+        xc.add(new int[]{sw - w - HWHudManager.SAFE, sw - HWHudManager.SAFE});
+        xc.add(new int[]{(sw - w) / 2, sw / 2});
+        java.util.List<int[]> yc = new java.util.ArrayList<>();
+        yc.add(new int[]{HWHudManager.SAFE, HWHudManager.SAFE});
+        yc.add(new int[]{sh - h - HWHudManager.SAFE, sh - HWHudManager.SAFE});
+        yc.add(new int[]{(sh - h) / 2, sh / 2});
+        int hotbarTop = sh - 39;
+        yc.add(new int[]{hotbarTop - h, hotbarTop});
+        for (HWHudManager.El o : HWHudManager.ELEMENTS) {
+            if (o == selected || !o.enabled) continue;
+            int ow = W(o), oh = H(o), oax = AX(o), oay = AY(o);
+            xc.add(new int[]{oax, oax}); xc.add(new int[]{oax + ow - w, oax + ow}); xc.add(new int[]{oax + ow / 2 - w / 2, oax + ow / 2});
+            yc.add(new int[]{oay, oay}); yc.add(new int[]{oay + oh - h, oay + oh}); yc.add(new int[]{oay + oh / 2 - h / 2, oay + oh / 2});
+        }
+        int bestX = nx, bd = T + 1;
+        for (int[] c : xc) { int d = Math.abs(nx - c[0]); if (d < bd) { bd = d; bestX = c[0]; guideX = c[1]; } }
+        if (bd > T) { bestX = nx; guideX = Integer.MIN_VALUE; }
+        int bestY = ny; bd = T + 1;
+        for (int[] c : yc) { int d = Math.abs(ny - c[0]); if (d < bd) { bd = d; bestY = c[0]; guideY = c[1]; } }
+        if (bd > T) { bestY = ny; guideY = Integer.MIN_VALUE; }
+        return new int[]{bestX, bestY};
     }
 
     private void setPos(HWHudManager.El e, int nx, int ny, int w, int h) {
         int sw = this.width, sh = this.height;
-        nx = Math.max(0, Math.min(sw - w, nx));
-        ny = Math.max(0, Math.min(sh - h, ny));
-        if (e.anchor == 1 || e.anchor == 3) e.ox = sw - w - nx;
-        else if (e.anchor == 4 || e.anchor == 5) e.ox = nx - (sw - w) / 2;
-        else e.ox = nx;
-        if (e.anchor == 2 || e.anchor == 3 || e.anchor == 5) e.oy = sh - h - ny;
-        else e.oy = ny;
-        if (e.anchor != 4 && e.anchor != 5 && e.ox < 0) e.ox = 0;
-        if (e.oy < 0) e.oy = 0;
+        nx = Math.max(HWHudManager.SAFE, Math.min(Math.max(HWHudManager.SAFE, sw - w - HWHudManager.SAFE), nx));
+        ny = Math.max(HWHudManager.SAFE, Math.min(Math.max(HWHudManager.SAFE, sh - h - HWHudManager.SAFE), ny));
+        e.ox = (nx - HWHudManager.baseX(e.anchor, sw, w)) / (float) sw;
+        e.oy = (ny - HWHudManager.baseY(e.anchor, sh, h)) / (float) sh;
     }
-
     private void reanchor(HWHudManager.El e, int w, int h) {
-        int ax = HWHudManager.actualX(e, this.width, w), ay = HWHudManager.actualY(e, this.height, h);
-        int cx = ax + w / 2, cy = ay + h / 2;
-        boolean bottom = cy > this.height / 2;
+        int ax = AX(e), ay = AY(e), cx = ax + w / 2, cy = ay + h / 2;
         int col = cx < this.width / 3 ? 0 : (cx < 2 * this.width / 3 ? 1 : 2);
-        if (col == 1) e.anchor = bottom ? 5 : 4;
-        else if (col == 2) e.anchor = bottom ? 3 : 1;
-        else e.anchor = bottom ? 2 : 0;
+        int row = cy < this.height / 3 ? 0 : (cy < 2 * this.height / 3 ? 1 : 2);
+        e.anchor = row * 3 + col;
         setPos(e, ax, ay, w, h);
     }
+
+    // rects des commandes du widget selectionne
+    private int ctrlY(int ax, int ay, int h) { return (ay - 14 >= 0) ? ay - 14 : ay + h + 2; }
+    private boolean inRect(double mx, double my, int x, int y, int s) { return mx >= x && mx <= x + s && my >= y && my <= y + s; }
 
     public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         MinecraftClient mc = this.client;
-        if (mc.world != null) ctx.fill(0, 0, this.width, this.height, 0x60000000);
+        if (mc.world != null) ctx.fill(0, 0, this.width, this.height, 0x66000000); // voile sombre leger et uniforme
         else { HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0x90000000); }
 
-        for (int gx = 0; gx < this.width; gx += 20) ctx.fill(gx, 0, gx + 1, this.height, 0x10FFFFFF);
-        for (int gy = 0; gy < this.height; gy += 20) ctx.fill(0, gy, this.width, gy + 1, 0x10FFFFFF);
+        // zone sure + zone hotbar
+        drawBorder(ctx, HWHudManager.SAFE, HWHudManager.SAFE, this.width - 2 * HWHudManager.SAFE, this.height - 2 * HWHudManager.SAFE, 0x2249BDF2);
+        int hbW = 186, hbX = this.width / 2 - hbW / 2, hbY = this.height - 40;
+        ctx.fill(hbX, hbY, hbX + hbW, this.height, 0x22E45B68);
 
+        // widgets (a l'echelle)
         for (HWHudManager.El e : HWHudManager.ELEMENTS) {
             if (!e.enabled) continue;
-            int w = HWHudManager.width(mc, e), h = HWHudManager.height(e);
-            int ax = HWHudManager.actualX(e, this.width, w), ay = HWHudManager.actualY(e, this.height, h);
-            boolean sel = (e == dragging) || (mouseX >= ax - 2 && mouseX <= ax + w + 2 && mouseY >= ay - 2 && mouseY <= ay + h + 2);
-            ctx.fill(ax - 2, ay - 2, ax + w + 2, ay + h + 2, sel ? 0x40E8C56A : 0x20FFFFFF);
-            drawBorder(ctx, ax - 2, ay - 2, w + 4, h + 4, sel ? 0xFFE8C56A : 0x66FFFFFF);
-            try { HWHudManager.renderAt(ctx, mc, e, ax, ay); } catch (Throwable ignored) {}
-            if (sel) {
-                int ly = (ay - 11 < 0) ? ay + h + 3 : ay - 11;
-                ctx.drawTextWithShadow(this.textRenderer, Text.literal("§e" + e.name + " §7[" + HWHudManager.anchorName(e.anchor) + "]"), ax, ly, 0xFFFFFFFF);
+            int w = W(e), h = H(e), ax = AX(e), ay = AY(e);
+            MatrixStack ms = ctx.getMatrices();
+            ms.push(); ms.translate((double) ax, (double) ay, 0.0); ms.scale(e.scale, e.scale, 1.0f);
+            try { HWHudManager.renderAt(ctx, mc, e, 0, 0); } catch (Throwable ignored) {}
+            ms.pop();
+            boolean hover = mouseX >= ax && mouseX <= ax + w && mouseY >= ay && mouseY <= ay + h;
+            if (e == selected) {
+                drawBorder(ctx, ax - 1, ay - 1, w + 2, h + 2, HWHudManager.SEL);          // contour cyan
+                ctx.fill(ax + w - 4, ay + h - 4, ax + w + 2, ay + h + 2, HWHudManager.SEL); // poignee
+                int cy = ctrlY(ax, ay, h);
+                ctrlBtn(ctx, ax + w - 34, cy, "R", mouseX, mouseY);   // reglages
+                ctrlBtn(ctx, ax + w - 22, cy, e.enabled ? "V" : "M", mouseX, mouseY); // visible/masquer
+                ctrlBtn(ctx, ax + w - 10, cy, e.locked ? "L" : "l", mouseX, mouseY);  // verrou
+                String tag = e.name.split(" ")[0] + " " + Math.round(e.scale * 100) + "%" + (e.locked ? " (verrou)" : "");
+                ctx.drawTextWithShadow(this.textRenderer, Text.literal("§b" + tag), ax, cy + 1, 0xFF49BDF2);
+            } else if (hover) {
+                drawBorder(ctx, ax - 1, ay - 1, w + 2, h + 2, 0x66FFFFFF);
             }
         }
-        drawBorder(ctx, 0, 0, this.width, this.height, 0x9940A0FF); // cadre bleu de la zone editable
-        if (dragging != null) {
-            int dw = HWHudManager.width(mc, dragging), dh = HWHudManager.height(dragging);
-            int dax = HWHudManager.actualX(dragging, this.width, dw), day = HWHudManager.actualY(dragging, this.height, dh);
-            if (Math.abs(dax + dw / 2 - this.width / 2) <= 1) ctx.fill(this.width / 2, 0, this.width / 2 + 1, this.height, 0xFFE8A020);
-            if (Math.abs(day + dh / 2 - this.height / 2) <= 1) ctx.fill(0, this.height / 2, this.width, this.height / 2 + 1, 0xFFE8A020);
+
+        // guides d'aimantation (pendant le geste)
+        if (mode == 1) {
+            if (guideX != Integer.MIN_VALUE) ctx.fill(guideX, 0, guideX + 1, this.height, HWHudManager.GUIDE);
+            if (guideY != Integer.MIN_VALUE) ctx.fill(0, guideY, this.width, guideY + 1, HWHudManager.GUIDE);
         }
-        ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§eEditeur de HUD §7- glisse les elements, ils s'ancrent au coin le plus proche - Echap pour sauver"), this.width / 2, 8, 0xFFE8C56A);
+        // cadre de la fenetre + aide
+        drawBorder(ctx, 0, 0, this.width, this.height, 0x5549BDF2);
+        ctx.drawCenteredTextWithShadow(this.textRenderer,
+            Text.literal("§bEditeur HUD §7- clic: selectionner - glisser: deplacer - poignee: redimensionner - fleches: 1px, Maj: 10px - Alt: sans aimant - Echap: sortir"),
+            this.width / 2, 8, 0xFFFFFFFF);
         super.render(ctx, mouseX, mouseY, delta);
+    }
+
+    private void ctrlBtn(DrawContext ctx, int x, int y, String label, int mouseX, int mouseY) {
+        boolean over = inRect(mouseX, mouseY, x, y, 11);
+        ctx.fill(x, y, x + 11, y + 11, over ? 0xCC20242C : 0xAA111318);
+        drawBorder(ctx, x, y, 11, 11, 0x8849BDF2);
+        ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§f" + label), x + 5, y + 2, 0xFFFFFFFF);
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
-        if (button == 0) {
-            for (int i = HWHudManager.ELEMENTS.size() - 1; i >= 0; i--) {
-                HWHudManager.El e = HWHudManager.ELEMENTS.get(i);
-                if (!e.enabled) continue;
-                int w = HWHudManager.width(this.client, e), h = HWHudManager.height(e);
-                int ax = HWHudManager.actualX(e, this.width, w), ay = HWHudManager.actualY(e, this.height, h);
-                if (mx >= ax - 2 && mx <= ax + w + 2 && my >= ay - 2 && my <= ay + h + 2) {
-                    dragging = e; offX = (int) mx - ax; offY = (int) my - ay; return true;
-                }
+        if (button != 0) return false;
+        // commandes du widget selectionne
+        if (selected != null) {
+            int w = W(selected), h = H(selected), ax = AX(selected), ay = AY(selected), cy = ctrlY(ax, ay, h);
+            if (inRect(mx, my, ax + w - 34, cy, 11)) { this.client.setScreen(new HWModSettingsScreen(this, selected)); return true; }
+            if (inRect(mx, my, ax + w - 22, cy, 11)) { pushUndo(selected); selected.enabled = !selected.enabled; HWHudManager.save(); return true; }
+            if (inRect(mx, my, ax + w - 10, cy, 11)) { pushUndo(selected); selected.locked = !selected.locked; HWHudManager.save(); return true; }
+            if (!selected.locked && mx >= ax + w - 4 && mx <= ax + w + 2 && my >= ay + h - 4 && my <= ay + h + 2) {
+                mode = 2; pushUndo(selected); startScale = selected.scale;
+                startDist = (float) Math.hypot(mx - ax, my - ay);
+                return true;
             }
         }
+        // selection du widget sous le curseur (le plus haut)
+        for (int i = HWHudManager.ELEMENTS.size() - 1; i >= 0; i--) {
+            HWHudManager.El e = HWHudManager.ELEMENTS.get(i);
+            if (!e.enabled) continue;
+            int w = W(e), h = H(e), ax = AX(e), ay = AY(e);
+            if (mx >= ax && mx <= ax + w && my >= ay && my <= ay + h) {
+                selected = e;
+                if (!e.locked) { mode = 1; offX = (int) mx - ax; offY = (int) my - ay; pushUndo(e); }
+                return true;
+            }
+        }
+        selected = null;
         return false;
     }
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
-        if (dragging != null) {
-            int w = HWHudManager.width(this.client, dragging), h = HWHudManager.height(dragging);
-            int nx = (int) mx - offX, ny = (int) my - offY;
-            int sw = this.width, sh = this.height, snap = 6;
-            if (Math.abs(nx + w / 2 - sw / 2) < snap) nx = sw / 2 - w / 2;
-            else if (nx < snap) nx = 0;
-            else if (Math.abs(nx + w - sw) < snap) nx = sw - w;
-            if (Math.abs(ny + h / 2 - sh / 2) < snap) ny = sh / 2 - h / 2;
-            else if (ny < snap) ny = 0;
-            else if (Math.abs(ny + h - sh) < snap) ny = sh - h;
-            setPos(dragging, nx, ny, w, h);
+        if (mode == 1 && selected != null && !selected.locked) {
+            int w = W(selected), h = H(selected);
+            int[] p = snap((int) mx - offX, (int) my - offY, w, h);
+            setPos(selected, p[0], p[1], w, h);
+            return true;
+        }
+        if (mode == 2 && selected != null && !selected.locked) {
+            int ax = AX(selected), ay = AY(selected);
+            float base = (float) Math.hypot(HWHudManager.width(mc(), selected), HWHudManager.height(selected));
+            float d = (float) Math.hypot(mx - ax, my - ay);
+            selected.scale = HWHudManager.clampScale(startScale + (d - startDist) / Math.max(8f, base));
             return true;
         }
         return super.mouseDragged(mx, my, button, dx, dy);
@@ -122,19 +210,33 @@ public class HWHudEditScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
-        if (dragging != null) {
-            int w = HWHudManager.width(this.client, dragging), h = HWHudManager.height(dragging);
-            reanchor(dragging, w, h);
-            dragging = null; HWHudManager.save(); return true;
-        }
+        if (mode == 1 && selected != null) { reanchor(selected, W(selected), H(selected)); mode = 0; guideX = guideY = Integer.MIN_VALUE; HWHudManager.save(); return true; }
+        if (mode == 2) { mode = 0; HWHudManager.save(); return true; }
         return super.mouseReleased(mx, my, button);
     }
 
-    private static void drawBorder(DrawContext ctx, int x, int y, int w, int h, int col) {
-        ctx.fill(x, y, x + w, y + 1, col);
-        ctx.fill(x, y + h - 1, x + w, y + h, col);
-        ctx.fill(x, y, x + 1, y + h, col);
-        ctx.fill(x + w - 1, y, x + w, y + h, col);
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256) { if (mode != 0) { undo(); mode = 0; return true; } done(); return true; } // Echap
+        if (keyCode == 90 && Screen.hasControlDown()) { undo(); return true; }                          // Ctrl+Z
+        if (selected != null && !selected.locked) {
+            int step = Screen.hasShiftDown() ? 10 : 1;
+            boolean moved = true;
+            if (keyCode == 263) { pushUndo(selected); selected.ox -= step / (float) this.width; }
+            else if (keyCode == 262) { pushUndo(selected); selected.ox += step / (float) this.width; }
+            else if (keyCode == 265) { pushUndo(selected); selected.oy -= step / (float) this.height; }
+            else if (keyCode == 264) { pushUndo(selected); selected.oy += step / (float) this.height; }
+            else moved = false;
+            if (moved) { HWHudManager.save(); return true; }
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private static void drawBorder(DrawContext ctx, int x, int y, int w, int h, int c) {
+        ctx.fill(x, y, x + w, y + 1, c);
+        ctx.fill(x, y + h - 1, x + w, y + h, c);
+        ctx.fill(x, y, x + 1, y + h, c);
+        ctx.fill(x + w - 1, y, x + w, y + h, c);
     }
 
     @Override public void close() { done(); }

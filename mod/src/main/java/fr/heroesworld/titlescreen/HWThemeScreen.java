@@ -50,8 +50,7 @@ public class HWThemeScreen extends Screen {
         ctx.fill(px, py, px + pw, py + ph, 0xE60E0C14);
         border(ctx, px, py, pw, ph, 0xFFE8C56A);
         ctx.fill(px, py + 34, px + pw, py + 35, 0x66E8C56A);
-        HWLogo.draw(ctx, px + 22, py + 17, 24);
-        ctx.drawTextWithShadow(this.textRenderer, Text.literal("§eSelectionner un theme"), px + 40, py + 13, 0xFFFFFFFF);
+        ctx.drawTextWithShadow(this.textRenderer, Text.literal("§eSelectionner un theme"), px + 12, py + 13, 0xFFFFFFFF);
 
         float t = (System.currentTimeMillis() % 600000L) / 1000f;
         for (int i = 0; i < HWTheme.THEMES.length; i++) {

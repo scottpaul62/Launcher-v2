@@ -8,6 +8,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
@@ -17,130 +18,154 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Systeme de HUD extensible du client HERO WORLD : mods activables, ancres aux coins, deplacables. */
+/** Systeme de HUD Heroes-World : ancrage semantique (9), offsets normalises, echelle, zone sure, sauvegarde atomique. */
 public final class HWHudManager {
     public static final Logger LOG = LoggerFactory.getLogger("HeroWorldClient");
     private static final Set<String> logged = new HashSet<>();
 
-    /** Ancres : 0=haut-gauche, 1=haut-droite, 2=bas-gauche, 3=bas-droite. */
+    public static final int SAFE = 12, SNAP = 8, GRID = 8;
+    public static final float MIN_SCALE = 0.5f, MAX_SCALE = 2.0f;
+    public static final int GUIDE = 0xFF49BDF2, SEL = 0xFF49BDF2;
+
+    /** 0=TL 1=TC 2=TR 3=CL 4=C 5=CR 6=BL 7=BC 8=BR */
+    public static final String[] ANCHORS = {
+        "top_left", "top_center", "top_right",
+        "center_left", "center", "center_right",
+        "bottom_left", "bottom_center", "bottom_right"
+    };
+
     public static final class El {
         public final String id, name, category;
-        public final int danchor, dox, doy; public final boolean de;
-        public boolean enabled; public int anchor, ox, oy;
-        public El(String id, String name, String category, boolean enabled, int anchor, int ox, int oy) {
+        public final int danchor; public final float dox, doy, dscale; public final boolean denabled;
+        public int anchor; public float ox, oy, scale; public boolean enabled, locked;
+        public El(String id, String name, String category, boolean enabled, int anchor, float ox, float oy) {
             this.id = id; this.name = name; this.category = category;
-            this.enabled = enabled; this.anchor = anchor; this.ox = ox; this.oy = oy;
-            this.de = enabled; this.danchor = anchor; this.dox = ox; this.doy = oy;
+            this.enabled = enabled; this.anchor = anchor; this.ox = ox; this.oy = oy; this.scale = 1f; this.locked = false;
+            this.denabled = enabled; this.danchor = anchor; this.dox = ox; this.doy = oy; this.dscale = 1f;
         }
     }
 
     public static final List<El> ELEMENTS = new ArrayList<>();
     static {
-        ELEMENTS.add(new El("fps", "Compteur FPS", "Performance", true, 0, 4, 4));
-        ELEMENTS.add(new El("ping", "Ping", "Performance", false, 0, 4, 18));
-        ELEMENTS.add(new El("coords", "Coordonnees", "Info", false, 0, 4, 32));
-        ELEMENTS.add(new El("direction", "Direction (boussole)", "Info", false, 4, 0, 4));
-        ELEMENTS.add(new El("time", "Horloge", "Info", false, 1, 4, 4));
-        ELEMENTS.add(new El("day", "Compteur de jours", "Info", false, 1, 4, 18));
-        ELEMENTS.add(new El("session", "Duree de session", "Info", false, 1, 4, 32));
-        ELEMENTS.add(new El("effects", "Effets de potion", "Info", false, 1, 4, 46));
-        ELEMENTS.add(new El("keystrokes", "KeyStrokes", "Mecanique", false, 2, 10, 52));
-        ELEMENTS.add(new El("cps", "CPS (clics/s)", "Mecanique", false, 2, 10, 96));
-        ELEMENTS.add(new El("armor", "Statut d'armure", "Combat", false, 3, 12, 52));
+        ELEMENTS.add(new El("fps", "Compteur FPS", "Performance", true, 0, 0f, 0f));
+        ELEMENTS.add(new El("ping", "Ping", "Performance", false, 0, 0f, 0.018f));
+        ELEMENTS.add(new El("coords", "Coordonnees", "Info", false, 0, 0f, 0.036f));
+        ELEMENTS.add(new El("direction", "Direction (boussole)", "Info", false, 1, 0f, 0f));
+        ELEMENTS.add(new El("time", "Horloge", "Info", false, 2, 0f, 0f));
+        ELEMENTS.add(new El("day", "Compteur de jours", "Info", false, 2, 0f, 0.018f));
+        ELEMENTS.add(new El("session", "Duree de session", "Info", false, 2, 0f, 0.036f));
+        ELEMENTS.add(new El("effects", "Effets de potion", "Info", false, 2, 0f, 0.06f));
+        ELEMENTS.add(new El("keystrokes", "KeyStrokes", "Mecanique", false, 6, 0f, -0.10f));
+        ELEMENTS.add(new El("cps", "CPS (clics/s)", "Mecanique", false, 6, 0f, -0.02f));
+        ELEMENTS.add(new El("armor", "Statut d'armure", "Combat", false, 8, 0f, -0.02f));
     }
 
     private static final long SESSION_START = System.currentTimeMillis();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private HWHudManager() {}
 
-    // ---- CPS : file des clics recents (alimentee par MouseClickMixin) ----
     private static final ArrayDeque<Long> CLICKS = new ArrayDeque<>();
-    public static void onClick() {
-        synchronized (CLICKS) {
-            CLICKS.addLast(System.currentTimeMillis());
-            while (CLICKS.size() > 60) CLICKS.pollFirst();
-        }
-    }
-    private static int cps() {
-        long now = System.currentTimeMillis();
-        synchronized (CLICKS) {
-            while (!CLICKS.isEmpty() && now - CLICKS.peekFirst() > 1000) CLICKS.pollFirst();
-            return CLICKS.size();
-        }
-    }
+    public static void onClick() { synchronized (CLICKS) { CLICKS.addLast(System.currentTimeMillis()); while (CLICKS.size() > 60) CLICKS.pollFirst(); } }
+    private static int cps() { long now = System.currentTimeMillis(); synchronized (CLICKS) { while (!CLICKS.isEmpty() && now - CLICKS.peekFirst() > 1000) CLICKS.pollFirst(); return CLICKS.size(); } }
 
     public static El byId(String id) { for (El e : ELEMENTS) if (e.id.equals(id)) return e; return null; }
-    public static void resetPos(El e) { e.anchor = e.danchor; e.ox = e.dox; e.oy = e.doy; }
-    public static void resetAll() { for (El e : ELEMENTS) { e.enabled = e.de; e.anchor = e.danchor; e.ox = e.dox; e.oy = e.doy; } }
+    public static void resetPos(El e) { e.anchor = e.danchor; e.ox = e.dox; e.oy = e.doy; e.scale = e.dscale; e.locked = false; }
+    public static void resetAll() { for (El e : ELEMENTS) { e.enabled = e.denabled; e.anchor = e.danchor; e.ox = e.dox; e.oy = e.doy; e.scale = e.dscale; e.locked = false; } }
     public static String anchorName(int a) {
-        switch (a) { case 1: return "haut-droite"; case 2: return "bas-gauche"; case 3: return "bas-droite";
-                     case 4: return "haut-centre"; case 5: return "bas-centre"; default: return "haut-gauche"; }
+        switch (a) {
+            case 1: return "haut-centre"; case 2: return "haut-droite";
+            case 3: return "centre-gauche"; case 4: return "centre"; case 5: return "centre-droite";
+            case 6: return "bas-gauche"; case 7: return "bas-centre"; case 8: return "bas-droite";
+            default: return "haut-gauche";
+        }
     }
+    private static int anchorFromName(String s) { for (int i = 0; i < ANCHORS.length; i++) if (ANCHORS[i].equals(s)) return i; return 0; }
 
-    public static int actualX(El e, int screenW, int w) {
-        if (e.anchor == 1 || e.anchor == 3) return Math.max(0, screenW - w - e.ox);
-        if (e.anchor == 4 || e.anchor == 5) return Math.max(0, (screenW - w) / 2 + e.ox);
-        return e.ox;
-    }
-    public static int actualY(El e, int screenH, int h) {
-        return (e.anchor == 2 || e.anchor == 3 || e.anchor == 5) ? Math.max(0, screenH - h - e.oy) : e.oy;
-    }
+    public static int baseX(int anchor, int sw, int w) { int c = anchor % 3; if (c == 0) return SAFE; if (c == 1) return (sw - w) / 2; return sw - w - SAFE; }
+    public static int baseY(int anchor, int sh, int h) { int r = anchor / 3; if (r == 0) return SAFE; if (r == 1) return (sh - h) / 2; return sh - h - SAFE; }
+    public static int actualX(El e, int sw, int w) { int fx = Math.round(baseX(e.anchor, sw, w) + e.ox * sw); int lo = SAFE, hi = Math.max(lo, sw - w - SAFE); return Math.max(lo, Math.min(hi, fx)); }
+    public static int actualY(El e, int sh, int h) { int fy = Math.round(baseY(e.anchor, sh, h) + e.oy * sh); int lo = SAFE, hi = Math.max(lo, sh - h - SAFE); return Math.max(lo, Math.min(hi, fy)); }
+    public static int scaledW(MinecraftClient mc, El e) { return Math.max(1, Math.round(width(mc, e) * e.scale)); }
+    public static int scaledH(El e) { return Math.max(1, Math.round(height(e) * e.scale)); }
+    public static float clampScale(float s) { return Math.max(MIN_SCALE, Math.min(MAX_SCALE, s)); }
 
     private static Path file() { return FabricLoader.getInstance().getConfigDir().resolve("heroworld_hud.json"); }
 
     public static void load() {
         try {
             Path f = file();
-            if (!Files.exists(f)) { LOG.info("[HUD] pas de config, valeurs par defaut ({} mods)", ELEMENTS.size()); return; }
-            JsonArray arr = GSON.fromJson(Files.readString(f, StandardCharsets.UTF_8), JsonArray.class);
-            if (arr == null) return;
+            if (!Files.exists(f)) { LOG.info("[HUD] pas de config, valeurs par defaut ({} widgets)", ELEMENTS.size()); return; }
+            JsonObject root = GSON.fromJson(Files.readString(f, StandardCharsets.UTF_8), JsonObject.class);
+            if (root == null || !root.has("widgets")) return;
+            JsonArray arr = root.getAsJsonArray("widgets");
             for (int i = 0; i < arr.size(); i++) {
                 JsonObject o = arr.get(i).getAsJsonObject();
                 El e = byId(o.get("id").getAsString());
-                if (e != null) {
-                    if (o.has("enabled")) e.enabled = o.get("enabled").getAsBoolean();
-                    if (o.has("anchor")) e.anchor = o.get("anchor").getAsInt();
-                    if (o.has("ox")) e.ox = o.get("ox").getAsInt();
-                    if (o.has("oy")) e.oy = o.get("oy").getAsInt();
-                }
+                if (e == null) continue;
+                if (o.has("anchor")) e.anchor = anchorFromName(o.get("anchor").getAsString());
+                if (o.has("offset")) { JsonObject off = o.getAsJsonObject("offset"); e.ox = (float) off.get("x").getAsDouble(); e.oy = (float) off.get("y").getAsDouble(); }
+                if (o.has("scale")) e.scale = clampScale((float) o.get("scale").getAsDouble());
+                if (o.has("visible")) e.enabled = o.get("visible").getAsBoolean();
+                if (o.has("locked")) e.locked = o.get("locked").getAsBoolean();
             }
-            LOG.info("[HUD] config chargee ({} mods)", ELEMENTS.size());
-        } catch (Exception ex) { LOG.warn("[HUD] echec chargement config", ex); }
+            LOG.info("[HUD] profil charge ({} widgets)", ELEMENTS.size());
+        } catch (Exception ex) { LOG.warn("[HUD] echec chargement, valeurs par defaut", ex); }
     }
 
     public static void save() {
         try {
+            JsonObject root = new JsonObject();
+            root.addProperty("schemaVersion", 2);
+            root.addProperty("profileId", "default");
+            root.add("serverMatch", com.google.gson.JsonNull.INSTANCE);
             JsonArray arr = new JsonArray();
+            int z = 0;
             for (El e : ELEMENTS) {
                 JsonObject o = new JsonObject();
-                o.addProperty("id", e.id); o.addProperty("enabled", e.enabled);
-                o.addProperty("anchor", e.anchor); o.addProperty("ox", e.ox); o.addProperty("oy", e.oy);
+                o.addProperty("id", e.id);
+                o.addProperty("anchor", ANCHORS[e.anchor]);
+                JsonObject off = new JsonObject(); off.addProperty("x", e.ox); off.addProperty("y", e.oy); o.add("offset", off);
+                o.addProperty("scale", e.scale);
+                o.add("width", com.google.gson.JsonNull.INSTANCE);
+                o.add("height", com.google.gson.JsonNull.INSTANCE);
+                o.addProperty("zIndex", z++);
+                o.addProperty("visible", e.enabled);
+                o.addProperty("locked", e.locked);
+                o.add("settings", new JsonObject());
                 arr.add(o);
             }
-            Files.writeString(file(), GSON.toJson(arr), StandardCharsets.UTF_8);
-        } catch (Exception ex) { LOG.warn("[HUD] echec sauvegarde config", ex); }
+            root.add("widgets", arr);
+            Path f = file(), tmp = f.resolveSibling("heroworld_hud.json.tmp");
+            Files.writeString(tmp, GSON.toJson(root), StandardCharsets.UTF_8);
+            try { Files.move(tmp, f, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE); }
+            catch (Exception atomicFail) { Files.move(tmp, f, StandardCopyOption.REPLACE_EXISTING); }
+        } catch (Exception ex) { LOG.warn("[HUD] echec sauvegarde", ex); }
     }
 
-    // ---- Rendu en jeu (appele par HudMixin) ----
     public static void renderAll(DrawContext ctx, MinecraftClient mc) {
         if (mc == null || mc.player == null || ctx == null) return;
         if (mc.options != null && mc.options.hudHidden) return;
-        if (mc.currentScreen instanceof HWHudEditScreen) return; // l'editeur dessine lui-meme
+        if (mc.currentScreen instanceof HWHudEditScreen) return;
         int sw = mc.getWindow().getScaledWidth(), sh = mc.getWindow().getScaledHeight();
         for (El e : ELEMENTS) {
             if (!e.enabled) continue;
             try {
-                int w = width(mc, e), h = height(e);
-                renderAt(ctx, mc, e, actualX(e, sw, w), actualY(e, sh, h));
-            } catch (Throwable t) {
-                if (logged.add(e.id)) LOG.warn("[HUD] erreur de rendu du mod '{}'", e.id, t);
-            }
+                int w = scaledW(mc, e), h = scaledH(e);
+                int fx = actualX(e, sw, w), fy = actualY(e, sh, h);
+                MatrixStack ms = ctx.getMatrices();
+                ms.push();
+                ms.translate((double) fx, (double) fy, 0.0);
+                ms.scale(e.scale, e.scale, 1.0f);
+                renderAt(ctx, mc, e, 0, 0);
+                ms.pop();
+            } catch (Throwable t) { if (logged.add(e.id)) LOG.warn("[HUD] erreur de rendu du widget '{}'", e.id, t); }
         }
     }
 
@@ -165,10 +190,7 @@ public final class HWHudManager {
             case "ping": {
                 int p = 0;
                 net.minecraft.client.network.ClientPlayNetworkHandler nh = mc.getNetworkHandler();
-                if (nh != null) {
-                    net.minecraft.client.network.PlayerListEntry pe = nh.getPlayerListEntry(mc.player.getUuid());
-                    if (pe != null) p = pe.getLatency();
-                }
+                if (nh != null) { net.minecraft.client.network.PlayerListEntry pe = nh.getPlayerListEntry(mc.player.getUuid()); if (pe != null) p = pe.getLatency(); }
                 return "§7Ping §f" + p + "ms";
             }
             case "cps": return "§bCPS §f" + cps();
@@ -200,8 +222,6 @@ public final class HWHudManager {
 
     private static final String[] COMPASS = {"S", "SO", "O", "NO", "N", "NE", "E", "SE"};
     private static float wrap180(float a) { a %= 360f; if (a > 180f) a -= 360f; if (a < -180f) a += 360f; return a; }
-
-    /** Boussole facon Lunar : ruban horizontal, cardinal courant au centre. */
     private static void drawCompass(DrawContext ctx, MinecraftClient mc, int x, int y) {
         int W = 110, H = 13;
         ctx.fill(x, y, x + W, y + H, 0x88000000);
