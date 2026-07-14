@@ -10,6 +10,9 @@
     "ScreenSwapMixin",
     "GameMenuMixin",
     "AuraTickMixin",
+    "GameRendererMixin",
+    "CrosshairMixin",
+    "ScoreboardMixin",
     "HudMixin",
     "MouseClickMixin"
   ]

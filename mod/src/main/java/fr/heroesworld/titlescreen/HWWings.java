@@ -11,6 +11,7 @@ public final class HWWings {
 
     public static void spawn(ClientWorld world, Entity e, int wings, long t) {
         if (world == null || e == null || wings <= 0) return;
+        if (!HWClientConfig.cosmeticsParticles) return;
         ParticleEffect p;
         switch (wings) {
             case 1 -> p = ParticleTypes.END_ROD;

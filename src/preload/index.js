@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
 
 // Pont sécurisé renderer <-> main. On n'expose que le strict nécessaire.
 contextBridge.exposeInMainWorld('hw', {
@@ -20,6 +20,10 @@ contextBridge.exposeInMainWorld('hw', {
   login: () => ipcRenderer.invoke('auth:login'),
   getAccount: () => ipcRenderer.invoke('auth:get'),
   logout: () => ipcRenderer.invoke('auth:logout'),
+  listAccounts: () => ipcRenderer.invoke('auth:list'),
+  switchAccount: (uuid) => ipcRenderer.invoke('auth:switch', uuid),
+  removeAccount: (uuid) => ipcRenderer.invoke('auth:remove', uuid),
+  setZoom: (f) => { try { webFrame.setZoomFactor(Number(f) || 1) } catch (_) {} },
   logOpen: () => ipcRenderer.invoke('log:open'),
   serverOnline: () => ipcRenderer.invoke('server:online'),
   serverStatus: () => ipcRenderer.invoke('server:status'),

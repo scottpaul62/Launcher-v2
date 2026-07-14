@@ -34,5 +34,12 @@ public class AuraTickMixin {
             }
             heroworld$prevKey = pressed;
         } catch (Throwable ignored) {}
+        try {
+            net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+            fr.heroesworld.titlescreen.HWHudManager.El z = fr.heroesworld.titlescreen.HWHudManager.byId("zoom");
+            boolean held = mc != null && z != null && z.enabled && mc.currentScreen == null
+                && net.minecraft.client.util.InputUtil.isKeyPressed(mc.getWindow().getHandle(), fr.heroesworld.titlescreen.HWClientConfig.zoomKey);
+            fr.heroesworld.titlescreen.HWZoom.active = held;
+        } catch (Throwable ignored) { fr.heroesworld.titlescreen.HWZoom.active = false; }
     }
 }

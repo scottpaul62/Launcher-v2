@@ -10,6 +10,7 @@ public final class HWAura {
 
     public static void spawn(ClientWorld world, Entity e, int aura, long t) {
         if (world == null || e == null || aura <= 0) return;
+        if (!HWClientConfig.cosmeticsParticles) return;
         double x = e.getX(), y = e.getY(), z = e.getZ();
         double ang = (t * 0.20);
         double r = 0.6;

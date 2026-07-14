@@ -24,7 +24,8 @@ public class HWButton extends ButtonWidget {
     protected void renderWidget(DrawContext ctx, int mouseX, int mouseY, float delta) {
         int x = getX(), y = getY(), w = getWidth(), h = getHeight();
         boolean over = isHovered() || isFocused();
-        hover += ((over ? 1f : 0f) - hover) * 0.3f;
+        if (HWClientConfig.reduceMotion) hover = over ? 1f : 0f;
+        else hover += ((over ? 1f : 0f) - hover) * 0.3f;
         TextRenderer tr = MinecraftClient.getInstance().textRenderer;
 
         if (style == PRIMARY) renderPrimary(ctx, tr, x, y, w, h);
@@ -33,14 +34,14 @@ public class HWButton extends ButtonWidget {
     }
 
     private void renderPrimary(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
-        if (hover > 0.02f) HWDraw.glow(ctx, x, y, w, h, 5, 0xE8C56A, hover);
+        if (hover > 0.02f && !HWClientConfig.reduceMotion) HWDraw.glow(ctx, x, y, w, h, 5, 0xE8C56A, hover);
         int fill = lerp(0xE01E1710, 0xE02C2114, hover);
         HWDraw.panel(ctx, x, y, w, h, 5, fill, lerp(0xFFCBA24E, 0xFFE8C56A, hover));
         ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + (h - 8) / 2, lerp(0xFFE9D4A0, 0xFFFFEFC6, hover));
     }
 
     private void renderSecondary(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
-        if (hover > 0.02f) HWDraw.glow(ctx, x, y, w, h, 4, 0x49BDF2, hover * 0.55f);
+        if (hover > 0.02f && !HWClientConfig.reduceMotion) HWDraw.glow(ctx, x, y, w, h, 4, 0x49BDF2, hover * 0.55f);
         int fill = lerp(0x9014121C, 0xC0221D2A, hover);
         HWDraw.panel(ctx, x, y, w, h, 4, fill, lerp(0x33FFFFFF, 0xB049BDF2, hover));
         boolean hasText = !getMessage().getString().isEmpty();

@@ -24,6 +24,7 @@ public class HWHudEditScreen extends Screen {
 
     @Override
     protected void init() {
+        HWHudManager.editorPreview = true; // les widgets sans donnees affichent un apercu (hitbox coherente)
         int bw = 82, g = 4, by = this.height - 22;
         int total = 4 * bw + 3 * g, sx = this.width / 2 - total / 2;
         this.addDrawableChild(new HWButton(sx, by, bw, 16, Text.literal("Annuler"), HWButton.SECONDARY, 0, b -> undo()));
@@ -100,9 +101,6 @@ public class HWHudEditScreen extends Screen {
         setPos(e, ax, ay, w, h);
     }
 
-    // rects des commandes du widget selectionne
-    private int ctrlY(int ax, int ay, int h) { return (ay - 14 >= 0) ? ay - 14 : ay + h + 2; }
-    private boolean inRect(double mx, double my, int x, int y, int s) { return mx >= x && mx <= x + s && my >= y && my <= y + s; }
 
     public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
 
@@ -119,7 +117,7 @@ public class HWHudEditScreen extends Screen {
 
         // widgets (a l'echelle)
         for (HWHudManager.El e : HWHudManager.ELEMENTS) {
-            if (!e.enabled) continue;
+            if (!e.enabled || e.id.equals("chat")) continue;
             int w = W(e), h = H(e), ax = AX(e), ay = AY(e);
             MatrixStack ms = ctx.getMatrices();
             ms.push(); ms.translate((double) ax, (double) ay, 0.0); ms.scale(e.scale, e.scale, 1.0f);
@@ -127,14 +125,8 @@ public class HWHudEditScreen extends Screen {
             ms.pop();
             boolean hover = mouseX >= ax && mouseX <= ax + w && mouseY >= ay && mouseY <= ay + h;
             if (e == selected) {
-                drawBorder(ctx, ax - 1, ay - 1, w + 2, h + 2, HWHudManager.SEL);          // contour cyan
-                ctx.fill(ax + w - 4, ay + h - 4, ax + w + 2, ay + h + 2, HWHudManager.SEL); // poignee
-                int cy = ctrlY(ax, ay, h);
-                ctrlBtn(ctx, ax + w - 34, cy, "R", mouseX, mouseY);   // reglages
-                ctrlBtn(ctx, ax + w - 22, cy, e.enabled ? "V" : "M", mouseX, mouseY); // visible/masquer
-                ctrlBtn(ctx, ax + w - 10, cy, e.locked ? "L" : "l", mouseX, mouseY);  // verrou
-                String tag = e.name.split(" ")[0] + " " + Math.round(e.scale * 100) + "%" + (e.locked ? " (verrou)" : "");
-                ctx.drawTextWithShadow(this.textRenderer, Text.literal("§b" + tag), ax, cy + 1, 0xFF49BDF2);
+                drawBorder(ctx, ax - 1, ay - 1, w + 2, h + 2, HWHudManager.SEL);            // contour cyan ajuste
+                ctx.fill(ax + w - 4, ay + h - 4, ax + w + 2, ay + h + 2, HWHudManager.SEL);  // poignee de taille
             } else if (hover) {
                 drawBorder(ctx, ax - 1, ay - 1, w + 2, h + 2, 0x66FFFFFF);
             }
@@ -153,23 +145,13 @@ public class HWHudEditScreen extends Screen {
         super.render(ctx, mouseX, mouseY, delta);
     }
 
-    private void ctrlBtn(DrawContext ctx, int x, int y, String label, int mouseX, int mouseY) {
-        boolean over = inRect(mouseX, mouseY, x, y, 11);
-        ctx.fill(x, y, x + 11, y + 11, over ? 0xCC20242C : 0xAA111318);
-        drawBorder(ctx, x, y, 11, 11, 0x8849BDF2);
-        ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§f" + label), x + 5, y + 2, 0xFFFFFFFF);
-    }
-
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
         if (button != 0) return false;
-        // commandes du widget selectionne
+        // poignee de redimensionnement du widget selectionne
         if (selected != null) {
-            int w = W(selected), h = H(selected), ax = AX(selected), ay = AY(selected), cy = ctrlY(ax, ay, h);
-            if (inRect(mx, my, ax + w - 34, cy, 11)) { this.client.setScreen(new HWModSettingsScreen(this, selected)); return true; }
-            if (inRect(mx, my, ax + w - 22, cy, 11)) { pushUndo(selected); selected.enabled = !selected.enabled; HWHudManager.save(); return true; }
-            if (inRect(mx, my, ax + w - 10, cy, 11)) { pushUndo(selected); selected.locked = !selected.locked; HWHudManager.save(); return true; }
+            int w = W(selected), h = H(selected), ax = AX(selected), ay = AY(selected);
             if (!selected.locked && mx >= ax + w - 4 && mx <= ax + w + 2 && my >= ay + h - 4 && my <= ay + h + 2) {
                 mode = 2; pushUndo(selected); startScale = selected.scale;
                 startDist = (float) Math.hypot(mx - ax, my - ay);
@@ -179,7 +161,7 @@ public class HWHudEditScreen extends Screen {
         // selection du widget sous le curseur (le plus haut)
         for (int i = HWHudManager.ELEMENTS.size() - 1; i >= 0; i--) {
             HWHudManager.El e = HWHudManager.ELEMENTS.get(i);
-            if (!e.enabled) continue;
+            if (!e.enabled || e.id.equals("chat")) continue;
             int w = W(e), h = H(e), ax = AX(e), ay = AY(e);
             if (mx >= ax && mx <= ax + w && my >= ay && my <= ay + h) {
                 selected = e;
@@ -240,6 +222,7 @@ public class HWHudEditScreen extends Screen {
         ctx.fill(x + w - 1, y, x + w, y + h, c);
     }
 
+    @Override public void removed() { HWHudManager.editorPreview = false; super.removed(); }
     @Override public void close() { done(); }
     @Override public boolean shouldPause() { return false; }
 }

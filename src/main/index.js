@@ -101,7 +101,7 @@ ipcMain.on('win:close', () => win && win.close())
 
 // Ouvre une URL dans le navigateur externe (jamais dans la fenêtre Electron)
 ipcMain.handle('open:external', (e, url) => {
-  try { if (typeof url === 'string' && /^https?:\/\//.test(url)) shell.openExternal(url) } catch (err) {}
+  try { if (typeof url === 'string' && /^(https?:\/\/|mailto:)/.test(url)) shell.openExternal(url) } catch (err) {}
 })
 
 // ============ SERVEUR LOCAL (TEMPORAIRE, pour tester — à remplacer par l'hébergement 24/7) ============
@@ -229,9 +229,36 @@ const AZURE_CLIENT_ID = '1ce6e35a-126f-48fd-97fb-54d143ac6d45'
 const REDIRECT = 'https://login.microsoftonline.com/common/oauth2/nativeclient'
 const AUTHORIZE = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?prompt=select_account&client_id=${AZURE_CLIENT_ID}&response_type=code&scope=XboxLive.signin%20offline_access&redirect_uri=${REDIRECT}`
 const TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token'
-const accountFile = () => join(app.getPath('userData'), 'hw-account.json')
-function readAccount () { try { return JSON.parse(readFileSync(accountFile(), 'utf8')) } catch (_) { return null } }
-function writeAccount (a) { try { writeFileSync(accountFile(), JSON.stringify(a)) } catch (_) {} }
+// Multi-account store (v2). Migrates the old single-account hw-account.json once.
+const accountsFile = () => join(app.getPath('userData'), 'hw-accounts.json')
+const legacyAccountFile = () => join(app.getPath('userData'), 'hw-account.json')
+function writeStore (s) { try { writeFileSync(accountsFile(), JSON.stringify(s)) } catch (_) {} }
+function readStore () {
+  try {
+    const s = JSON.parse(readFileSync(accountsFile(), 'utf8'))
+    if (s && Array.isArray(s.accounts)) return s
+  } catch (_) {}
+  try {
+    const old = JSON.parse(readFileSync(legacyAccountFile(), 'utf8'))
+    if (old && old.uuid) {
+      const s = { active: old.uuid, accounts: [old] }
+      writeStore(s)
+      try { unlinkSync(legacyAccountFile()) } catch (_) {}
+      console.log('[AUTH] ancien compte migré vers le store multi-comptes')
+      return s
+    }
+  } catch (_) {}
+  return { active: null, accounts: [] }
+}
+function readAccount () { const s = readStore(); return s.accounts.find((a) => a.uuid === s.active) || null }
+function writeAccount (a) {
+  const s = readStore()
+  const i = s.accounts.findIndex((x) => x.uuid === a.uuid)
+  if (i >= 0) s.accounts[i] = Object.assign({}, s.accounts[i], a)
+  else s.accounts.push(a)
+  s.active = a.uuid
+  writeStore(s)
+}
 
 async function msToken (body) {
   const res = await fetch(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(body).toString() })
@@ -251,7 +278,34 @@ async function fullAuthFromMs (msAccessToken) {
 }
 
 ipcMain.handle('auth:get', () => { const a = readAccount(); return a ? { name: a.name, uuid: a.uuid } : null })
-ipcMain.handle('auth:logout', () => { try { unlinkSync(accountFile()) } catch (_) {} ; return { ok: true } })
+ipcMain.handle('auth:logout', () => {
+  const s = readStore()
+  s.accounts = s.accounts.filter((a) => a.uuid !== s.active)
+  s.active = s.accounts.length ? s.accounts[0].uuid : null
+  writeStore(s)
+  const a = readAccount()
+  console.log('[AUTH] déconnexion, compte suivant :', a ? a.name : 'aucun')
+  return a ? { ok: true, name: a.name, uuid: a.uuid } : { ok: true }
+})
+ipcMain.handle('auth:list', () => {
+  const s = readStore()
+  return s.accounts.map((a) => ({ name: a.name, uuid: a.uuid, active: a.uuid === s.active }))
+})
+ipcMain.handle('auth:switch', (e, uuid) => {
+  const s = readStore()
+  if (s.accounts.some((a) => a.uuid === uuid)) { s.active = uuid; writeStore(s); console.log('[AUTH] compte actif ->', uuid) }
+  const a = readAccount()
+  return a ? { name: a.name, uuid: a.uuid } : null
+})
+ipcMain.handle('auth:remove', (e, uuid) => {
+  const s = readStore()
+  s.accounts = s.accounts.filter((a) => a.uuid !== uuid)
+  if (s.active === uuid) s.active = s.accounts.length ? s.accounts[0].uuid : null
+  writeStore(s)
+  const a = readAccount()
+  console.log('[AUTH] compte retiré, actif :', a ? a.name : 'aucun')
+  return a ? { ok: true, name: a.name, uuid: a.uuid } : { ok: true }
+})
 ipcMain.handle('auth:login', async () => new Promise((resolve) => {
   const authWin = new BrowserWindow({ width: 500, height: 660, parent: win, modal: true, show: true, autoHideMenuBar: true, title: 'Connexion Microsoft', webPreferences: { nodeIntegration: false, contextIsolation: true } })
   let done = false

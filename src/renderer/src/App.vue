@@ -30,12 +30,24 @@ const settings = reactive(Object.assign(
   {
     ram: 4, res: '1920 × 1080', dir: '%APPDATA%/.heroesworld', java: '',
     autoDownload: true, minimizeOnLaunch: true,
-    notifEnabled: true, animations: true
+    notifEnabled: true, animations: true,
+    reduceMotion: false, uiScale: 100
   },
   JSON.parse(localStorage.getItem('hwSettings') || '{}')
 ))
 function saveSettings () { localStorage.setItem('hwSettings', JSON.stringify(settings)) }
 watch(settings, saveSettings, { deep: true })
+
+/* Accessibility: apply "reduce motion" + interface scale to the whole app. */
+function applyAccessibility () {
+  try { document.body.classList.toggle('hw-reduce-motion', !!settings.reduceMotion) } catch (_) {}
+  const f = (Number(settings.uiScale) || 100) / 100
+  try {
+    if (window.hw && window.hw.setZoom) window.hw.setZoom(f)
+    else document.body.style.zoom = String(f)
+  } catch (_) {}
+}
+watch(() => [settings.reduceMotion, settings.uiScale], applyAccessibility)
 
 const nameColor = ref(localStorage.getItem('hwNameColor') || '#FFD700')
 function pickColor (e) { nameColor.value = e.target.value; localStorage.setItem('hwNameColor', e.target.value) }
@@ -141,7 +153,19 @@ const messages = {
     'notif.update.title': 'Mise à jour disponible', 'notif.error.title': 'Échec du lancement',
     'notif.event1.title': 'Événement', 'notif.event1.text': 'Ouverture publique en préparation.',
     'notif.cosmetic1.title': 'Nouveau cosmétique', 'notif.cosmetic1.text': 'Ailes de foudre bientôt disponibles.',
-    'home.playingAs': 'Connecté en tant que {name}'
+    'home.playingAs': 'Connecté en tant que {name}',
+    'settings.cat.accessibilite': 'Accessibilité',
+    'settings.reduceMotionLabel': 'Réduire les animations',
+    'settings.reduceMotionHint': "Désactive les animations décoratives de l'interface.",
+    'settings.animationsHint': 'Étoiles filantes et dérive du ciel en arrière-plan.',
+    'settings.uiScaleLabel': "Taille de l'interface",
+    'settings.uiScaleHint': 'Agrandit tout le launcher, texte compris.',
+    'account.accounts': 'Comptes', 'account.addAccount': 'Ajouter un compte',
+    'account.active': 'Actif', 'account.remove': 'Retirer ce compte',
+    'launch.support': 'Contacter le support',
+    'launch.hint.perm': "Accès refusé à un fichier — un antivirus bloque peut-être le dossier du jeu. Ajoute une exception puis clique Réparer.",
+    'launch.hint.disk': 'Espace disque insuffisant — libère de la place puis clique Réparer.',
+    'launch.hint.files': 'Fichier du jeu manquant ou corrompu — clique Réparer pour le retélécharger.'
   },
   en: {
     'nav.accueil': 'Home', 'nav.actus': 'News', 'nav.cosmetiques': 'Cosmetics', 'nav.amis': 'Friends',
@@ -236,7 +260,19 @@ const messages = {
     'notif.update.title': 'Update available', 'notif.error.title': 'Launch failed',
     'notif.event1.title': 'Event', 'notif.event1.text': 'Public opening in preparation.',
     'notif.cosmetic1.title': 'New cosmetic', 'notif.cosmetic1.text': 'Lightning wings coming soon.',
-    'home.playingAs': 'Playing as {name}'
+    'home.playingAs': 'Playing as {name}',
+    'settings.cat.accessibilite': 'Accessibility',
+    'settings.reduceMotionLabel': 'Reduce motion',
+    'settings.reduceMotionHint': 'Disables decorative interface animations.',
+    'settings.animationsHint': 'Background shooting stars and sky drift.',
+    'settings.uiScaleLabel': 'Interface size',
+    'settings.uiScaleHint': 'Scales the whole launcher, text included.',
+    'account.accounts': 'Accounts', 'account.addAccount': 'Add an account',
+    'account.active': 'Active', 'account.remove': 'Remove this account',
+    'launch.support': 'Contact support',
+    'launch.hint.perm': 'File access denied — an antivirus may be blocking the game folder. Add an exception then click Repair.',
+    'launch.hint.disk': 'Not enough disk space — free some space then click Repair.',
+    'launch.hint.files': 'Missing or corrupted game file — click Repair to re-download it.'
   }
 }
 function t (key) {
@@ -285,6 +321,21 @@ function go (p) { page.value = p; acctOpen.value = false; notifOpen.value = fals
 const serverOnline = ref(false)
 const players = reactive({ online: 0, max: 0 })
 let srvTimer = null
+async function pingSrv () {
+  try {
+    if (window.hw && window.hw.serverStatus) {
+      const s = await window.hw.serverStatus()
+      serverOnline.value = !!(s && s.online)
+      if (s && s.players) { players.online = s.players.online || 0; players.max = s.players.max || 0 }
+    } else if (window.hw && window.hw.serverOnline) {
+      serverOnline.value = !!(await window.hw.serverOnline())
+    }
+  } catch (_) {}
+}
+function restartSrvTimer (ms) { if (srvTimer) clearInterval(srvTimer); srvTimer = setInterval(pingSrv, ms) }
+/* Perf: window unfocused -> pause decorative animations + slow down polling. */
+function onWinBlur () { try { document.body.classList.add('hw-paused') } catch (_) {} ; restartSrvTimer(30000) }
+function onWinFocus () { try { document.body.classList.remove('hw-paused') } catch (_) {} ; restartSrvTimer(5000); pingSrv() }
 
 /* ===================== Compte (Microsoft réel) ===================== */
 const acctOpen = ref(false)
@@ -314,12 +365,43 @@ async function login () {
       toast(t('toast.loginCancelled') + (r && r.error ? ' (' + r.error + ')' : '')); ulog('login cancelled -> ' + JSON.stringify(r))
     }
   } catch (e) { toast(t('toast.loginError') + e); ulog('login error -> ' + e) }
+  refreshAccounts()
 }
 async function logout () {
   ulog('logout click')
   acctOpen.value = false
-  try { if (window.hw && window.hw.logout) await window.hw.logout() } catch (_) {}
-  account.online = false; CONFIG.uuid = null; toast(t('toast.loggedOut'))
+  let next = null
+  try { if (window.hw && window.hw.logout) next = await window.hw.logout() } catch (_) {}
+  if (next && next.name) {
+    CONFIG.pseudo = next.name; CONFIG.uuid = next.uuid; account.online = true
+    toast(t('toast.connectedPrefix') + next.name)
+  } else {
+    account.online = false; CONFIG.uuid = null; toast(t('toast.loggedOut'))
+  }
+  refreshAccounts()
+}
+
+/* ===================== Comptes multiples ===================== */
+const accounts = ref([])
+async function refreshAccounts () {
+  try { accounts.value = (window.hw && window.hw.listAccounts) ? ((await window.hw.listAccounts()) || []) : [] } catch (_) { accounts.value = [] }
+}
+async function switchAccount (a) {
+  if (!a || a.active || !(window.hw && window.hw.switchAccount)) return
+  try {
+    const r = await window.hw.switchAccount(a.uuid)
+    if (r && r.name) { CONFIG.pseudo = r.name; CONFIG.uuid = r.uuid; account.online = true; toast(t('toast.connectedPrefix') + r.name) }
+  } catch (_) {}
+  refreshAccounts(); ulog('switch account')
+}
+async function removeAccount (a) {
+  if (!a || !(window.hw && window.hw.removeAccount)) return
+  try {
+    const r = await window.hw.removeAccount(a.uuid)
+    if (r && r.name) { CONFIG.pseudo = r.name; CONFIG.uuid = r.uuid; account.online = true }
+    else if (a.active) { account.online = false; CONFIG.uuid = null }
+  } catch (_) {}
+  refreshAccounts(); ulog('remove account')
 }
 async function openFolder (sub) {
   if (!(window.hw && window.hw.openGameFolder)) return { ok: false, error: 'unavailable' }
@@ -384,12 +466,21 @@ function repairLaunch () {
   launchInfo.active = false; launchInfo.phase = ''; launchInfo.error = ''
   nextTick(() => launch())
 }
+const SUPPORT_EMAIL = 'scottpaulafg@gmail.com'
+function contactSupport () {
+  ulog('contact support')
+  const body = 'Launcher: ' + APP_VERSION.value + '\nPhase: ' + (launchInfo.phase || '-') + '\nErreur: ' + (launchInfo.error || '-')
+  ext('mailto:' + SUPPORT_EMAIL + '?subject=' + encodeURIComponent('[HEROES-WORLD] Support launcher') + '&body=' + encodeURIComponent(body))
+}
 function errorHint (msg) {
   const m = ('' + (msg || '')).toLowerCase()
   if (m.includes('annulé') || m.includes('annule')) return t('launch.hint.cancelled')
   if (m.includes('java')) return t('launch.hint.java')
   if (m.includes('réseau') || m.includes('reseau') || m.includes('network') || m.includes('timeout') || m.includes('econnrefused') || m.includes('enotfound')) return t('launch.hint.network')
   if (m.includes('0xc0000005') || m.includes('crash') || m.includes('planté') || m.includes('plante')) return t('launch.hint.crash')
+  if (m.includes('eperm') || m.includes('eacces') || m.includes('accès') || m.includes('access is denied') || m.includes('permission')) return t('launch.hint.perm')
+  if (m.includes('enospc') || m.includes('espace disque') || m.includes('disk full')) return t('launch.hint.disk')
+  if (m.includes('introuvable') || m.includes('not found') || m.includes('enoent') || m.includes('corrom') || m.includes('checksum') || m.includes('integrity')) return t('launch.hint.files')
   return t('launch.hint.generic')
 }
 const launchErrorHint = computed(() => errorHint(launchInfo.error))
@@ -582,6 +673,7 @@ const languagesFiltered = computed(() => {
 /* ===================== Paramètres (catégories + recherche) ===================== */
 const settingsCategories = [
   { id: 'jeu', key: 'settings.cat.jeu' },
+  { id: 'accessibilite', key: 'settings.cat.accessibilite' },
   { id: 'apropos', key: 'settings.cat.apropos' }
 ]
 const settingsSelectedCat = ref('jeu')
@@ -590,6 +682,8 @@ const settingsFieldIndex = [
   { cat: 'jeu', labelKey: 'settings.memoryTitle' }, { cat: 'jeu', labelKey: 'settings.ramLabel' },
   { cat: 'jeu', labelKey: 'settings.displayTitle' }, { cat: 'jeu', labelKey: 'settings.resolutionLabel' },
   { cat: 'jeu', labelKey: 'settings.folderTitle' }, { cat: 'jeu', labelKey: 'settings.javaTitle' },
+  { cat: 'accessibilite', labelKey: 'settings.reduceMotionLabel' }, { cat: 'accessibilite', labelKey: 'settings.animationsLabel' },
+  { cat: 'accessibilite', labelKey: 'settings.uiScaleLabel' }, { cat: 'accessibilite', labelKey: 'settings.notifEnabledLabel' },
   { cat: 'apropos', labelKey: 'settings.launcherTitle' }, { cat: 'apropos', labelKey: 'settings.checkUpdateBtn' },
   { cat: 'apropos', labelKey: 'settings.openFolderBtn' }
 ]
@@ -642,7 +736,7 @@ function spawnMeteor () {
   meteors.value.push({ id, style })
   setTimeout(() => { meteors.value = meteors.value.filter(m => m.id !== id) }, dur * 1000 + 400)
 }
-function scheduleMeteor () { meteorTimer = setTimeout(() => { if (!document.hidden && settings.animations) spawnMeteor(); scheduleMeteor() }, 11000 + Math.random() * 15000) }
+function scheduleMeteor () { meteorTimer = setTimeout(() => { if (!document.hidden && document.hasFocus() && settings.animations && !settings.reduceMotion) spawnMeteor(); scheduleMeteor() }, 11000 + Math.random() * 15000) }
 
 /* ===================== Mise à jour / toast ===================== */
 const upd = reactive({ state: null, percent: 0, version: '' })
@@ -712,18 +806,11 @@ onMounted(() => {
   refreshAccount()
   loadMods()
   if (window.hw && window.hw.onLogLine) window.hw.onLogLine(pushLog)
-  const pingSrv = async () => {
-    try {
-      if (window.hw && window.hw.serverStatus) {
-        const s = await window.hw.serverStatus()
-        serverOnline.value = !!(s && s.online)
-        if (s && s.players) { players.online = s.players.online || 0; players.max = s.players.max || 0 }
-      } else if (window.hw && window.hw.serverOnline) {
-        serverOnline.value = !!(await window.hw.serverOnline())
-      }
-    } catch (_) {}
-  }
-  pingSrv(); srvTimer = setInterval(pingSrv, 5000)
+  pingSrv(); restartSrvTimer(5000)
+  window.addEventListener('blur', onWinBlur)
+  window.addEventListener('focus', onWinFocus)
+  applyAccessibility()
+  refreshAccounts()
   try { if (window.hw && window.hw.appVersion) window.hw.appVersion().then(v => { if (v) APP_VERSION.value = v }) } catch (_) {}
   addNotif('event', t('notif.event1.title'), t('notif.event1.text'))
   addNotif('cosmetic', t('notif.cosmetic1.title'), t('notif.cosmetic1.text'))
@@ -737,6 +824,8 @@ onUnmounted(() => {
   window.removeEventListener('unhandledrejection', onUnhandledRejection)
   clearTimeout(meteorTimer)
   clearInterval(srvTimer)
+  window.removeEventListener('blur', onWinBlur)
+  window.removeEventListener('focus', onWinFocus)
 })
 </script>
 
@@ -744,9 +833,9 @@ onUnmounted(() => {
   <div class="titlebar" @dblclick="winMax">
     <span class="tb-title">⚡ HEROES-WORLD</span>
     <div class="tb-controls">
-      <button @click="winMin" :aria-label="t('window.minimize')">─</button>
-      <button @click="winMax" :aria-label="t('window.maximize')">▢</button>
-      <button class="close" @click="winClose" :aria-label="t('window.close')">✕</button>
+      <button @click="winMin" :aria-label="t('window.minimize')" :title="t('window.minimize')">─</button>
+      <button @click="winMax" :aria-label="t('window.maximize')" :title="t('window.maximize')">▢</button>
+      <button class="close" @click="winClose" :aria-label="t('window.close')" :title="t('window.close')">✕</button>
     </div>
   </div>
 
@@ -781,7 +870,7 @@ onUnmounted(() => {
       <div class="topbar">
         <div class="tb-crumb">{{ pageLabel }}</div>
         <div class="tb-right">
-          <div class="bell-chip" :class="{ open: notifOpen }" @click="toggleNotif" :title="t('notif.title')">
+          <div class="bell-chip" :class="{ open: notifOpen }" @click="toggleNotif" :title="t('notif.title')" role="button" tabindex="0" :aria-label="t('notif.title')" :aria-expanded="notifOpen" @keydown.enter.self.prevent="toggleNotif" @keydown.space.self.prevent="toggleNotif">
             <svg class="bell-ic" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" /></svg>
             <span v-if="notifUnread" class="bell-badge">{{ notifUnread > 9 ? '9+' : notifUnread }}</span>
             <transition name="pop">
@@ -804,7 +893,7 @@ onUnmounted(() => {
               </div>
             </transition>
           </div>
-          <div class="acct-chip" :class="{ open: acctOpen }" @click="toggleAcct">
+          <div class="acct-chip" :class="{ open: acctOpen }" @click="toggleAcct" role="button" tabindex="0" :aria-label="CONFIG.pseudo + ' — ' + (account.online ? t('account.online') : t('account.offline'))" :aria-expanded="acctOpen" @keydown.enter.self.prevent="toggleAcct" @keydown.space.self.prevent="toggleAcct">
             <span class="acct-dot" :class="{ on: account.online }"></span>
             <span class="acct-name" :style="{ color: nameColor }">{{ CONFIG.pseudo }}</span>
             <img class="acct-head" :src="`https://mc-heads.net/avatar/${CONFIG.uuid || CONFIG.pseudo}/64`" alt="" draggable="false" />
@@ -817,9 +906,21 @@ onUnmounted(() => {
                 </div>
                 <button v-if="!account.online" class="ap-item login" @click="login">{{ t('account.loginMs') }}</button>
                 <template v-else>
+                  <div v-if="accounts.length" class="ap-acc-list">
+                    <div class="ap-acc-title">{{ t('account.accounts') }}</div>
+                    <div v-for="a in accounts" :key="a.uuid" class="ap-acc-row" :class="{ active: a.active }">
+                      <button class="ap-acc-main" @click="switchAccount(a)">
+                        <img class="ap-acc-head" :src="`https://mc-heads.net/avatar/${a.uuid}/32`" alt="" draggable="false" />
+                        <span class="ap-acc-name">{{ a.name }}</span>
+                        <span v-if="a.active" class="ap-acc-badge">{{ t('account.active') }}</span>
+                      </button>
+                      <button v-if="!a.active" class="ap-acc-del" @click.stop="removeAccount(a)" :title="t('account.remove')" :aria-label="t('account.remove')">✕</button>
+                    </div>
+                  </div>
+                  <button class="ap-item" @click="login">{{ t('account.addAccount') }}</button>
+                  <div class="ap-sep"></div>
                   <button class="ap-item" @click="ext('https://account.microsoft.com')">{{ t('account.myAccount') }}</button>
                   <button class="ap-item" @click="ext('https://www.minecraft.net/fr-fr/msaprofile/mygames/editskin')">{{ t('account.changeSkin') }}</button>
-                  <button class="ap-item" @click="login">{{ t('account.switchAccount') }}</button>
                   <button class="ap-item" @click="openGameFolderBtn">{{ t('account.screenshots') }}</button>
                   <button class="ap-item" @click="go('settings')">{{ t('account.settings') }}</button>
                   <div class="ap-sep"></div>
@@ -856,7 +957,7 @@ onUnmounted(() => {
           <div class="home-news">
             <div class="home-news-head"><span>{{ t('nav.actus') }}</span><button @click="go('actus')">{{ t('home.seeAll') }}</button></div>
             <div class="home-news-grid">
-              <article v-for="(a, i) in CONFIG.actus.slice(0, 3)" :key="i" class="news-card" @click="go('actus')">
+              <article v-for="(a, i) in CONFIG.actus.slice(0, 3)" :key="i" class="news-card" role="button" tabindex="0" @click="go('actus')" @keydown.enter.self.prevent="go('actus')" @keydown.space.self.prevent="go('actus')">
                 <div class="nc-tag" :class="{ 'nc-tag-event': a.tag === 'Événement' }">{{ a.tag }}</div>
                 <h3>{{ a.titre }}</h3>
                 <p>{{ a.texte }}</p>
@@ -923,7 +1024,7 @@ onUnmounted(() => {
                   <button class="btn-sm" :class="{ ghost: !cosSelectedObj.owned }" :disabled="!cosSelectedObj.owned" @click="toggleEquip(cosSelectedObj)">
                     {{ isEquipped(cosSelectedObj) ? t('cosmetics.unequipBtn') : t('cosmetics.equipBtn') }}
                   </button>
-                  <button class="btn-fav" :class="{ active: isFav(cosSelectedObj.id) }" @click="toggleFav(cosSelectedObj)" :title="t('cosmetics.favToggle')">★</button>
+                  <button class="btn-fav" :class="{ active: isFav(cosSelectedObj.id) }" @click="toggleFav(cosSelectedObj)" :title="t('cosmetics.favToggle')" :aria-label="t('cosmetics.favToggle')" :aria-pressed="isFav(cosSelectedObj.id)">★</button>
                 </div>
                 <p class="cos-equip-note">{{ t('cosmetics.equipNote') }}</p>
               </div>
@@ -959,8 +1060,8 @@ onUnmounted(() => {
               </div>
 
               <div class="cos-grid">
-                <div v-for="it in cosItemsFiltered" :key="it.id" class="cos-item" :class="{ locked: !it.owned, active: cosSelected === it.id, equipped: isEquipped(it) }" @click="selectCosmetic(it)">
-                  <button class="cos-fav-star" :class="{ active: isFav(it.id) }" @click.stop="toggleFav(it)" :title="t('cosmetics.favToggle')">★</button>
+                <div v-for="it in cosItemsFiltered" :key="it.id" class="cos-item" :class="{ locked: !it.owned, active: cosSelected === it.id, equipped: isEquipped(it) }" role="button" tabindex="0" @click="selectCosmetic(it)" @keydown.enter.self.prevent="selectCosmetic(it)" @keydown.space.self.prevent="selectCosmetic(it)">
+                  <button class="cos-fav-star" :class="{ active: isFav(it.id) }" @click.stop="toggleFav(it)" :title="t('cosmetics.favToggle')" :aria-label="t('cosmetics.favToggle')" :aria-pressed="isFav(it.id)">★</button>
                   <div class="ci-name">{{ it.name }}</div>
                   <div class="ci-badges">
                     <span class="ci-badge ci-rarity" :style="rarityBadgeStyle(it.rarity)">{{ t('cosmetics.rarity.' + it.rarity) }}</span>
@@ -1008,10 +1109,10 @@ onUnmounted(() => {
               <template v-for="grp in ['Client', 'Minecraft', 'Bibliothèques']" :key="grp">
                 <div v-if="modsFiltered[grp] && modsFiltered[grp].length" class="mods-group">
                   <div class="mg-title">{{ t(MOD_GROUP_LABELS[grp]) }}</div>
-                  <div v-for="m in modsFiltered[grp]" :key="m.id" class="mod-row" :class="{ active: selectedMod === m.id }" @click="selectedMod = m.id">
+                  <div v-for="m in modsFiltered[grp]" :key="m.id" class="mod-row" :class="{ active: selectedMod === m.id }" role="button" tabindex="0" @click="selectedMod = m.id" @keydown.enter.self.prevent="selectedMod = m.id" @keydown.space.self.prevent="selectedMod = m.id">
                     <div class="mr-main"><div class="mr-name">{{ m.name }}</div><div class="mr-sub">v{{ m.version }} · {{ m.author }}</div></div>
                     <label v-if="m.toggleable" class="switch" @click.stop>
-                      <input type="checkbox" :checked="isModOn(m)" @change="toggleMod(m)" />
+                      <input type="checkbox" :checked="isModOn(m)" @change="toggleMod(m)" :aria-label="m.name" />
                       <span class="switch-track"></span>
                     </label>
                     <span v-else class="mr-static">{{ t('mods.alwaysActive') }}</span>
@@ -1082,6 +1183,33 @@ onUnmounted(() => {
                 </div>
               </div>
 
+              <div v-if="catVisible('accessibilite')" class="panel set-block">
+                <h3>{{ t('settings.cat.accessibilite') }}</h3>
+                <div v-show="fieldVisible('settings.reduceMotionLabel', 'accessibilite')" class="set-row">
+                  <label>{{ t('settings.reduceMotionLabel') }}<span class="set-hint">{{ t('settings.reduceMotionHint') }}</span></label>
+                  <div class="set-control"><label class="switch"><input type="checkbox" v-model="settings.reduceMotion" :aria-label="t('settings.reduceMotionLabel')" /><span class="switch-track"></span></label></div>
+                </div>
+                <div v-show="fieldVisible('settings.animationsLabel', 'accessibilite')" class="set-row">
+                  <label>{{ t('settings.animationsLabel') }}<span class="set-hint">{{ t('settings.animationsHint') }}</span></label>
+                  <div class="set-control"><label class="switch"><input type="checkbox" v-model="settings.animations" :aria-label="t('settings.animationsLabel')" /><span class="switch-track"></span></label></div>
+                </div>
+                <div v-show="fieldVisible('settings.uiScaleLabel', 'accessibilite')" class="set-row">
+                  <label>{{ t('settings.uiScaleLabel') }}<span class="set-hint">{{ t('settings.uiScaleHint') }}</span></label>
+                  <div class="set-control">
+                    <select v-model.number="settings.uiScale" :aria-label="t('settings.uiScaleLabel')">
+                      <option :value="90">90 %</option>
+                      <option :value="100">100 %</option>
+                      <option :value="110">110 %</option>
+                      <option :value="125">125 %</option>
+                    </select>
+                  </div>
+                </div>
+                <div v-show="fieldVisible('settings.notifEnabledLabel', 'accessibilite')" class="set-row">
+                  <label>{{ t('settings.notifEnabledLabel') }}</label>
+                  <div class="set-control"><label class="switch"><input type="checkbox" v-model="settings.notifEnabled" :aria-label="t('settings.notifEnabledLabel')" /><span class="switch-track"></span></label></div>
+                </div>
+              </div>
+
               <div v-if="catVisible('apropos')" class="panel set-block">
                 <h3>{{ t('settings.launcherTitle') }}</h3>
                 <div v-show="fieldVisible('settings.checkUpdateBtn', 'apropos')" class="set-row">
@@ -1125,6 +1253,7 @@ onUnmounted(() => {
       <div class="lo-actions">
         <template v-if="launchInfo.phase === 'error' || launchInfo.phase === 'exit'">
           <button class="btn-sm" @click="repairLaunch">{{ t('launch.repair') }}</button>
+          <button class="btn-sm ghost" @click="contactSupport">{{ t('launch.support') }}</button>
           <button class="btn-sm ghost" @click="copyLog">{{ t('launch.copyLogs') }}</button>
           <button class="btn-sm ghost" @click="logsOpen = !logsOpen">{{ logsOpen ? t('launch.hideLogs') : t('launch.showLogs') }}</button>
           <button class="btn-sm ghost" @click="openGameFolderBtn">{{ t('launch.openFolder') }}</button>
@@ -1213,7 +1342,7 @@ onUnmounted(() => {
 .side-ic { width: 19px; height: 19px; flex: 0 0 auto; }
 .side-ic path { fill: currentColor; }
 .side-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.side-foot { margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 12px 16px 4px; border-top: 1px solid rgba(255,255,255,.06); font-size: 11.5px; color: #6E6980; }
+.side-foot { margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 12px 16px 4px; border-top: 1px solid rgba(255,255,255,.06); font-size: 11.5px; color: #8b8b98; }
 .sf-dot { width: 8px; height: 8px; border-radius: 50%; background: #E05555; box-shadow: 0 0 6px #E05555; flex: 0 0 auto; }
 .sf-dot.on { background: #7CCB6E; box-shadow: 0 0 6px #7CCB6E; }
 .sf-txt { font-size: 11.5px; }
@@ -1246,8 +1375,8 @@ onUnmounted(() => {
 .np-body { min-width: 0; flex: 1; }
 .np-title { font-size: 12.5px; font-weight: 700; color: #EDE8DA; }
 .np-text { font-size: 11.5px; color: #9A94A8; margin-top: 2px; line-height: 1.4; }
-.np-time { font-size: 10px; color: #6b6b78; margin-top: 4px; }
-.np-empty { padding: 30px 10px; text-align: center; color: #6b6b78; font-size: 12.5px; }
+.np-time { font-size: 10px; color: #8b8b98; margin-top: 4px; }
+.np-empty { padding: 30px 10px; text-align: center; color: #8b8b98; font-size: 12.5px; }
 .acct-chip { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 16px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); cursor: pointer; transition: background .15s, border-color .15s; }
 .acct-chip:hover, .acct-chip.open { background: rgba(232,197,106,.1); border-color: rgba(232,197,106,.3); }
 .acct-dot { width: 8px; height: 8px; border-radius: 50%; background: #6b6b78; }
@@ -1318,7 +1447,7 @@ onUnmounted(() => {
 .nc-tag-event, .ai-tag-event { color: var(--gold, #E8C56A); }
 .news-card h3 { font-family: var(--serif, Georgia, serif); font-size: 15.5px; color: var(--gold, #E8C56A); margin-bottom: 8px; line-height: 1.3; }
 .news-card p { font-size: 12.5px; color: #9A94A8; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.nc-date { font-size: 11px; color: #6b6b78; margin-top: 10px; }
+.nc-date { font-size: 11px; color: #8b8b98; margin-top: 10px; }
 
 /* ===== Actualités ===== */
 .actus-body { display: flex; gap: 20px; align-items: flex-start; }
@@ -1328,7 +1457,7 @@ onUnmounted(() => {
 .actus-item.active { border-color: rgba(232,197,106,.55); background: rgba(232,197,106,.08); }
 .ai-tag { font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: #5AA9E6; }
 .ai-title { font-size: 13px; color: #EDE8DA; font-weight: 600; }
-.ai-date { font-size: 11px; color: #6b6b78; }
+.ai-date { font-size: 11px; color: #8b8b98; }
 .actus-reader { flex: 1; padding: 30px 34px; min-width: 0; }
 .ar-tag { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #5AA9E6; margin-bottom: 12px; }
 .actus-reader h2 { font-family: var(--serif, Georgia, serif); font-size: clamp(22px, 2.6vw, 32px); color: var(--gold, #E8C56A); line-height: 1.2; margin-bottom: 8px; }
@@ -1343,11 +1472,11 @@ onUnmounted(() => {
 .cos-notice { padding: 12px 16px; margin-bottom: 16px; font-size: 12.5px; color: #CFC7B2; border-color: rgba(232,197,106,.25); }
 .cos-body { display: grid; grid-template-columns: 200px 260px 1fr; gap: 18px; align-items: start; }
 .cos-cats { display: flex; flex-direction: column; gap: 4px; padding: 10px; max-height: calc(100vh - 300px); overflow-y: auto; }
-.cos-cats-title { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #6b6b78; margin: 2px 4px 6px; }
+.cos-cats-title { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b8b98; margin: 2px 4px 6px; }
 .cos-cat { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; background: rgba(9,10,16,.5); border: 1px solid rgba(255,255,255,.06); color: #B9B4C6; border-radius: 9px; padding: 9px 12px; cursor: pointer; font-size: 12.5px; contain: content; }
 .cos-cat:hover { border-color: rgba(232,197,106,.3); }
 .cos-cat.active { color: var(--gold, #E8C56A); background: rgba(232,197,106,.1); border-color: rgba(232,197,106,.4); }
-.cos-cat-count { font-size: 10.5px; color: #6b6b78; }
+.cos-cat-count { font-size: 10.5px; color: #8b8b98; }
 .cos-cat.active .cos-cat-count { color: var(--gold, #E8C56A); }
 .cos-preview { padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; max-height: calc(100vh - 300px); overflow-y: auto; }
 .cos-body-img { width: 120px; image-rendering: pixelated; filter: drop-shadow(0 10px 20px rgba(0,0,0,.5)); }
@@ -1366,10 +1495,10 @@ onUnmounted(() => {
 .cos-owned-badge.owned { background: rgba(124,203,110,.16); color: #7CCB6E; }
 .cos-owned-badge.locked { background: rgba(255,255,255,.08); color: #9A94A8; }
 .cos-selected-actions { display: flex; align-items: center; gap: 8px; }
-.btn-fav { width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); color: #6b6b78; cursor: pointer; font-size: 15px; line-height: 1; transition: color .15s, border-color .15s, background .15s; }
+.btn-fav { width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); color: #8b8b98; cursor: pointer; font-size: 15px; line-height: 1; transition: color .15s, border-color .15s, background .15s; }
 .btn-fav:hover { border-color: rgba(232,197,106,.4); color: var(--gold, #E8C56A); }
 .btn-fav.active { color: var(--gold, #E8C56A); background: rgba(232,197,106,.14); border-color: rgba(232,197,106,.45); }
-.cos-equip-note { font-size: 10.5px; color: #6b6b78; line-height: 1.5; max-width: 220px; }
+.cos-equip-note { font-size: 10.5px; color: #8b8b98; line-height: 1.5; max-width: 220px; }
 .cos-grid-wrap { min-width: 0; }
 .cos-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; padding: 12px 14px; }
 .cos-controls .ipt { flex: 1; min-width: 140px; }
@@ -1383,7 +1512,7 @@ onUnmounted(() => {
 .cos-item.active { border-color: rgba(232,197,106,.55); background: rgba(232,197,106,.06); }
 .cos-item.locked { opacity: .6; }
 .cos-item.equipped { border-color: rgba(124,203,110,.5); }
-.cos-fav-star { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 7px; background: rgba(0,0,0,.25); border: none; color: #6b6b78; cursor: pointer; font-size: 13px; line-height: 1; }
+.cos-fav-star { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 7px; background: rgba(0,0,0,.25); border: none; color: #8b8b98; cursor: pointer; font-size: 13px; line-height: 1; }
 .cos-fav-star:hover { color: #CFC7B2; }
 .cos-fav-star.active { color: var(--gold, #E8C56A); }
 .ci-name { font-size: 13px; color: #EDE8DA; font-weight: 600; line-height: 1.3; padding-right: 20px; }
@@ -1412,7 +1541,7 @@ onUnmounted(() => {
 .mods-hint { background: rgba(232,197,106,.1); border: 1px solid rgba(232,197,106,.3); color: var(--gold, #E8C56A); border-radius: 9px; padding: 9px 14px; font-size: 12.5px; margin-bottom: 12px; }
 .mods-body { display: grid; grid-template-columns: 1fr 280px; gap: 16px; align-items: start; }
 .mods-list { display: flex; flex-direction: column; gap: 14px; min-width: 0; max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
-.mg-title { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #6b6b78; margin-bottom: 6px; }
+.mg-title { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b8b98; margin-bottom: 6px; }
 .mod-row { display: flex; align-items: center; gap: 12px; background: rgba(9,10,16,.55); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 11px 14px; margin-bottom: 6px; cursor: pointer; contain: content; }
 .mod-row:hover { border-color: rgba(232,197,106,.25); }
 .mod-row.active { border-color: rgba(232,197,106,.5); background: rgba(232,197,106,.06); }
@@ -1432,7 +1561,7 @@ onUnmounted(() => {
 .mods-detail h3 { font-family: var(--serif, Georgia, serif); color: var(--gold, #E8C56A); font-size: 16px; margin-bottom: 10px; }
 .md-row { display: flex; justify-content: space-between; font-size: 12px; color: #B9B4C6; margin-bottom: 6px; }
 .md-desc { font-size: 12.5px; color: #9A94A8; line-height: 1.55; margin-top: 10px; }
-.md-empty { color: #6b6b78; font-size: 12.5px; }
+.md-empty { color: #8b8b98; font-size: 12.5px; }
 
 /* ===== Langues ===== */
 .lang-wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
@@ -1479,13 +1608,13 @@ onUnmounted(() => {
 .set-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 10px 0; padding: 14px 16px; background: rgba(15,17,26,.7); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; flex-wrap: wrap; transition: border-color .15s, background .15s; }
 .set-row:first-of-type { margin-top: 0; }
 .set-row:hover { border-color: rgba(232,197,106,.22); }
-.set-row label { display: flex; flex-direction: column; gap: 4px; min-width: 180px; flex: 1 1 220px; font-size: 13px; color: #EDE8DA; font-weight: 600; }
+.set-row > label { display: flex; flex-direction: column; gap: 4px; min-width: 180px; flex: 1 1 220px; font-size: 13px; color: #EDE8DA; font-weight: 600; }
 .set-hint { font-size: 11px; color: #8A85A0; font-weight: 400; }
 .set-control { flex: 1 1 200px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 140px; }
 .set-control select, .set-control input[type=range] { flex: 1; min-width: 120px; }
 .set-control input[type=range] { accent-color: var(--gold-dark, #D4AF37); }
 .set-row-stack { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 8px; }
-.set-row-stack label { margin-bottom: 2px; }
+.set-row-stack > label { margin-bottom: 2px; }
 .set-row-toggle { justify-content: space-between; }
 .set-val { width: 56px; text-align: right; color: var(--gold, #E8C56A); font-weight: 700; font-size: 13px; flex: 0 0 auto; }
 .set-note { font-size: 11.5px; color: #8A85A0; margin-top: 6px; }
@@ -1514,7 +1643,7 @@ onUnmounted(() => {
 .lo-logs-bar .sp { flex: 1; }
 .lo-logs-bar button { background: rgba(232,197,106,.14); color: var(--gold, #E8C56A); border: 1px solid rgba(232,197,106,.3); border-radius: 7px; padding: 5px 10px; cursor: pointer; font-size: 11.5px; }
 .ov-logpre { max-height: 180px; overflow: auto; padding: 10px 12px; font-family: Consolas, monospace; font-size: 11.5px; line-height: 1.5; color: #9FB0C4; white-space: pre-wrap; word-break: break-word; }
-.lg-err { color: #ff6b6b; } .lg-warn { color: #ffc04f; } .lg-game { color: #C9D2E0; } .lg-dim { color: #6b7180; font-style: italic; }
+.lg-err { color: #ff6b6b; } .lg-warn { color: #ffc04f; } .lg-game { color: #C9D2E0; } .lg-dim { color: #8a90a2; font-style: italic; }
 
 /* ===== Mise à jour / toast ===== */
 .upd { position: fixed; top: 44px; left: 50%; transform: translateX(-50%); z-index: 250; display: flex; align-items: center; gap: 12px; background: rgba(9,10,16,.94); border: 1px solid rgba(232,197,106,.5); border-radius: 12px; padding: 9px 16px; font-size: 13px; color: #EDE8DA; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
@@ -1524,8 +1653,27 @@ onUnmounted(() => {
 .toast { position: fixed; bottom: 26px; left: 50%; transform: translate(-50%,12px); z-index: 600; opacity: 0; pointer-events: none; transition: .2s; background: #0A0B11; color: #EDE8DA; border: 1px solid var(--gold, #E8C56A); border-radius: 10px; padding: 11px 20px; font-size: 13px; }
 .toast.show { opacity: 1; transform: translate(-50%,0); }
 
-/* ===== Accessibilité ===== */
-button:focus-visible, .side-item:focus-visible, .acct-chip:focus-visible, .bell-chip:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid rgba(232,197,106,.65); outline-offset: 2px; border-radius: 6px; }
+/* ===== Accessibilité (focus + switches) ===== */
+button:focus-visible, .side-item:focus-visible, .acct-chip:focus-visible, .bell-chip:focus-visible, input:focus-visible, select:focus-visible, [role="button"]:focus-visible, [tabindex="0"]:focus-visible { outline: 2px solid rgba(232,197,106,.85); outline-offset: 2px; border-radius: 6px; }
+
+/* Force compact switches inside settings rows (something stretches flex items there) */
+.set-control .switch { flex: 0 0 40px !important; width: 40px !important; }
+
+/* ===== Comptes multiples (popover) ===== */
+.ap-acc-title { font-size: 10.5px; letter-spacing: 1.2px; text-transform: uppercase; color: #8b8b98; padding: 6px 10px 2px; }
+.ap-acc-row { display: flex; align-items: center; gap: 4px; }
+.ap-acc-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; background: none; border: none; color: #E7E2D2; font-size: 13px; padding: 7px 10px; border-radius: 8px; cursor: pointer; text-align: left; }
+.ap-acc-main:hover { background: rgba(232,197,106,.14); }
+.ap-acc-row.active .ap-acc-main { background: rgba(232,197,106,.08); cursor: default; }
+.ap-acc-head { width: 22px; height: 22px; border-radius: 6px; image-rendering: pixelated; flex: 0 0 auto; }
+.ap-acc-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ap-acc-badge { font-size: 9px; letter-spacing: .5px; text-transform: uppercase; color: var(--gold, #E8C56A); border: 1px solid rgba(232,197,106,.45); border-radius: 999px; padding: 2px 7px; flex: 0 0 auto; }
+.ap-acc-del { width: 26px; height: 26px; flex: 0 0 auto; background: none; border: none; color: #8b8b98; border-radius: 7px; cursor: pointer; font-size: 12px; }
+.ap-acc-del:hover { background: rgba(224,85,85,.15); color: #ff9a9a; }
+
+/* ===== Accessibilité / perf : exceptions et pause hors focus ===== */
+body.hw-reduce-motion .lo-spinner { animation: spin 1s linear infinite !important; }
+body.hw-paused .sky, body.hw-paused .planet, body.hw-paused .lightning, body.hw-paused .meteor { animation-play-state: paused !important; }
 
 /* ===== Responsive ===== */
 @media (max-width: 980px) {

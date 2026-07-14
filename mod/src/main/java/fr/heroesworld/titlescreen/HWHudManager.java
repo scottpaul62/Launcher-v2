@@ -45,12 +45,18 @@ public final class HWHudManager {
         public final String id, name, category;
         public final int danchor; public final float dox, doy, dscale; public final boolean denabled;
         public int anchor; public float ox, oy, scale; public boolean enabled, locked;
+        public int color = 0;   // 0 = couleur par defaut, sinon ARGB
+        public int bgMode = 0;  // 0 = suit le reglage global, 1 = force ON, 2 = force OFF
+        public int opt = 0;     // option specifique au widget (ex. style du crosshair)
         public El(String id, String name, String category, boolean enabled, int anchor, float ox, float oy) {
             this.id = id; this.name = name; this.category = category;
             this.enabled = enabled; this.anchor = anchor; this.ox = ox; this.oy = oy; this.scale = 1f; this.locked = false;
             this.denabled = enabled; this.danchor = anchor; this.dox = ox; this.doy = oy; this.dscale = 1f;
         }
     }
+
+    /** Vrai pendant le rendu de l'editeur HUD : les widgets sans donnees affichent un apercu. */
+    public static boolean editorPreview = false;
 
     public static final List<El> ELEMENTS = new ArrayList<>();
     static {
@@ -68,6 +74,12 @@ public final class HWHudManager {
         ELEMENTS.add(new El("speed", "Vitesse", "Info", false, 0, 0f, 0.054f));
         ELEMENTS.add(new El("xp", "Niveau XP", "Info", false, 2, 0f, 0.078f));
         ELEMENTS.add(new El("itemcount", "Compteur d'objet", "Combat", false, 8, 0f, -0.06f));
+        ELEMENTS.add(new El("zoom", "Zoom (touche)", "Mecanique", false, 1, 0f, 0.05f));
+        ELEMENTS.add(new El("togglesprint", "Toggle Sprint/Sneak", "Mecanique", false, 6, 0f, -0.16f));
+        ELEMENTS.add(new El("scoreboard", "Scoreboard (deplacable)", "Info", false, 5, 0f, 0f));
+        ELEMENTS.add(new El("chat", "Tchat (reglages)", "Info", true, 6, 0f, 0f));
+        ELEMENTS.add(new El("crosshair", "Crosshair personnalise", "Combat", false, 4, 0f, 0f));
+        ELEMENTS.add(new El("waypoints", "Waypoints (HUD)", "Info", false, 0, 0f, 0.09f));
     }
 
     private static final long SESSION_START = System.currentTimeMillis();
@@ -121,6 +133,12 @@ public final class HWHudManager {
                 if (o.has("scale")) e.scale = clampScale((float) o.get("scale").getAsDouble());
                 if (o.has("visible")) e.enabled = o.get("visible").getAsBoolean();
                 if (o.has("locked")) e.locked = o.get("locked").getAsBoolean();
+                if (o.has("settings")) {
+                    JsonObject st = o.getAsJsonObject("settings");
+                    if (st.has("color")) e.color = st.get("color").getAsInt();
+                    if (st.has("bg")) e.bgMode = st.get("bg").getAsInt();
+                    if (st.has("opt")) e.opt = st.get("opt").getAsInt();
+                }
             }
             LOG.info("[HUD] profil charge ({} widgets)", ELEMENTS.size());
         } catch (Exception ex) { LOG.warn("[HUD] echec chargement, valeurs par defaut", ex); }
@@ -145,7 +163,11 @@ public final class HWHudManager {
                 o.addProperty("zIndex", z++);
                 o.addProperty("visible", e.enabled);
                 o.addProperty("locked", e.locked);
-                o.add("settings", new JsonObject());
+                JsonObject st = new JsonObject();
+                if (e.color != 0) st.addProperty("color", e.color);
+                if (e.bgMode != 0) st.addProperty("bg", e.bgMode);
+                if (e.opt != 0) st.addProperty("opt", e.opt);
+                o.add("settings", st);
                 arr.add(o);
             }
             root.add("widgets", arr);
@@ -181,14 +203,22 @@ public final class HWHudManager {
             switch (e.id) {
                 case "keystrokes": return 40;
                 case "armor": return 18;
-                case "effects": return 74;
+                case "effects": return 118;
                 case "direction": return 110;
+                case "scoreboard": return 95;
+                case "crosshair": return 12;
+                case "waypoints": return 110;
+                case "chat": return 40;
                 default: return mc.textRenderer.getWidth(text(mc, e)) + 4;
             }
         } catch (Throwable t) { return 40; }
     }
     public static int height(El e) {
-        switch (e.id) { case "keystrokes": return 40; case "armor": return 72; case "effects": return 66; case "direction": return 13; default: return 10; }
+        switch (e.id) {
+            case "keystrokes": return 40; case "armor": return 72; case "effects": return 72; case "direction": return 13;
+            case "scoreboard": return 85; case "crosshair": return 12; case "waypoints": return 33; case "chat": return 10;
+            default: return 10;
+        }
     }
 
     static String text(MinecraftClient mc, El e) {
@@ -208,6 +238,14 @@ public final class HWHudManager {
             case "speed": return "§7Vitesse §f" + String.format("%.1f", mc.player.getVelocity().horizontalLength() * 20) + " b/s";
             case "xp": return "§7Niveau §f" + mc.player.experienceLevel;
             case "itemcount": { net.minecraft.item.ItemStack h = mc.player.getMainHandStack(); return "§7Objet §f" + (h != null ? h.getCount() : 0); }
+            case "zoom": return HWZoom.active ? ("§bZoom §fx" + String.format("%.1f", HWZoom.clampFactor(HWClientConfig.zoomFactor)))
+                : (editorPreview ? ("§bZoom §fx" + String.format("%.1f", HWZoom.clampFactor(HWClientConfig.zoomFactor)) + " §8(apercu)") : "");
+            case "togglesprint": {
+                boolean sp = false, sn = false;
+                try { sp = mc.options.getSprintToggled().getValue(); sn = mc.options.getSneakToggled().getValue(); } catch (Throwable ignored) {}
+                String run = (mc.player != null && mc.player.isSprinting()) ? "§a" : "§f";
+                return "§7Sprint " + run + (sp ? "toggle" : "maintenu") + " §8| §7Sneak §f" + (sn ? "toggle" : "maintenu");
+            }
             default: return e.name;
         }
     }
@@ -217,13 +255,32 @@ public final class HWHudManager {
         switch (e.id) {
             case "keystrokes": drawKeystrokes(ctx, mc, ax, ay); break;
             case "armor": drawArmor(ctx, mc, ax, ay); break;
-            case "effects": drawEffects(ctx, mc, ax, ay); break;
+            case "effects": drawEffects(ctx, mc, e, ax, ay); break;
             case "direction": drawCompass(ctx, mc, ax, ay); break;
+            case "crosshair": drawCrosshair(ctx, e, ax, ay); break;
+            case "waypoints": drawWaypoints(ctx, mc, ax, ay); break;
+            case "chat": break; // le tchat vanilla reste en place (reglages via le menu)
+            case "scoreboard": {
+                if (editorPreview) {
+                    ctx.fill(ax, ay, ax + 95, ay + 85, 0x55000000);
+                    ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.literal("§eSCOREBOARD"), ax + 47, ay + 6, 0xFFE8C56A);
+                    ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.literal("§7(rendu vanilla"), ax + 47, ay + 34, 0xFFA9AFBA);
+                    ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.literal("§7deplace ici)"), ax + 47, ay + 46, 0xFFA9AFBA);
+                }
+                break; // en jeu : rendu vanilla repositionne par ScoreboardMixin
+            }
             default: {
                 String s = text(mc, e);
+                if (s.isEmpty()) return; // ex. zoom inactif
+                if (e.color != 0) s = s.replaceAll("§.", ""); // couleur perso : on retire les codes § qui l'ecraseraient
                 int w = tr.getWidth(s);
-                if (HWClientConfig.hudBackground) ctx.fill(ax - 2, ay - 1, ax + w + 2, ay + 9, 0x66000000);
-                ctx.drawTextWithShadow(tr, Text.literal(s), ax, ay, 0xFFFFFFFF);
+                boolean bg;
+                if (HWClientConfig.highContrast) bg = true;
+                else if (e.bgMode == 1) bg = true;
+                else if (e.bgMode == 2) bg = false;
+                else bg = HWClientConfig.hudBackground;
+                if (bg) ctx.fill(ax - 2, ay - 1, ax + w + 2, ay + 9, 0x66000000);
+                ctx.drawTextWithShadow(tr, Text.literal(s), ax, ay, e.color != 0 ? e.color : 0xFFFFFFFF);
             }
         }
     }
@@ -247,16 +304,75 @@ public final class HWHudManager {
         ctx.fill(x + W / 2, y - 1, x + W / 2 + 1, y + H + 1, 0xFFE8C56A);
     }
 
-    private static void drawEffects(DrawContext ctx, MinecraftClient mc, int x, int y) {
+    private static void drawEffects(DrawContext ctx, MinecraftClient mc, El e, int x, int y) {
         int row = 0;
         for (StatusEffectInstance eff : mc.player.getStatusEffects()) {
-            if (row >= 6) break;
+            if (row >= 4) break;
+            int yy = y + row * 18;
             int secs = eff.getDuration() / 20;
-            String s = "§d" + String.format("%d:%02d", secs / 60, secs % 60) + (eff.getAmplifier() > 0 ? " §7x" + (eff.getAmplifier() + 1) : "");
+            String name = "";
+            try { name = eff.getEffectType().value().getName().getString(); } catch (Throwable ignored) {}
+            String s = "§f" + name + (eff.getAmplifier() > 0 ? " " + (eff.getAmplifier() + 1) : "")
+                + " §7" + String.format("%d:%02d", secs / 60, secs % 60);
+            if (e.color != 0) s = s.replaceAll("§.", "");
             int w = mc.textRenderer.getWidth(s);
+            boolean bg;
+            if (HWClientConfig.highContrast) bg = true;
+            else if (e.bgMode == 1) bg = true;
+            else if (e.bgMode == 2) bg = false;
+            else bg = HWClientConfig.hudBackground;
+            if (bg) ctx.fill(x, yy, x + 20 + w + 6, yy + 18, 0x66000000);
+            boolean icon = false;
+            try {
+                net.minecraft.client.texture.Sprite sp = mc.getStatusEffectSpriteManager().getSprite(eff.getEffectType());
+                ctx.drawSprite(x + 1, yy + 1, 0, 16, 16, sp);
+                icon = true;
+            } catch (Throwable ignored) {}
+            if (!icon) {
+                int c = 0xFFB07CE8;
+                try { c = 0xFF000000 | eff.getEffectType().value().getColor(); } catch (Throwable ignored) {}
+                ctx.fill(x + 3, yy + 3, x + 15, yy + 15, c);
+            }
+            ctx.drawTextWithShadow(mc.textRenderer, Text.literal(s), x + 21, yy + 5, e.color != 0 ? e.color : 0xFFFFFFFF);
+            row++;
+        }
+    }
+
+    /** Crosshair personnalise : 0 croix, 1 point, 2 cercle. */
+    private static void drawCrosshair(DrawContext ctx, El e, int x, int y) {
+        int c = e.color != 0 ? e.color : 0xFFFFFFFF;
+        int cx = x + 6, cy = y + 6;
+        switch (e.opt % 3) {
+            case 1: // point
+                ctx.fill(cx - 1, cy - 1, cx + 2, cy + 2, c);
+                break;
+            case 2: // cercle
+                ctx.fill(cx - 2, cy - 6, cx + 3, cy - 5, c); ctx.fill(cx - 2, cy + 5, cx + 3, cy + 6, c);
+                ctx.fill(cx - 6, cy - 2, cx - 5, cy + 3, c); ctx.fill(cx + 5, cy - 2, cx + 6, cy + 3, c);
+                ctx.fill(cx - 5, cy - 4, cx - 3, cy - 3, c); ctx.fill(cx + 3, cy - 4, cx + 5, cy - 3, c);
+                ctx.fill(cx - 5, cy + 3, cx - 3, cy + 4, c); ctx.fill(cx + 3, cy + 3, cx + 5, cy + 4, c);
+                ctx.fill(cx, cy, cx + 1, cy + 1, c);
+                break;
+            default: // croix
+                ctx.fill(cx, cy - 6, cx + 1, cy - 1, c); ctx.fill(cx, cy + 2, cx + 1, cy + 7, c);
+                ctx.fill(cx - 6, cy, cx - 1, cy + 1, c); ctx.fill(cx + 2, cy, cx + 7, cy + 1, c);
+        }
+    }
+
+    /** Les 3 waypoints visibles les plus proches (dimension courante). */
+    private static void drawWaypoints(DrawContext ctx, MinecraftClient mc, int x, int y) {
+        java.util.List<HWWaypoints.WP> list = HWWaypoints.nearest(mc, 3);
+        if (list.isEmpty()) {
+            if (editorPreview) ctx.drawTextWithShadow(mc.textRenderer, Text.literal("§7◆ (aucun waypoint)"), x, y, 0xFFA9AFBA);
+            return;
+        }
+        int row = 0;
+        for (HWWaypoints.WP w : list) {
+            String s = "◆ " + w.name + "  " + HWWaypoints.dist(mc, w) + "m " + HWWaypoints.dirTo(mc, w);
+            int tw = mc.textRenderer.getWidth(s);
             int yy = y + row * 11;
-            ctx.fill(x - 2, yy - 1, x + w + 2, yy + 9, 0x66000000);
-            ctx.drawTextWithShadow(mc.textRenderer, Text.literal(s), x, yy, 0xFFFFFFFF);
+            if (HWClientConfig.hudBackground || HWClientConfig.highContrast) ctx.fill(x - 2, yy - 1, x + tw + 2, yy + 9, 0x66000000);
+            ctx.drawTextWithShadow(mc.textRenderer, Text.literal(s), x, yy, 0xFF000000 | (w.color & 0xFFFFFF));
             row++;
         }
     }

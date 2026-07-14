@@ -19,3 +19,13 @@ body.resizing .sky,
 body.resizing .planet,
 body.resizing .stars { animation: none !important; }
 body.resizing * { transition: none !important; animation-play-state: paused !important; }
+
+/* Accessibilité : « Réduire les animations » — coupe les animations/transitions décoratives.
+   (L'exception du spinner de lancement est gérée dans App.vue, style scoped.) */
+body.hw-reduce-motion *,
+body.hw-reduce-motion *::before,
+body.hw-reduce-motion *::after {
+  animation-duration: .001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .001s !important;
+}
