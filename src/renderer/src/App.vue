@@ -582,7 +582,6 @@ const languagesFiltered = computed(() => {
 /* ===================== Paramètres (catégories + recherche) ===================== */
 const settingsCategories = [
   { id: 'jeu', key: 'settings.cat.jeu' },
-  { id: 'launcher', key: 'settings.cat.launcher' },
   { id: 'apropos', key: 'settings.cat.apropos' }
 ]
 const settingsSelectedCat = ref('jeu')
@@ -591,9 +590,6 @@ const settingsFieldIndex = [
   { cat: 'jeu', labelKey: 'settings.memoryTitle' }, { cat: 'jeu', labelKey: 'settings.ramLabel' },
   { cat: 'jeu', labelKey: 'settings.displayTitle' }, { cat: 'jeu', labelKey: 'settings.resolutionLabel' },
   { cat: 'jeu', labelKey: 'settings.folderTitle' }, { cat: 'jeu', labelKey: 'settings.javaTitle' },
-  { cat: 'launcher', labelKey: 'settings.autoDownloadLabel' },
-  { cat: 'launcher', labelKey: 'settings.minimizeOnLaunchLabel' }, { cat: 'launcher', labelKey: 'settings.notifEnabledLabel' },
-  { cat: 'launcher', labelKey: 'settings.animationsLabel' },
   { cat: 'apropos', labelKey: 'settings.launcherTitle' }, { cat: 'apropos', labelKey: 'settings.checkUpdateBtn' },
   { cat: 'apropos', labelKey: 'settings.openFolderBtn' }
 ]
@@ -1083,26 +1079,6 @@ onUnmounted(() => {
                 <div v-show="fieldVisible('settings.javaTitle', 'jeu')" class="set-row set-row-stack">
                   <label>{{ t('settings.javaTitle') }}</label>
                   <input class="ipt full" type="text" v-model="settings.java" :placeholder="t('settings.javaPlaceholder')" spellcheck="false" />
-                </div>
-              </div>
-
-              <div v-if="catVisible('launcher')" class="panel set-block">
-                <h3>{{ t('settings.cat.launcher') }}</h3>
-                <div v-show="fieldVisible('settings.autoDownloadLabel', 'launcher')" class="set-row set-row-toggle">
-                  <label>{{ t('settings.autoDownloadLabel') }}</label>
-                  <label class="switch"><input type="checkbox" v-model="settings.autoDownload" /><span class="switch-track"></span></label>
-                </div>
-                <div v-show="fieldVisible('settings.minimizeOnLaunchLabel', 'launcher')" class="set-row set-row-toggle">
-                  <label>{{ t('settings.minimizeOnLaunchLabel') }}</label>
-                  <label class="switch"><input type="checkbox" v-model="settings.minimizeOnLaunch" /><span class="switch-track"></span></label>
-                </div>
-                <div v-show="fieldVisible('settings.notifEnabledLabel', 'launcher')" class="set-row set-row-toggle">
-                  <label>{{ t('settings.notifEnabledLabel') }}</label>
-                  <label class="switch"><input type="checkbox" v-model="settings.notifEnabled" /><span class="switch-track"></span></label>
-                </div>
-                <div v-show="fieldVisible('settings.animationsLabel', 'launcher')" class="set-row set-row-toggle">
-                  <label>{{ t('settings.animationsLabel') }}</label>
-                  <label class="switch"><input type="checkbox" v-model="settings.animations" /><span class="switch-track"></span></label>
                 </div>
               </div>
 

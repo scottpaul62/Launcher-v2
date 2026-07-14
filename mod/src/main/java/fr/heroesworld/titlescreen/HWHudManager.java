@@ -45,7 +45,7 @@ public final class HWHudManager {
         ELEMENTS.add(new El("fps", "Compteur FPS", "Performance", true, 0, 4, 4));
         ELEMENTS.add(new El("ping", "Ping", "Performance", false, 0, 4, 18));
         ELEMENTS.add(new El("coords", "Coordonnees", "Info", false, 0, 4, 32));
-        ELEMENTS.add(new El("direction", "Direction", "Info", false, 0, 4, 46));
+        ELEMENTS.add(new El("direction", "Direction (boussole)", "Info", false, 4, 0, 4));
         ELEMENTS.add(new El("time", "Horloge", "Info", false, 1, 4, 4));
         ELEMENTS.add(new El("day", "Compteur de jours", "Info", false, 1, 4, 18));
         ELEMENTS.add(new El("session", "Duree de session", "Info", false, 1, 4, 32));
@@ -78,13 +78,18 @@ public final class HWHudManager {
     public static El byId(String id) { for (El e : ELEMENTS) if (e.id.equals(id)) return e; return null; }
     public static void resetPos(El e) { e.anchor = e.danchor; e.ox = e.dox; e.oy = e.doy; }
     public static void resetAll() { for (El e : ELEMENTS) { e.enabled = e.de; e.anchor = e.danchor; e.ox = e.dox; e.oy = e.doy; } }
-    public static String anchorName(int a) { switch (a) { case 1: return "haut-droite"; case 2: return "bas-gauche"; case 3: return "bas-droite"; default: return "haut-gauche"; } }
+    public static String anchorName(int a) {
+        switch (a) { case 1: return "haut-droite"; case 2: return "bas-gauche"; case 3: return "bas-droite";
+                     case 4: return "haut-centre"; case 5: return "bas-centre"; default: return "haut-gauche"; }
+    }
 
     public static int actualX(El e, int screenW, int w) {
-        return (e.anchor == 1 || e.anchor == 3) ? Math.max(0, screenW - w - e.ox) : e.ox;
+        if (e.anchor == 1 || e.anchor == 3) return Math.max(0, screenW - w - e.ox);
+        if (e.anchor == 4 || e.anchor == 5) return Math.max(0, (screenW - w) / 2 + e.ox);
+        return e.ox;
     }
     public static int actualY(El e, int screenH, int h) {
-        return (e.anchor == 2 || e.anchor == 3) ? Math.max(0, screenH - h - e.oy) : e.oy;
+        return (e.anchor == 2 || e.anchor == 3 || e.anchor == 5) ? Math.max(0, screenH - h - e.oy) : e.oy;
     }
 
     private static Path file() { return FabricLoader.getInstance().getConfigDir().resolve("heroworld_hud.json"); }
@@ -145,12 +150,13 @@ public final class HWHudManager {
                 case "keystrokes": return 40;
                 case "armor": return 18;
                 case "effects": return 74;
+                case "direction": return 110;
                 default: return mc.textRenderer.getWidth(text(mc, e)) + 4;
             }
         } catch (Throwable t) { return 40; }
     }
     public static int height(El e) {
-        switch (e.id) { case "keystrokes": return 40; case "armor": return 74; case "effects": return 66; default: return 10; }
+        switch (e.id) { case "keystrokes": return 40; case "armor": return 74; case "effects": return 66; case "direction": return 13; default: return 10; }
     }
 
     static String text(MinecraftClient mc, El e) {
@@ -167,7 +173,6 @@ public final class HWHudManager {
             }
             case "cps": return "§bCPS §f" + cps();
             case "coords": return "§7XYZ §f" + fl(mc.player.getX()) + " " + fl(mc.player.getY()) + " " + fl(mc.player.getZ());
-            case "direction": return "§7Dir §f" + dir(mc.player.getYaw());
             case "time": { String t = java.time.LocalTime.now().toString(); return "§f" + (t.length() >= 5 ? t.substring(0, 5) : t); }
             case "day": return "§7Jour §f" + (mc.world != null ? (mc.world.getTimeOfDay() / 24000L) : 0);
             case "session": { long s = (System.currentTimeMillis() - SESSION_START) / 1000; return String.format("§7Session §f%02d:%02d", s / 60, s % 60); }
@@ -181,6 +186,7 @@ public final class HWHudManager {
             case "keystrokes": drawKeystrokes(ctx, mc, ax, ay); break;
             case "armor": drawArmor(ctx, mc, ax, ay); break;
             case "effects": drawEffects(ctx, mc, ax, ay); break;
+            case "direction": drawCompass(ctx, mc, ax, ay); break;
             default: {
                 String s = text(mc, e);
                 int w = tr.getWidth(s);
@@ -192,10 +198,23 @@ public final class HWHudManager {
 
     private static long fl(double v) { return (long) Math.floor(v); }
 
-    private static String dir(float yaw) {
-        float y = ((yaw % 360) + 360) % 360;
-        String[] d = {"S", "SO", "O", "NO", "N", "NE", "E", "SE"};
-        return d[(int) Math.round(y / 45f) % 8];
+    private static final String[] COMPASS = {"S", "SO", "O", "NO", "N", "NE", "E", "SE"};
+    private static float wrap180(float a) { a %= 360f; if (a > 180f) a -= 360f; if (a < -180f) a += 360f; return a; }
+
+    /** Boussole facon Lunar : ruban horizontal, cardinal courant au centre. */
+    private static void drawCompass(DrawContext ctx, MinecraftClient mc, int x, int y) {
+        int W = 110, H = 13;
+        ctx.fill(x, y, x + W, y + H, 0x88000000);
+        float yaw = mc.player.getYaw();
+        float fov = 140f, ppd = W / fov;
+        for (int i = 0; i < 8; i++) {
+            float d = wrap180(i * 45f - yaw);
+            if (Math.abs(d) <= fov / 2f) {
+                int px = (int) (x + W / 2f + d * ppd);
+                ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.literal(COMPASS[i]), px, y + 3, (i % 2 == 0) ? 0xFFFFFFFF : 0xFF9A93A6);
+            }
+        }
+        ctx.fill(x + W / 2, y - 1, x + W / 2 + 1, y + H + 1, 0xFFE8C56A);
     }
 
     private static void drawEffects(DrawContext ctx, MinecraftClient mc, int x, int y) {

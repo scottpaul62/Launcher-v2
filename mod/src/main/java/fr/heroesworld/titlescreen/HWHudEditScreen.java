@@ -30,20 +30,23 @@ public class HWHudEditScreen extends Screen {
         int sw = this.width, sh = this.height;
         nx = Math.max(0, Math.min(sw - w, nx));
         ny = Math.max(0, Math.min(sh - h, ny));
-        switch (e.anchor) {
-            case 1: e.ox = sw - w - nx; e.oy = ny; break;
-            case 2: e.ox = nx; e.oy = sh - h - ny; break;
-            case 3: e.ox = sw - w - nx; e.oy = sh - h - ny; break;
-            default: e.ox = nx; e.oy = ny;
-        }
-        if (e.ox < 0) e.ox = 0;
+        if (e.anchor == 1 || e.anchor == 3) e.ox = sw - w - nx;
+        else if (e.anchor == 4 || e.anchor == 5) e.ox = nx - (sw - w) / 2;
+        else e.ox = nx;
+        if (e.anchor == 2 || e.anchor == 3 || e.anchor == 5) e.oy = sh - h - ny;
+        else e.oy = ny;
+        if (e.anchor != 4 && e.anchor != 5 && e.ox < 0) e.ox = 0;
         if (e.oy < 0) e.oy = 0;
     }
 
     private void reanchor(HWHudManager.El e, int w, int h) {
         int ax = HWHudManager.actualX(e, this.width, w), ay = HWHudManager.actualY(e, this.height, h);
         int cx = ax + w / 2, cy = ay + h / 2;
-        e.anchor = (cx > this.width / 2 ? 1 : 0) + (cy > this.height / 2 ? 2 : 0);
+        boolean bottom = cy > this.height / 2;
+        int col = cx < this.width / 3 ? 0 : (cx < 2 * this.width / 3 ? 1 : 2);
+        if (col == 1) e.anchor = bottom ? 5 : 4;
+        else if (col == 2) e.anchor = bottom ? 3 : 1;
+        else e.anchor = bottom ? 2 : 0;
         setPos(e, ax, ay, w, h);
     }
 
