@@ -65,6 +65,9 @@ public final class HWHudManager {
         ELEMENTS.add(new El("keystrokes", "KeyStrokes", "Mecanique", false, 6, 0f, -0.10f));
         ELEMENTS.add(new El("cps", "CPS (clics/s)", "Mecanique", false, 6, 0f, -0.02f));
         ELEMENTS.add(new El("armor", "Statut d'armure", "Combat", false, 8, 0f, -0.02f));
+        ELEMENTS.add(new El("speed", "Vitesse", "Info", false, 0, 0f, 0.054f));
+        ELEMENTS.add(new El("xp", "Niveau XP", "Info", false, 2, 0f, 0.078f));
+        ELEMENTS.add(new El("itemcount", "Compteur d'objet", "Combat", false, 8, 0f, -0.06f));
     }
 
     private static final long SESSION_START = System.currentTimeMillis();
@@ -185,7 +188,7 @@ public final class HWHudManager {
         } catch (Throwable t) { return 40; }
     }
     public static int height(El e) {
-        switch (e.id) { case "keystrokes": return 40; case "armor": return 74; case "effects": return 66; case "direction": return 13; default: return 10; }
+        switch (e.id) { case "keystrokes": return 40; case "armor": return 72; case "effects": return 66; case "direction": return 13; default: return 10; }
     }
 
     static String text(MinecraftClient mc, El e) {
@@ -202,6 +205,9 @@ public final class HWHudManager {
             case "time": { String t = java.time.LocalTime.now().toString(); return "§f" + (t.length() >= 5 ? t.substring(0, 5) : t); }
             case "day": return "§7Jour §f" + (mc.world != null ? (mc.world.getTimeOfDay() / 24000L) : 0);
             case "session": { long s = (System.currentTimeMillis() - SESSION_START) / 1000; return String.format("§7Session §f%02d:%02d", s / 60, s % 60); }
+            case "speed": return "§7Vitesse §f" + String.format("%.1f", mc.player.getVelocity().horizontalLength() * 20) + " b/s";
+            case "xp": return "§7Niveau §f" + mc.player.experienceLevel;
+            case "itemcount": { net.minecraft.item.ItemStack h = mc.player.getMainHandStack(); return "§7Objet §f" + (h != null ? h.getCount() : 0); }
             default: return e.name;
         }
     }
@@ -216,7 +222,7 @@ public final class HWHudManager {
             default: {
                 String s = text(mc, e);
                 int w = tr.getWidth(s);
-                ctx.fill(ax - 2, ay - 1, ax + w + 2, ay + 9, 0x66000000);
+                if (HWClientConfig.hudBackground) ctx.fill(ax - 2, ay - 1, ax + w + 2, ay + 9, 0x66000000);
                 ctx.drawTextWithShadow(tr, Text.literal(s), ax, ay, 0xFFFFFFFF);
             }
         }
@@ -269,10 +275,29 @@ public final class HWHudManager {
     }
 
     private static void drawArmor(DrawContext ctx, MinecraftClient mc, int x, int y) {
-        int ay = y + 54;
-        for (ItemStack st : mc.player.getArmorItems()) {
-            if (st != null && !st.isEmpty()) ctx.drawItem(st, x, ay);
-            ay -= 18;
+        ItemStack[] arm = new ItemStack[4];
+        int i = 0;
+        for (ItemStack st : mc.player.getArmorItems()) { if (i < 4) arm[i] = st; i++; }
+        // colonne gauche : casque, plastron, jambieres, bottes (haut -> bas)
+        armorSlot(ctx, x, y, arm[3]);
+        armorSlot(ctx, x, y + 18, arm[2]);
+        armorSlot(ctx, x, y + 36, arm[1]);
+        armorSlot(ctx, x, y + 54, arm[0]);
+        // colonne droite : main principale + main secondaire
+        armorSlot(ctx, x + 18, y, mc.player.getMainHandStack());
+        armorSlot(ctx, x + 18, y + 18, mc.player.getOffHandStack());
+    }
+    private static void armorSlot(DrawContext ctx, int x, int y, ItemStack st) {
+        ctx.fill(x - 1, y - 1, x + 17, y + 17, 0x55000000);
+        if (st == null || st.isEmpty()) return;
+        ctx.drawItem(st, x, y);
+        if (st.isDamageable() && st.getDamage() > 0) {
+            int max = st.getMaxDamage();
+            float fr = Math.max(0f, 1f - (float) st.getDamage() / max);
+            int bw = Math.max(0, (int) (14 * fr));
+            int col = fr > 0.5f ? 0xFF48C78E : (fr > 0.2f ? 0xFFE7B84B : 0xFFE45B68);
+            ctx.fill(x + 1, y + 15, x + 15, y + 16, 0xFF333333);
+            ctx.fill(x + 1, y + 15, x + 1 + bw, y + 16, col);
         }
     }
 }

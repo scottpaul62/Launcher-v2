@@ -12,6 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class MouseClickMixin {
     @Inject(method = "onMouseButton", at = @At("HEAD"), require = 0)
     private void heroworld$click(long window, int button, int action, int mods, CallbackInfo ci) {
-        if (action == 1 && (button == 0 || button == 1)) HWHudManager.onClick();
+        if (action == 1 && button == 0) HWHudManager.onClick(); // clic gauche uniquement
     }
 }

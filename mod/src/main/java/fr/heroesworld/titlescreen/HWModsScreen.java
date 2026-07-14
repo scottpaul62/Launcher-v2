@@ -116,7 +116,9 @@ public class HWModsScreen extends Screen {
             b -> this.client.setScreen(new HWCosmeticsScreen(this)))); y += 28;
         boolean hud = !(this.client.options != null && this.client.options.hudHidden);
         this.addDrawableChild(new HWButton(x, y, w, 24, Text.literal("Afficher le HUD : " + (hud ? "§aON" : "§8OFF")), HWButton.SECONDARY, 0,
-            b -> { if (this.client.options != null) this.client.options.hudHidden = !this.client.options.hudHidden; reopen(); }));
+            b -> { if (this.client.options != null) this.client.options.hudHidden = !this.client.options.hudHidden; reopen(); })); y += 28;
+        this.addDrawableChild(new HWButton(x, y, w, 24, Text.literal("Fond des widgets HUD : " + (HWClientConfig.hudBackground ? "§aON" : "§8OFF")), HWButton.SECONDARY, 0,
+            b -> { HWClientConfig.hudBackground = !HWClientConfig.hudBackground; HWClientConfig.save(); reopen(); }));
     }
 
     public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
@@ -152,6 +154,7 @@ public class HWModsScreen extends Screen {
             case "fps": return 6; case "coords": return 7; case "direction": return 8; case "time": return 9;
             case "day": return 10; case "session": return 11; case "keystrokes": return 12; case "armor": return 13;
             case "ping": return 14; case "effects": return 15; case "cps": return 16;
+            case "speed": return 17; case "xp": return 18; case "itemcount": return 19;
             default: return 0;
         }
     }
