@@ -13,6 +13,7 @@ public class HWTitleScreen extends Screen {
 
     private static final int GOLD = 0xFFE8C56A;
     private int dockX, dockY, dockW, dockH;
+    private int ry; // haut de la pile centrale (borne pour ne jamais chevaucher le dock)
 
     public HWTitleScreen() { super(Text.literal("HERO WORLD")); }
 
@@ -20,7 +21,10 @@ public class HWTitleScreen extends Screen {
     protected void init() {
         int cx = this.width / 2;
 
-        int ry = (int) (this.height * 0.42);
+        // pile centrale bornee : jamais de chevauchement avec le dock en petite fenetre
+        int dockTop = this.height - 74;
+        int stackH = 36 + 6 + 22 + 4 + 22 + 8 + 20; // Rejoindre + Solo + Boutique + Quitter + marges
+        ry = Math.max(34, Math.min((int) (this.height * 0.42), dockTop - stackH - 8));
         int joinW = Math.min(340, this.width - 60);
         this.addDrawableChild(new HWButton(cx - joinW / 2, ry, joinW, 36, Text.literal("Rejoindre"), HWButton.PRIMARY, 0, b -> this.connect()));
         this.addDrawableChild(new HWButton(cx - joinW / 2, ry + 42, joinW, 22, Text.literal("Solo"), HWButton.SECONDARY, 0,
@@ -66,15 +70,24 @@ public class HWTitleScreen extends Screen {
 
         // En-tete : le wordmark HEROES-WORLD est deja dans l'image de fond
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§6◆ §eL'OLYMPE VOUS ATTEND §6◆"),
-            cx, (int) (this.height * 0.42) - 22, 0xFFE8C56A);
+            cx, ry - 22, 0xFFE8C56A);
 
         // Puce compte (haut-droite)
         String who = (this.client.getSession() != null) ? this.client.getSession().getUsername() : "";
         if (who != null && !who.isEmpty()) {
             int tw = this.textRenderer.getWidth(who);
-            int pw = tw + 30, ph = 20, px = this.width - pw - 12, py = 10;
-            ctx.fill(px, py, px + pw, py + ph, 0x55000000); // pilule sobre, plate (fini le fond noir + trait dore)
-            ctx.fill(px + 11, py + ph / 2 - 3, px + 17, py + ph / 2 + 3, 0xFF7CCB6E); // pastille en ligne
+            int pw = tw + 32, ph = 20, px = this.width - pw - 12, py = 10;
+            ctx.fill(px, py, px + pw, py + ph, 0x55000000);
+            boolean head = false;
+            try {
+                // vraie tete du skin du joueur (visage + calque chapeau)
+                net.minecraft.util.Identifier skin = this.client.getSkinProvider()
+                    .getSkinTextures(this.client.getGameProfile()).texture();
+                ctx.drawTexture(skin, px + 4, py + 3, 14, 14, 8f, 8f, 8, 8, 64, 64);
+                ctx.drawTexture(skin, px + 4, py + 3, 14, 14, 40f, 8f, 8, 8, 64, 64);
+                head = true;
+            } catch (Throwable ignored) {}
+            if (!head) ctx.fill(px + 6, py + ph / 2 - 3, px + 12, py + ph / 2 + 3, 0xFF7CCB6E);
             ctx.drawTextWithShadow(this.textRenderer, Text.literal("§f" + who), px + 22, py + 6, 0xFFFFFFFF);
         }
 

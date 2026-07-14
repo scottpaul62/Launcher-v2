@@ -25,7 +25,7 @@ public class HWHudEditScreen extends Screen {
     @Override
     protected void init() {
         HWHudManager.editorPreview = true; // les widgets sans donnees affichent un apercu (hitbox coherente)
-        int bw = 82, g = 4, by = this.height - 22;
+        int bw = 82, g = 4, by = this.height - 92;
         int total = 4 * bw + 3 * g, sx = this.width / 2 - total / 2;
         this.addDrawableChild(new HWButton(sx, by, bw, 16, Text.literal("Annuler"), HWButton.SECONDARY, 0, b -> undo()));
         this.addDrawableChild(new HWButton(sx + (bw + g), by, bw, 16, Text.literal("Reinit. widget"), HWButton.SECONDARY, 0,
@@ -69,13 +69,13 @@ public class HWHudEditScreen extends Screen {
         yc.add(new int[]{HWHudManager.SAFE, HWHudManager.SAFE});
         yc.add(new int[]{sh - h - HWHudManager.SAFE, sh - HWHudManager.SAFE});
         yc.add(new int[]{(sh - h) / 2, sh / 2});
-        int hotbarTop = sh - 39;
+        int hotbarTop = sh - 62;
         yc.add(new int[]{hotbarTop - h, hotbarTop});
         for (HWHudManager.El o : HWHudManager.ELEMENTS) {
             if (o == selected || !o.enabled) continue;
             int ow = W(o), oh = H(o), oax = AX(o), oay = AY(o);
-            xc.add(new int[]{oax, oax}); xc.add(new int[]{oax + ow - w, oax + ow}); xc.add(new int[]{oax + ow / 2 - w / 2, oax + ow / 2});
-            yc.add(new int[]{oay, oay}); yc.add(new int[]{oay + oh - h, oay + oh}); yc.add(new int[]{oay + oh / 2 - h / 2, oay + oh / 2});
+            xc.add(new int[]{oax, oax}); xc.add(new int[]{oax + ow - w, oax + ow});
+            yc.add(new int[]{oay, oay}); yc.add(new int[]{oay + oh - h, oay + oh});
         }
         int bestX = nx, bd = T + 1;
         for (int[] c : xc) { int d = Math.abs(nx - c[0]); if (d < bd) { bd = d; bestX = c[0]; guideX = c[1]; } }
@@ -112,7 +112,7 @@ public class HWHudEditScreen extends Screen {
 
         // zone sure + zone hotbar
         drawBorder(ctx, HWHudManager.SAFE, HWHudManager.SAFE, this.width - 2 * HWHudManager.SAFE, this.height - 2 * HWHudManager.SAFE, 0x2249BDF2);
-        int hbW = 186, hbX = this.width / 2 - hbW / 2, hbY = this.height - 40;
+        int hbW = 186, hbX = this.width / 2 - hbW / 2, hbY = this.height - 62;
         ctx.fill(hbX, hbY, hbX + hbW, this.height, 0x22E45B68);
 
         // widgets (a l'echelle)

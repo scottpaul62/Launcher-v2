@@ -166,22 +166,49 @@ public class HWModSettingsScreen extends Screen {
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§e" + el.name), this.width / 2, y0 - 40, 0xFFE8C56A);
         super.render(ctx, mouseX, mouseY, delta);
 
-        // Apercu live (en jeu uniquement : donnees reelles)
+        // Apercu NET a la position reelle : le widget concerne "ressort" du flou
         MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc != null && mc.player != null && (isTextWidget() || el.id.equals("crosshair")) && !el.id.equals("zoom")) {
+        if (mc != null && mc.world != null && mc.player != null) {
             try {
-                String s = HWHudManager.text(mc, el);
-                if (!s.isEmpty()) {
-                    int tw = mc.textRenderer.getWidth(s);
-                    int axc = this.width / 2 - Math.round(tw * el.scale) / 2, ayc = y0 - 16;
+                if (el.id.equals("chat")) {
+                    drawChatPreview(ctx, mc);
+                } else if (!el.id.equals("scoreboard")) { // le vrai scoreboard reste rendu par le jeu
+                    int w = HWHudManager.scaledW(mc, el), h = HWHudManager.scaledH(el);
+                    int ax = HWHudManager.actualX(el, this.width, w), ay = HWHudManager.actualY(el, this.height, h);
                     MatrixStack ms = ctx.getMatrices();
                     ms.push();
-                    ms.translate(axc, ayc, 0);
+                    ms.translate(ax, ay, 0);
                     ms.scale(el.scale, el.scale, 1f);
-                    HWHudManager.renderAt(ctx, mc, el, 0, 0);
+                    HWHudManager.editorPreview = true;
+                    try { HWHudManager.renderAt(ctx, mc, el, 0, 0); } finally { HWHudManager.editorPreview = false; }
                     ms.pop();
                 }
             } catch (Throwable ignored) {}
+        }
+    }
+
+    /** Apercu du tchat en bas-gauche, avec les reglages appliques en direct. */
+    private void drawChatPreview(DrawContext ctx, MinecraftClient mc) {
+        double op = 1, bgOp = 0.5, scale = 1, width = 1;
+        try { op = mc.options.getChatOpacity().getValue(); } catch (Throwable ignored) {}
+        try { bgOp = mc.options.getTextBackgroundOpacity().getValue(); } catch (Throwable ignored) {}
+        try { scale = mc.options.getChatScale().getValue(); } catch (Throwable ignored) {}
+        try { width = mc.options.getChatWidth().getValue(); } catch (Throwable ignored) {}
+        String[] lines = {"§b+ Reglage applique en direct", "§7Steven §8» §fapercu du tchat", "§6[HW] §fBienvenue sur HEROES-WORLD !"};
+        int w = (int) (320 * width * scale);
+        int lineH = Math.max(8, (int) (9 * scale));
+        int x = 4, yBase = this.height - 52;
+        int bgA = (int) (Math.max(0.08, bgOp) * 255);
+        int txtA = Math.min(255, Math.max(40, (int) (op * 255)));
+        for (int i = 0; i < lines.length; i++) {
+            int yy = yBase - i * lineH;
+            ctx.fill(x - 2, yy - 1, x + w, yy + lineH - 1, bgA << 24);
+            MatrixStack ms = ctx.getMatrices();
+            ms.push();
+            ms.translate(x, yy, 0);
+            ms.scale((float) scale, (float) scale, 1f);
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal(lines[i]), 0, 0, (txtA << 24) | 0xFFFFFF);
+            ms.pop();
         }
     }
 

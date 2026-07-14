@@ -66,7 +66,8 @@ public class HWModsScreen extends Screen {
             for (String name : HWProfiles.names) {
                 final String n = name;
                 boolean act = n.equals(HWProfiles.active);
-                this.addDrawableChild(new HWButton(px + 12, y, 138, 22, Text.literal((act ? "§f" : "§7") + n),
+                this.addDrawableChild(new HWButton(px + 12, y, 138, 22,
+                    Text.literal(profColor(n) + "\u25cf " + (act ? "§f" : "§7") + n),
                     act ? HWButton.PRIMARY : HWButton.SECONDARY, 0, b -> { HWProfiles.switchTo(n); reopen(); }));
                 y += 26;
             }
@@ -244,6 +245,18 @@ public class HWModsScreen extends Screen {
         if (tab == 0 && searchField != null && searchField.getText().isEmpty() && !searchField.isFocused()) {
             ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8Rechercher un mod..."), mainX + 5, py + 44, TXT2);
         }
+    }
+
+    /** Couleur d'accent d'un profil (pastille), pour une colonne plus vivante. */
+    private static String profColor(String n) {
+        String l = n.toLowerCase(Locale.ROOT);
+        if (l.contains("pvp")) return "§c";
+        if (l.contains("survie")) return "§a";
+        if (l.contains("skyblock")) return "§b";
+        if (l.contains("perf")) return "§9";
+        if (l.contains("heroes")) return "§6";
+        if (l.contains("defaut")) return "§e";
+        return "§d";
     }
 
     private static int iconKind(String id) {

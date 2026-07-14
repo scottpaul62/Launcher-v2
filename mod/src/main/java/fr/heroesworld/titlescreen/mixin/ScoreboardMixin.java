@@ -26,12 +26,12 @@ public class ScoreboardMixin {
             int sw = mc.getWindow().getScaledWidth(), sh = mc.getWindow().getScaledHeight();
             int w = HWHudManager.scaledW(mc, e), h = HWHudManager.scaledH(e);
             int ax = HWHudManager.actualX(e, sw, w), ay = HWHudManager.actualY(e, sh, h);
-            // ancre vanilla approximative du sidebar (droite, centre vertical)
-            float defX = sw - 95f, defY = sh / 2f - 42f;
+            // le sidebar vanilla est colle au bord DROIT et centre verticalement :
+            // on fait correspondre son coin droit/centre au bord droit/centre du cadre HERO WORLD.
             context.getMatrices().push();
-            context.getMatrices().translate(ax, ay, 0);
+            context.getMatrices().translate(ax + w, ay + h / 2f, 0);
             context.getMatrices().scale(e.scale, e.scale, 1f);
-            context.getMatrices().translate(-defX, -defY, 0);
+            context.getMatrices().translate(-(sw - 1f), -(sh / 2f), 0);
             heroworld$pushed = true;
         } catch (Throwable ignored) {}
     }

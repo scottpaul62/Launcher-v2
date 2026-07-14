@@ -202,7 +202,7 @@ public final class HWHudManager {
         try {
             switch (e.id) {
                 case "keystrokes": return 40;
-                case "armor": return 18;
+                case "armor": return 38;
                 case "effects": return 118;
                 case "direction": return 110;
                 case "scoreboard": return 95;
@@ -215,7 +215,7 @@ public final class HWHudManager {
     }
     public static int height(El e) {
         switch (e.id) {
-            case "keystrokes": return 40; case "armor": return 72; case "effects": return 72; case "direction": return 13;
+            case "keystrokes": return 40; case "armor": return 90; case "effects": return 72; case "direction": return 27;
             case "scoreboard": return 85; case "crosshair": return 12; case "waypoints": return 33; case "chat": return 10;
             default: return 10;
         }
@@ -261,7 +261,7 @@ public final class HWHudManager {
             case "waypoints": drawWaypoints(ctx, mc, ax, ay); break;
             case "chat": break; // le tchat vanilla reste en place (reglages via le menu)
             case "scoreboard": {
-                if (editorPreview) {
+                if (editorPreview && !hasSidebar(mc)) {
                     ctx.fill(ax, ay, ax + 95, ay + 85, 0x55000000);
                     ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.literal("§eSCOREBOARD"), ax + 47, ay + 6, 0xFFE8C56A);
                     ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.literal("§7(rendu vanilla"), ax + 47, ay + 34, 0xFFA9AFBA);
@@ -287,21 +287,44 @@ public final class HWHudManager {
 
     private static long fl(double v) { return (long) Math.floor(v); }
 
+    /** Vrai si un scoreboard vanilla (sidebar) est actuellement affiche. */
+    public static boolean hasSidebar(MinecraftClient mc) {
+        try {
+            return mc != null && mc.world != null
+                && mc.world.getScoreboard().getObjectiveForSlot(net.minecraft.scoreboard.ScoreboardDisplaySlot.SIDEBAR) != null;
+        } catch (Throwable t) { return false; }
+    }
+
     private static final String[] COMPASS = {"S", "SO", "O", "NO", "N", "NE", "E", "SE"};
     private static float wrap180(float a) { a %= 360f; if (a > 180f) a -= 360f; if (a < -180f) a += 360f; return a; }
     private static void drawCompass(DrawContext ctx, MinecraftClient mc, int x, int y) {
-        int W = 110, H = 13;
-        ctx.fill(x, y, x + W, y + H, 0x88000000);
+        int W = 110, H = 16;
+        // bande sombre degradee + liseret or en bas (style HERO WORLD)
+        ctx.fillGradient(x, y, x + W, y + H, 0xAA10131A, 0x5510131A);
+        ctx.fill(x, y + H - 1, x + W, y + H, 0x88E8C56A);
         float yaw = mc.player.getYaw();
-        float fov = 140f, ppd = W / fov;
-        for (int i = 0; i < 8; i++) {
-            float d = wrap180(i * 45f - yaw);
-            if (Math.abs(d) <= fov / 2f) {
-                int px = (int) (x + W / 2f + d * ppd);
-                ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.literal(COMPASS[i]), px, y + 3, (i % 2 == 0) ? 0xFFFFFFFF : 0xFF9A93A6);
+        float fov = 150f, ppd = W / fov;
+        for (int deg = 0; deg < 360; deg += 15) {
+            float d = wrap180(deg - yaw);
+            if (Math.abs(d) > fov / 2f) continue;
+            int px = (int) (x + W / 2f + d * ppd);
+            if (px <= x + 3 || px >= x + W - 3) continue;
+            if (deg % 45 == 0) {
+                int idx = (deg / 45) % 8;
+                boolean cardinal = idx % 2 == 0; // S O N E
+                ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.literal(COMPASS[idx]), px, y + 4,
+                    cardinal ? 0xFFE8C56A : 0xFFB9C2CC);
+            } else {
+                ctx.fill(px, y + H - 5, px + 1, y + H - 1, 0x66B9C2CC);
             }
         }
-        ctx.fill(x + W / 2, y - 1, x + W / 2 + 1, y + H + 1, 0xFFE8C56A);
+        // curseur central (petit triangle or) + cap en degres sous la bande
+        int cxp = x + W / 2;
+        ctx.fill(cxp - 2, y, cxp + 3, y + 1, 0xFFE8C56A);
+        ctx.fill(cxp - 1, y + 1, cxp + 2, y + 2, 0xFFE8C56A);
+        ctx.fill(cxp, y + 2, cxp + 1, y + 4, 0xFFE8C56A);
+        int deg = Math.round((mc.player.getYaw() % 360f + 360f) % 360f);
+        ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.literal("§7" + deg + "°"), cxp, y + H + 2, 0xFFB9C2CC);
     }
 
     private static void drawEffects(DrawContext ctx, MinecraftClient mc, El e, int x, int y) {
@@ -394,14 +417,16 @@ public final class HWHudManager {
         ItemStack[] arm = new ItemStack[4];
         int i = 0;
         for (ItemStack st : mc.player.getArmorItems()) { if (i < 4) arm[i] = st; i++; }
-        // colonne gauche : casque, plastron, jambieres, bottes (haut -> bas)
-        armorSlot(ctx, x, y, arm[3]);
-        armorSlot(ctx, x, y + 18, arm[2]);
-        armorSlot(ctx, x, y + 36, arm[1]);
-        armorSlot(ctx, x, y + 54, arm[0]);
-        // colonne droite : main principale + main secondaire
-        armorSlot(ctx, x + 18, y, mc.player.getMainHandStack());
-        armorSlot(ctx, x + 18, y + 18, mc.player.getOffHandStack());
+        // colonne principale : casque -> bottes puis main principale (haut -> bas)
+        int col = x + 20;
+        armorSlot(ctx, col, y, arm[3]);
+        armorSlot(ctx, col, y + 18, arm[2]);
+        armorSlot(ctx, col, y + 36, arm[1]);
+        armorSlot(ctx, col, y + 54, arm[0]);
+        armorSlot(ctx, col, y + 72, mc.player.getMainHandStack());
+        // objet de la main secondaire : a GAUCHE du casque, seulement s'il existe
+        ItemStack off = mc.player.getOffHandStack();
+        if (off != null && !off.isEmpty()) armorSlot(ctx, x, y, off);
     }
     private static void armorSlot(DrawContext ctx, int x, int y, ItemStack st) {
         ctx.fill(x - 1, y - 1, x + 17, y + 17, 0x55000000);
