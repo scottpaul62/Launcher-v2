@@ -103,6 +103,7 @@ public class HWModsScreen extends Screen {
         switch (id) {
             case "fps": return 6; case "coords": return 7; case "direction": return 8; case "time": return 9;
             case "day": return 10; case "session": return 11; case "keystrokes": return 12; case "armor": return 13;
+            case "ping": return 14; case "effects": return 15; case "cps": return 16;
             default: return 0;
         }
     }

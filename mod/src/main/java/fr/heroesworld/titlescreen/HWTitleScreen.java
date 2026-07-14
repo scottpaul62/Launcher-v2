@@ -21,7 +21,7 @@ public class HWTitleScreen extends Screen {
         int cx = this.width / 2;
 
         int ry = (int) (this.height * 0.44);
-        this.addDrawableChild(new HWButton(cx - 170, ry, 340, 40, Text.literal("REJOINDRE HEROES-WORLD"), HWButton.PRIMARY, 0, b -> this.connect()));
+        this.addDrawableChild(new HWButton(cx - 170, ry, 340, 40, Text.literal("Rejoindre"), HWButton.PRIMARY, 0, b -> this.connect()));
         this.addDrawableChild(new HWButton(cx - 100, ry + 50, 200, 22, Text.literal("Quitter"), HWButton.SECONDARY, 0, b -> this.client.scheduleStop()));
 
         int itemW = 122, gap = 6, n = 5;

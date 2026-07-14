@@ -8,6 +8,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import org.slf4j.Logger;
@@ -16,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -41,25 +43,43 @@ public final class HWHudManager {
     public static final List<El> ELEMENTS = new ArrayList<>();
     static {
         ELEMENTS.add(new El("fps", "Compteur FPS", "Performance", true, 0, 4, 4));
-        ELEMENTS.add(new El("coords", "Coordonnees", "Info", false, 0, 4, 18));
-        ELEMENTS.add(new El("direction", "Direction", "Info", false, 0, 4, 32));
+        ELEMENTS.add(new El("ping", "Ping", "Performance", false, 0, 4, 18));
+        ELEMENTS.add(new El("coords", "Coordonnees", "Info", false, 0, 4, 32));
+        ELEMENTS.add(new El("direction", "Direction", "Info", false, 0, 4, 46));
         ELEMENTS.add(new El("time", "Horloge", "Info", false, 1, 4, 4));
         ELEMENTS.add(new El("day", "Compteur de jours", "Info", false, 1, 4, 18));
         ELEMENTS.add(new El("session", "Duree de session", "Info", false, 1, 4, 32));
-        ELEMENTS.add(new El("keystrokes", "KeyStrokes", "Mecanique", false, 2, 10, 48));
-        ELEMENTS.add(new El("armor", "Statut d'armure", "Combat", false, 3, 12, 48));
+        ELEMENTS.add(new El("effects", "Effets de potion", "Info", false, 1, 4, 46));
+        ELEMENTS.add(new El("keystrokes", "KeyStrokes", "Mecanique", false, 2, 10, 52));
+        ELEMENTS.add(new El("cps", "CPS (clics/s)", "Mecanique", false, 2, 10, 96));
+        ELEMENTS.add(new El("armor", "Statut d'armure", "Combat", false, 3, 12, 52));
     }
 
     private static final long SESSION_START = System.currentTimeMillis();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private HWHudManager() {}
 
+    // ---- CPS : file des clics recents (alimentee par MouseClickMixin) ----
+    private static final ArrayDeque<Long> CLICKS = new ArrayDeque<>();
+    public static void onClick() {
+        synchronized (CLICKS) {
+            CLICKS.addLast(System.currentTimeMillis());
+            while (CLICKS.size() > 60) CLICKS.pollFirst();
+        }
+    }
+    private static int cps() {
+        long now = System.currentTimeMillis();
+        synchronized (CLICKS) {
+            while (!CLICKS.isEmpty() && now - CLICKS.peekFirst() > 1000) CLICKS.pollFirst();
+            return CLICKS.size();
+        }
+    }
+
     public static El byId(String id) { for (El e : ELEMENTS) if (e.id.equals(id)) return e; return null; }
     public static void resetPos(El e) { e.anchor = e.danchor; e.ox = e.dox; e.oy = e.doy; }
     public static void resetAll() { for (El e : ELEMENTS) { e.enabled = e.de; e.anchor = e.danchor; e.ox = e.dox; e.oy = e.doy; } }
     public static String anchorName(int a) { switch (a) { case 1: return "haut-droite"; case 2: return "bas-gauche"; case 3: return "bas-droite"; default: return "haut-gauche"; } }
 
-    /** Position ecran reelle a partir de l'ancre + offset (responsive). */
     public static int actualX(El e, int screenW, int w) {
         return (e.anchor == 1 || e.anchor == 3) ? Math.max(0, screenW - w - e.ox) : e.ox;
     }
@@ -124,17 +144,28 @@ public final class HWHudManager {
             switch (e.id) {
                 case "keystrokes": return 40;
                 case "armor": return 18;
+                case "effects": return 74;
                 default: return mc.textRenderer.getWidth(text(mc, e)) + 4;
             }
         } catch (Throwable t) { return 40; }
     }
     public static int height(El e) {
-        switch (e.id) { case "keystrokes": return 40; case "armor": return 74; default: return 10; }
+        switch (e.id) { case "keystrokes": return 40; case "armor": return 74; case "effects": return 66; default: return 10; }
     }
 
     static String text(MinecraftClient mc, El e) {
         switch (e.id) {
             case "fps": return "§e" + mc.getCurrentFps() + " §7FPS";
+            case "ping": {
+                int p = 0;
+                net.minecraft.client.network.ClientPlayNetworkHandler nh = mc.getNetworkHandler();
+                if (nh != null) {
+                    net.minecraft.client.network.PlayerListEntry pe = nh.getPlayerListEntry(mc.player.getUuid());
+                    if (pe != null) p = pe.getLatency();
+                }
+                return "§7Ping §f" + p + "ms";
+            }
+            case "cps": return "§bCPS §f" + cps();
             case "coords": return "§7XYZ §f" + fl(mc.player.getX()) + " " + fl(mc.player.getY()) + " " + fl(mc.player.getZ());
             case "direction": return "§7Dir §f" + dir(mc.player.getYaw());
             case "time": { String t = java.time.LocalTime.now().toString(); return "§f" + (t.length() >= 5 ? t.substring(0, 5) : t); }
@@ -149,6 +180,7 @@ public final class HWHudManager {
         switch (e.id) {
             case "keystrokes": drawKeystrokes(ctx, mc, ax, ay); break;
             case "armor": drawArmor(ctx, mc, ax, ay); break;
+            case "effects": drawEffects(ctx, mc, ax, ay); break;
             default: {
                 String s = text(mc, e);
                 int w = tr.getWidth(s);
@@ -164,6 +196,20 @@ public final class HWHudManager {
         float y = ((yaw % 360) + 360) % 360;
         String[] d = {"S", "SO", "O", "NO", "N", "NE", "E", "SE"};
         return d[(int) Math.round(y / 45f) % 8];
+    }
+
+    private static void drawEffects(DrawContext ctx, MinecraftClient mc, int x, int y) {
+        int row = 0;
+        for (StatusEffectInstance eff : mc.player.getStatusEffects()) {
+            if (row >= 6) break;
+            int secs = eff.getDuration() / 20;
+            String s = "§d" + String.format("%d:%02d", secs / 60, secs % 60) + (eff.getAmplifier() > 0 ? " §7x" + (eff.getAmplifier() + 1) : "");
+            int w = mc.textRenderer.getWidth(s);
+            int yy = y + row * 11;
+            ctx.fill(x - 2, yy - 1, x + w + 2, yy + 9, 0x66000000);
+            ctx.drawTextWithShadow(mc.textRenderer, Text.literal(s), x, yy, 0xFFFFFFFF);
+            row++;
+        }
     }
 
     private static void drawKeystrokes(DrawContext ctx, MinecraftClient mc, int x, int y) {

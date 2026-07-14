@@ -33,15 +33,10 @@ public class HWButton extends ButtonWidget {
     }
 
     private void renderPrimary(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
-        float pulse = 0.5f + 0.5f * (float) Math.sin(System.currentTimeMillis() / 500.0);
-        int glowA = (int) (26 + 46 * (0.4f + 0.6f * hover) * (0.6f + 0.4f * pulse));
-        ctx.fillGradient(x - 8, y - 8, x + w + 8, y + h + 8, (glowA << 24) | 0xE8C56A, 0x00000000);
-        int top = lerp(0xFF3B2E12, 0xFF5A431A, hover);
-        int bot = lerp(0xFF241B0A, 0xFF3A2C10, hover);
-        rgrad(ctx, x, y, w, h, top, bot);
-        border(ctx, x, y, w, h, 0xFFE8C56A);
-        ctx.fill(x + 2, y + 1, x + w - 2, y + 2, 0x33FFFFFF);
-        ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + (h - 8) / 2, 0xFFFFEFC6);
+        int fill = lerp(0xE01E1710, 0xE02C2114, hover);
+        rflat(ctx, x, y, w, h, fill);
+        border(ctx, x, y, w, h, lerp(0xFFCBA24E, 0xFFE8C56A, hover));
+        ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + (h - 8) / 2, lerp(0xFFE9D4A0, 0xFFFFEFC6, hover));
     }
 
     private void renderSecondary(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
