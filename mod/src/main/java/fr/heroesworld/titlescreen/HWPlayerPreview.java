@@ -50,7 +50,7 @@ public final class HWPlayerPreview {
             ms.multiply(new Quaternionf().rotationY((float) Math.PI + (float) Math.sin(t * 0.30f) * 0.35f));
             DiffuseLighting.disableGuiDepthLighting();
             VertexConsumer vc = ctx.getVertexConsumers().getBuffer(RenderLayer.getEntityCutoutNoCull(tex));
-            model.render(ms, vc, 0xF000F0, OverlayTexture.DEFAULT_UV);
+            model.render(ms, vc, 0xF000F0, OverlayTexture.DEFAULT_UV, 1f, 1f, 1f, 1f);
             ctx.draw();
             DiffuseLighting.enableGuiDepthLighting();
             ms.pop();
