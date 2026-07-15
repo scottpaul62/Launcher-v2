@@ -25,7 +25,10 @@ public class HWCosmeticsScreen extends Screen {
         "Des ailes de lumiere blanche battent dans ton dos.",
         "Des ailes d'energie electrique crepitent derriere toi.",
         "Des ailes de feu embrasent ton dos.",
-        "Des ailes d'ames bleutees ondulent derriere toi."
+        "Des ailes d'ames bleutees ondulent derriere toi.",
+        "Des ailes dorees benies par le dieu du soleil.",
+        "Des ailes de petales celestes portees par la brise.",
+        "Des ailes d'energie du Vide, sombres et hypnotiques."
     };
 
     private int px, py, pw, ph;
@@ -113,14 +116,14 @@ public class HWCosmeticsScreen extends Screen {
                 entity = true;
             } catch (Throwable ignored) {}
         }
+        if (!entity) entity = HWPlayerPreview.draw(ctx, mc, ccx, ccy, (int) (vh * 0.78f), mouseX, mouseY);
         if (!entity) {
             try {
-                net.minecraft.util.Identifier skin = mc.getSkinProvider().getSkinTextures(mc.getGameProfile()).texture();
+                net.minecraft.util.Identifier skin = HWSkin.texture(mc);
                 int hs = Math.min(64, vh / 3);
                 ctx.drawTexture(skin, ccx - hs / 2, ccy - hs / 2 - 8, hs, hs, 8f, 8f, 8, 8, 64, 64);
                 ctx.drawTexture(skin, ccx - hs / 2, ccy - hs / 2 - 8, hs, hs, 40f, 8f, 8, 8, 64, 64);
             } catch (Throwable ignored) {}
-            ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8Apercu 3D complet disponible en jeu"), ccx, vy + vh - 16, 0xFF8B8B98);
         }
 
         // apercu cosmetique : particules "devant" le perso
@@ -198,6 +201,9 @@ public class HWCosmeticsScreen extends Screen {
             case 2: col = 0xFFBFE8FF; break;   // foudre
             case 3: col = 0xFFFF9A3C; break;   // flammes
             case 4: col = 0xFF7FB8FF; break;   // Hades
+            case 5: col = 0xFFF3D889; break;   // Apollon (or)
+            case 6: col = 0xFFF2A9C4; break;   // celestes (petales)
+            case 7: col = 0xFFB07CE8; break;   // Vide (violet)
             default: col = 0xFFF4F5F7;         // Hermes
         }
         double flap = Math.sin(t * 0.004) * 0.35;

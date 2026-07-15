@@ -50,13 +50,16 @@ public class HWButton extends ButtonWidget {
     }
 
     private void renderDock(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
-        if (hover > 0.02f) rflat(ctx, x + 2, y + 2, w - 4, h - 4, lerp(0x00000000, 0x552A2233, hover));
+        // pas de fond au survol : l'icone zoome legerement et le label apparait en fondu
         int iconCol = lerp(0xFFCBB98A, 0xFFF3D889, hover);
         boolean small = h < 36; // dock compact (petite fenetre)
-        int iconSize = small ? 13 : 20;
-        int iconCy = small ? y + 9 : y + 14;
+        int iconSize = (small ? 13 : 20) + Math.round(hover * 3f);
+        int iconCy = small ? y + 9 : y + h / 2 - 5;
         if (!HWIcons.draw(ctx, icon, x + w / 2, iconCy, iconSize)) drawIcon(ctx, icon, x + w / 2, iconCy - 1, iconCol);
-        ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + h - (small ? 9 : 12), lerp(0xFFB9B3C4, 0xFFFFFFFF, hover));
+        int la = (int) (hover * 255f);
+        if (la > 12) {
+            ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + h - (small ? 9 : 11), (la << 24) | 0xFFFFFF);
+        }
         int uw = (int) ((w - 18) * hover);
         if (uw > 1) {
             ctx.fill(x + w / 2 - uw / 2, y + h - 3, x + w / 2 + uw / 2, y + h - 1, 0xFFE8C56A);

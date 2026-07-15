@@ -20,9 +20,6 @@ public class HWTitleScreen extends Screen {
     private boolean acctOpen = false;
     private int chipX, chipY, chipW, chipH;
 
-    // skin reelle du compte (fetch asynchrone officiel, repli = skin par defaut)
-    private static net.minecraft.util.Identifier hwSkin = null;
-    private static boolean skinRequested = false;
     // taille minimale de la fenetre du jeu (une seule fois)
     private static boolean sizeLimitsSet = false;
 
@@ -112,20 +109,6 @@ public class HWTitleScreen extends Screen {
                     org.lwjgl.glfw.GLFW.GLFW_DONT_CARE, org.lwjgl.glfw.GLFW.GLFW_DONT_CARE);
             } catch (Throwable ignored) {}
         }
-        // vraie skin du compte (asynchrone, une seule requete)
-        if (!skinRequested) {
-            skinRequested = true;
-            try {
-                this.client.getSkinProvider().fetchSkinTextures(this.client.getGameProfile()).thenAccept(o -> {
-                    try {
-                        Object v = o;
-                        if (v instanceof java.util.Optional<?> opt) v = opt.orElse(null);
-                        if (v instanceof net.minecraft.client.util.SkinTextures st) hwSkin = st.texture();
-                    } catch (Throwable ignored) {}
-                });
-            } catch (Throwable ignored) {}
-        }
-
         HWScene.draw(ctx, this.width, this.height);
 
         int cx = this.width / 2;
@@ -140,8 +123,7 @@ public class HWTitleScreen extends Screen {
             HWDraw.panel(ctx, chipX, chipY, chipW, chipH, 10, over ? 0x9A14121C : 0x66101318, over ? 0x55FFFFFF : 0x26FFFFFF);
             boolean head = false;
             try {
-                net.minecraft.util.Identifier skin = hwSkin != null ? hwSkin
-                    : this.client.getSkinProvider().getSkinTextures(this.client.getGameProfile()).texture();
+                net.minecraft.util.Identifier skin = HWSkin.texture(this.client);
                 ctx.drawTexture(skin, chipX + 6, chipY + 3, 14, 14, 8f, 8f, 8, 8, 64, 64);
                 ctx.drawTexture(skin, chipX + 6, chipY + 3, 14, 14, 40f, 8f, 8, 8, 64, 64);
                 head = true;

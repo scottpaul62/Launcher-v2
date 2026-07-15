@@ -18,6 +18,9 @@ public final class HWWings {
             case 2 -> p = ParticleTypes.ELECTRIC_SPARK;
             case 3 -> p = ParticleTypes.FLAME;
             case 4 -> p = ParticleTypes.SOUL_FIRE_FLAME;
+            case 5 -> p = ParticleTypes.WAX_ON;          // Apollon : etincelles dorees
+            case 6 -> p = ParticleTypes.CHERRY_LEAVES;   // celestes : petales
+            case 7 -> p = ParticleTypes.PORTAL;          // Vide : energie violette
             default -> { return; }
         }
         double yaw = Math.toRadians(e.getYaw());

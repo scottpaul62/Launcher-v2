@@ -15,7 +15,8 @@ public final class HWCosmetics {
         "Aucune", "Éclairs de Zeus", "Halo d'Apollon", "Flammes d'Héphaïstos", "Ombre d'Hadès", "Pétales d'Olympe"
     };
     public static final String[] WING_NAMES = {
-        "Aucune", "Ailes d'Hermès", "Ailes de foudre", "Ailes de flammes", "Ailes d'Hadès"
+        "Aucune", "Ailes d'Hermès", "Ailes de foudre", "Ailes de flammes", "Ailes d'Hadès",
+        "Ailes d'Apollon", "Ailes célestes", "Ailes du Vide"
     };
     public static int aura = 0;
     public static int wings = 0;
