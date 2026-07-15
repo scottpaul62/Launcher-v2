@@ -52,8 +52,11 @@ public class HWButton extends ButtonWidget {
     private void renderDock(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
         if (hover > 0.02f) rflat(ctx, x + 2, y + 2, w - 4, h - 4, lerp(0x00000000, 0x552A2233, hover));
         int iconCol = lerp(0xFFCBB98A, 0xFFF3D889, hover);
-        if (!HWIcons.draw(ctx, icon, x + w / 2, y + 14, 20)) drawIcon(ctx, icon, x + w / 2, y + 13, iconCol);
-        ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + h - 12, lerp(0xFFB9B3C4, 0xFFFFFFFF, hover));
+        boolean small = h < 36; // dock compact (petite fenetre)
+        int iconSize = small ? 13 : 20;
+        int iconCy = small ? y + 9 : y + 14;
+        if (!HWIcons.draw(ctx, icon, x + w / 2, iconCy, iconSize)) drawIcon(ctx, icon, x + w / 2, iconCy - 1, iconCol);
+        ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + h - (small ? 9 : 12), lerp(0xFFB9B3C4, 0xFFFFFFFF, hover));
         int uw = (int) ((w - 18) * hover);
         if (uw > 1) {
             ctx.fill(x + w / 2 - uw / 2, y + h - 3, x + w / 2 + uw / 2, y + h - 1, 0xFFE8C56A);
