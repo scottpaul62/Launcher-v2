@@ -16,6 +16,7 @@ public class HeroworldClient implements ClientModInitializer {
         HWProfiles.load();
         HWHudManager.load();
         HWWaypoints.load();
+        fr.heroesworld.titlescreen.gek.HWGekRegistry.load();
         HWHudManager.LOG.info("[HERO WORLD] client initialise - {} mods HUD", HWHudManager.ELEMENTS.size());
     }
 }

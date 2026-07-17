@@ -1,0 +1,201 @@
+{
+ "version": 1,
+ "items": [
+  {
+   "id": 101,
+   "key": "aura_zeus",
+   "name": "Éclairs de Zeus",
+   "category": "aura",
+   "renderer": "particle",
+   "particle": 1,
+   "rarity": "epic",
+   "colors": [
+    "GOLD"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 102,
+   "key": "aura_apollon",
+   "name": "Halo d'Apollon",
+   "category": "aura",
+   "renderer": "particle",
+   "particle": 2,
+   "rarity": "rare",
+   "colors": [
+    "WHITE"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 103,
+   "key": "aura_hephaistos",
+   "name": "Flammes d'Héphaïstos",
+   "category": "aura",
+   "renderer": "particle",
+   "particle": 3,
+   "rarity": "rare",
+   "colors": [
+    "ORANGE"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 104,
+   "key": "aura_hades",
+   "name": "Ombre d'Hadès",
+   "category": "aura",
+   "renderer": "particle",
+   "particle": 4,
+   "rarity": "epic",
+   "colors": [
+    "PURPLE"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 105,
+   "key": "aura_petales",
+   "name": "Pétales d'Olympe",
+   "category": "aura",
+   "renderer": "particle",
+   "particle": 5,
+   "rarity": "common",
+   "colors": [
+    "PINK"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 201,
+   "key": "wings_hermes",
+   "name": "Ailes d'Hermès",
+   "category": "wings",
+   "renderer": "particle",
+   "particle": 1,
+   "rarity": "rare",
+   "colors": [
+    "WHITE"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 202,
+   "key": "wings_foudre",
+   "name": "Ailes de foudre",
+   "category": "wings",
+   "renderer": "particle",
+   "particle": 2,
+   "rarity": "epic",
+   "colors": [
+    "CYAN"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 203,
+   "key": "wings_flammes",
+   "name": "Ailes de flammes",
+   "category": "wings",
+   "renderer": "particle",
+   "particle": 3,
+   "rarity": "rare",
+   "colors": [
+    "ORANGE"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 204,
+   "key": "wings_hades",
+   "name": "Ailes d'Hadès",
+   "category": "wings",
+   "renderer": "particle",
+   "particle": 4,
+   "rarity": "epic",
+   "colors": [
+    "BLUE"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 205,
+   "key": "wings_apollon",
+   "name": "Ailes d'Apollon",
+   "category": "wings",
+   "renderer": "particle",
+   "particle": 5,
+   "rarity": "rare",
+   "colors": [
+    "GOLD"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 206,
+   "key": "wings_celestes",
+   "name": "Ailes célestes",
+   "category": "wings",
+   "renderer": "particle",
+   "particle": 6,
+   "rarity": "common",
+   "colors": [
+    "PINK"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 207,
+   "key": "wings_vide",
+   "name": "Ailes du Vide",
+   "category": "wings",
+   "renderer": "particle",
+   "particle": 7,
+   "rarity": "epic",
+   "colors": [
+    "PURPLE"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 208,
+   "key": "ailes_zeus",
+   "name": "Ailes de Zeus",
+   "category": "wings",
+   "renderer": "gek",
+   "path": "gek/wings/ailes_zeus",
+   "rarity": "legendary",
+   "colors": [
+    "GOLD"
+   ],
+   "tags": [
+    "OLYMPE",
+    "3D"
+   ]
+  }
+ ]
+}

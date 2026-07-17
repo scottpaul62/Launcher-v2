@@ -21,6 +21,7 @@ public final class HWWings {
             case 5 -> p = ParticleTypes.WAX_ON;          // Apollon : etincelles dorees
             case 6 -> p = ParticleTypes.CHERRY_LEAVES;   // celestes : petales
             case 7 -> p = ParticleTypes.PORTAL;          // Vide : energie violette
+            case 8 -> { return; }                        // Ailes de Zeus : rendu 3D gek (pas de particules)
             default -> { return; }
         }
         double yaw = Math.toRadians(e.getYaw());

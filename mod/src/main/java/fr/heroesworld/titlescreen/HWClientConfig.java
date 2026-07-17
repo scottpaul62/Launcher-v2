@@ -18,7 +18,7 @@ public final class HWClientConfig {
     public static boolean highContrast = false;       // accessibilite : force le fond des widgets HUD
     public static int zoomKey = 67;                    // GLFW_KEY_C
     public static float zoomFactor = 4f;               // x2..x8
-    public static boolean titleFx = true;              // effets vivants de l'ecran titre
+    public static boolean titleFx = false;             // effets vivants de l'ecran titre (opt-in)
     public static boolean menuSounds = true;           // sons de survol des menus
     public static String lastSeen = "";                // derniere version vue (quoi de neuf)
     private HWClientConfig() {}

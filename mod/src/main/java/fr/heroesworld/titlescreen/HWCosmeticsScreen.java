@@ -3,7 +3,6 @@ package fr.heroesworld.titlescreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.text.Text;
 
 /** Vestiaire HERO WORLD : liste des cosmetiques, personnage 3D anime, apercu du rendu AVANT d'equiper. */
@@ -28,11 +27,16 @@ public class HWCosmeticsScreen extends Screen {
         "Des ailes d'ames bleutees ondulent derriere toi.",
         "Des ailes dorees benies par le dieu du soleil.",
         "Des ailes de petales celestes portees par la brise.",
-        "Des ailes d'energie du Vide, sombres et hypnotiques."
+        "Des ailes d'energie du Vide, sombres et hypnotiques.",
+        "Des ailes 3D forgees dans l'or de l'Olympe. (moteur data-driven)"
     };
 
     private int px, py, pw, ph;
     private boolean wide;
+    private int vx, vy, vw, vh;             // zone du viewport 3D
+    private float userYaw = 0f;             // rotation par glisser (axe vertical uniquement)
+    private boolean rotDrag = false;
+    private double lastDragX = 0;
 
     public HWCosmeticsScreen(Screen parent) { super(Text.literal("Vestiaire")); this.parent = parent; }
     private void reopen() { this.client.setScreen(new HWCosmeticsScreen(parent)); }
@@ -95,8 +99,8 @@ public class HWCosmeticsScreen extends Screen {
         ctx.drawTextWithShadow(this.textRenderer, Text.literal("§6VESTIAIRE §eHERO WORLD"), px + 12, py + 10, 0xFFE8C56A);
 
         // zone 3D (centre)
-        int vx = px + 200, vy = py + 40;
-        int vw = (wide ? px + pw - 190 : px + pw - 12) - vx, vh = py + ph - 70 - vy;
+        vx = px + 200; vy = py + 40;
+        vw = (wide ? px + pw - 190 : px + pw - 12) - vx; vh = py + ph - 70 - vy;
         HWDraw.panel(ctx, vx, vy, vw, vh, 6, 0xFF181B22, 0xFF323844);
 
         int ccx = vx + vw / 2, ccy = vy + vh / 2;
@@ -107,16 +111,9 @@ public class HWCosmeticsScreen extends Screen {
         if (cat == 1 && s > 0) drawWingsPreview(ctx, s, ccx, ccy - vh / 8, vh, t);
         if (cat == 0 && s > 0) drawAuraPreview(ctx, s, ccx, ccy, vw, vh, t, true);
 
-        // personnage 3D (en jeu : vrai joueur qui suit la souris ; au menu : tete de skin)
-        boolean entity = false;
-        if (mc.player != null) {
-            try {
-                int size = Math.max(30, (int) (vh / 2.6f));
-                InventoryScreen.drawEntity(ctx, vx, vy, vx + vw, vy + vh, size, 0.0625f, mouseX, mouseY, mc.player);
-                entity = true;
-            } catch (Throwable ignored) {}
-        }
-        if (!entity) entity = HWPlayerPreview.draw(ctx, mc, ccx, ccy, (int) (vh * 0.78f), mouseX, mouseY);
+        // personnage 3D : modele anime (glisser gauche/droite pour tourner), ailes 3D si selectionnees
+        int wings3d = (cat == 1) ? s : HWCosmetics.wings;
+        boolean entity = HWPlayerPreview.draw(ctx, mc, ccx, ccy + vh / 12, (int) (vh * 0.72f), mouseX, mouseY, userYaw, wings3d);
         if (!entity) {
             try {
                 net.minecraft.util.Identifier skin = HWSkin.texture(mc);
@@ -125,6 +122,8 @@ public class HWCosmeticsScreen extends Screen {
                 ctx.drawTexture(skin, ccx - hs / 2, ccy - hs / 2 - 8, hs, hs, 40f, 8f, 8, 8, 64, 64);
             } catch (Throwable ignored) {}
         }
+
+        ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8glisser pour tourner"), ccx, vy + vh - 14, 0xFF6E7480);
 
         // apercu cosmetique : particules "devant" le perso
         if (cat == 0 && s > 0) drawAuraPreview(ctx, s, ccx, ccy, vw, vh, t, false);
@@ -136,6 +135,17 @@ public class HWCosmeticsScreen extends Screen {
             HWDraw.panel(ctx, fx, fy, fw, ph - 110, 6, 0xFF181B22, 0xFF323844);
             ctx.drawTextWithShadow(this.textRenderer, Text.literal("§e" + names[s]), fx + 8, fy + 8, 0xFFE8C56A);
             ctx.drawTextWrapped(this.textRenderer, Text.literal("§7" + descs[s]), fx + 8, fy + 24, fw - 16, 0xFFA9AFBA);
+            if (s > 0) { // apercu du cosmetique SEUL (encart anime)
+                int ax2 = fx + 8, ay2 = fy + 64, aw2 = fw - 16, ah2 = 74;
+                HWDraw.panel(ctx, ax2, ay2, aw2, ah2, 5, 0xFF10131A, 0xFF2A2F3A);
+                int acx = ax2 + aw2 / 2, acy = ay2 + ah2 / 2;
+                if (cat == 0) {
+                    drawAuraPreview(ctx, s, acx, acy, aw2 - 12, ah2 + 30, t, true);
+                    drawAuraPreview(ctx, s, acx, acy, aw2 - 12, ah2 + 30, t, false);
+                } else {
+                    drawWingsPreview(ctx, s, acx, acy + 12, ah2 + 40, t);
+                }
+            }
             int fb = fy + (ph - 110); // bas du panneau fiche
             if (equipped() == s && s != 0)
                 ctx.drawTextWithShadow(this.textRenderer, Text.literal("§a✔ Equipe"), fx + 8, fb - 50, 0xFF48C78E);
@@ -204,6 +214,7 @@ public class HWCosmeticsScreen extends Screen {
             case 5: col = 0xFFF3D889; break;   // Apollon (or)
             case 6: col = 0xFFF2A9C4; break;   // celestes (petales)
             case 7: col = 0xFFB07CE8; break;   // Vide (violet)
+            case 8: col = 0xFFF3D889; break;   // Zeus 3D (encart : or)
             default: col = 0xFFF4F5F7;         // Hermes
         }
         double flap = Math.sin(t * 0.004) * 0.35;
@@ -217,6 +228,32 @@ public class HWCosmeticsScreen extends Screen {
                 if (i % 2 == 0) dot(ctx, wx - sgn * 2, wy + 4, 0, (col & 0xFFFFFF) | 0x88000000);
             }
         }
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (super.mouseClicked(mx, my, button)) return true;
+        if (button == 0 && mx >= vx && mx <= vx + vw && my >= vy && my <= vy + vh) {
+            rotDrag = true; lastDragX = mx;
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (rotDrag) {
+            userYaw += (float) ((mx - lastDragX) * 0.02); // rotation uniquement gauche/droite (axe vertical)
+            lastDragX = mx;
+            return true;
+        }
+        return super.mouseDragged(mx, my, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        if (rotDrag) { rotDrag = false; return true; }
+        return super.mouseReleased(mx, my, button);
     }
 
     @Override public void close() { this.client.setScreen(parent != null ? parent : new HWTitleScreen()); }

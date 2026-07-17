@@ -1,0 +1,21 @@
+{
+ "version": 1,
+ "presets": [
+  {
+   "name": "allow_all",
+   "compatible": [
+    "type:aura",
+    "type:wings",
+    "type:hat",
+    "type:cape"
+   ]
+  },
+  {
+   "name": "back_exclusive",
+   "parent": "allow_all",
+   "incompatible": [
+    "type:cape"
+   ]
+  }
+ ]
+}

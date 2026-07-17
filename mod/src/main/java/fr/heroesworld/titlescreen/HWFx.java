@@ -28,12 +28,6 @@ public final class HWFx {
             if (a > 8) ctx.fill(x, y, x + 2, y + 2, (a << 24) | 0xE8C56A);
         }
 
-        // brume tres lente (2 nappes translucides qui derivent)
-        int mx = (int) ((t / 45) % (w * 2L)) - w;
-        ctx.fill(Math.max(0, mx), (int) (h * 0.62f), Math.min(w, mx + w), (int) (h * 0.70f), 0x08FFFFFF);
-        int mx2 = w - (int) ((t / 60) % (w * 2L));
-        ctx.fill(Math.max(0, mx2 - w), (int) (h * 0.72f), Math.min(w, mx2), (int) (h * 0.79f), 0x08FFFFFF);
-
         // etoile filante (cycle 13 s, visible ~1,2 s)
         long cyc = t % 13000L;
         if (cyc < 1200) {

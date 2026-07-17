@@ -130,7 +130,7 @@ public class HWTitleScreen extends Screen {
         // personnage 3D avec ta skin (a droite, si la place le permet)
         if (!compact && this.width >= 760) {
             HWPlayerPreview.draw(ctx, this.client, (int) (this.width * 0.86f), (int) (this.height * 0.55f),
-                (int) (this.height * 0.34f), mouseX, mouseY);
+                (int) (this.height * 0.34f), mouseX, mouseY, 0f, HWCosmetics.wings);
         }
 
         // panneau serveur en direct (haut-gauche)
