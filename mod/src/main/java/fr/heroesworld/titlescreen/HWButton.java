@@ -13,6 +13,7 @@ public class HWButton extends ButtonWidget {
     private final int style;
     private final int icon; // 0=aucune, 1=amis, 2=thèmes, 3=perso, 4=options, 5=paramètres
     private float hover = 0f;
+    private boolean sounded = false;
 
     public HWButton(int x, int y, int w, int h, Text msg, int style, int icon, PressAction onPress) {
         super(x, y, w, h, msg, onPress, DEFAULT_NARRATION_SUPPLIER);
@@ -24,6 +25,14 @@ public class HWButton extends ButtonWidget {
     protected void renderWidget(DrawContext ctx, int mouseX, int mouseY, float delta) {
         int x = getX(), y = getY(), w = getWidth(), h = getHeight();
         boolean over = isHovered() || isFocused();
+        if (over && !sounded && HWClientConfig.menuSounds) {
+            sounded = true;
+            try {
+                MinecraftClient.getInstance().getSoundManager().play(
+                    net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK.value(), 1.85f, 0.06f));
+            } catch (Throwable ignored) {}
+        }
+        if (!over) sounded = false;
         if (HWClientConfig.reduceMotion) hover = over ? 1f : 0f;
         else hover += ((over ? 1f : 0f) - hover) * 0.3f;
         TextRenderer tr = MinecraftClient.getInstance().textRenderer;

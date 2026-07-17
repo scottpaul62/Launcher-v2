@@ -22,11 +22,23 @@ public class HWTitleScreen extends Screen {
 
     // taille minimale de la fenetre du jeu (une seule fois)
     private static boolean sizeLimitsSet = false;
+    // easter egg Konami
+    private static final int[] KONAMI = {265, 265, 264, 264, 263, 262, 263, 262, 66, 65};
+    private int konamiIdx = 0;
 
     public HWTitleScreen() { super(Text.literal("HERO WORLD")); }
 
     @Override
     protected void init() {
+        // « Quoi de neuf » : une fois par version
+        if (!HWBrand.VERSION.equals(HWClientConfig.lastSeen)) {
+            HWClientConfig.lastSeen = HWBrand.VERSION;
+            HWClientConfig.save();
+            if (this.client != null && this.client.world == null) {
+                this.client.setScreen(new HWWhatsNewScreen(this));
+                return;
+            }
+        }
         int cx = this.width / 2;
         compact = this.height < 360 || this.width < 720;
 
@@ -110,8 +122,30 @@ public class HWTitleScreen extends Screen {
             } catch (Throwable ignored) {}
         }
         HWScene.draw(ctx, this.width, this.height);
+        HWFx.draw(ctx, this.width, this.height);            // effets vivants (braises, brume, eclairs)
+        HWServerStatus.tick();                               // ping serveur asynchrone
 
         int cx = this.width / 2;
+
+        // personnage 3D avec ta skin (a droite, si la place le permet)
+        if (!compact && this.width >= 760) {
+            HWPlayerPreview.draw(ctx, this.client, (int) (this.width * 0.86f), (int) (this.height * 0.55f),
+                (int) (this.height * 0.34f), mouseX, mouseY);
+        }
+
+        // panneau serveur en direct (haut-gauche)
+        {
+            String txt = HWServerStatus.online
+                ? "§a● §f" + HWServerStatus.playersOn + "§7/" + HWServerStatus.playersMax + " en ligne"
+                : "§c● §7hors ligne";
+            int tw2 = this.textRenderer.getWidth(txt.replaceAll("§.", "")) + 40;
+            HWDraw.panel(ctx, 10, 10, tw2, 20, 10, 0x66101318, 0x26FFFFFF);
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal("§6HW"), 18, 16, 0xFFE8C56A);
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal(txt), 34, 16, 0xFFFFFFFF);
+        }
+
+        // astuce rotative au-dessus du dock
+        ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8" + HWTips.current()), cx, dockY - 12, 0xFF8B8B98);
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§6◆ §eL'OLYMPE VOUS ATTEND §6◆"),
             cx, ry - 22, 0xFFE8C56A);
 
@@ -141,6 +175,16 @@ public class HWTitleScreen extends Screen {
             8, this.height - 12, GOLD);
 
         super.render(ctx, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // Konami : fleches fleches B A -> tempete d'eclairs
+        if (keyCode == KONAMI[konamiIdx]) {
+            konamiIdx++;
+            if (konamiIdx >= KONAMI.length) { konamiIdx = 0; HWFx.storm(); }
+        } else konamiIdx = (keyCode == KONAMI[0]) ? 1 : 0;
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override public boolean shouldCloseOnEsc() { return false; }

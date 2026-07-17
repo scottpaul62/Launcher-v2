@@ -1,6 +1,6 @@
 {
   "name": "heroesworld-launcher",
-  "version": "2.25.0",
+  "version": "2.26.0",
   "description": "Launcher officiel HEROES-WORLD (Electron + Vue 3 + XMCL)",
   "author": "Scott Paul (HEROES-WORLD)",
   "license": "UNLICENSED",
@@ -21,6 +21,7 @@
     "@xmcl/core": "^2.15.1",
     "@xmcl/installer": "^6.1.2",
     "@xmcl/user": "^4.3.0",
+    "discord-rpc": "^4.0.1",
     "electron-updater": "^6.3.9",
     "skinview3d": "^3.1.0"
   },

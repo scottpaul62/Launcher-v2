@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, Tray, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, Tray, Menu, dialog, nativeImage } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, unlinkSync, existsSync, appendFileSync, mkdirSync, readdirSync, statSync } from 'fs'
 import { spawn } from 'child_process'
@@ -80,6 +80,7 @@ app.whenReady().then(() => {
   createWindow()
   setupUpdater()
   startLocalServer()
+  setupDiscord()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
@@ -224,6 +225,28 @@ function goToTray () {
   } catch (_) { try { win.minimize() } catch (__) {} }
 }
 
+// ============ DISCORD RICH PRESENCE ============
+// Config editable : %APPDATA%/heroesworld-launcher/discord.json  { "appId": "...", "invite": "https://discord.gg/..." }
+// appId = ID d'application Discord (portail developpeur). L'invite alimente le bouton « Rejoindre le Discord ».
+let discordCfg = { appId: '1527807916500058112', invite: '' }
+let rpc = null, rpcReady = false
+const rpcStart = Date.now()
+function setupDiscord () {
+  try {
+    const p = join(app.getPath('userData'), 'discord.json')
+    try { discordCfg = Object.assign(discordCfg, JSON.parse(readFileSync(p, 'utf8'))) }
+    catch (_) { try { writeFileSync(p, JSON.stringify(discordCfg, null, 2)) } catch (__) {} }
+    const RPC = require('discord-rpc')
+    rpc = new RPC.Client({ transport: 'ipc' })
+    rpc.on('ready', () => { rpcReady = true; console.log('[DISCORD] Rich Presence actif'); setDiscordActivity('Sur le launcher') })
+    rpc.login({ clientId: discordCfg.appId }).catch((e) => console.log('[DISCORD] indisponible : ' + String(e && e.message || e)))
+  } catch (e) { console.log('[DISCORD] module absent : ' + String(e && e.message || e)) }
+}
+function setDiscordActivity (state) {
+  try { if (rpc && rpcReady) rpc.setActivity({ details: 'HEROES-WORLD', state, startTimestamp: rpcStart, instance: false }) } catch (_) {}
+}
+ipcMain.handle('discord:info', () => discordCfg)
+
 // ============ AUTH MICROSOFT ============
 const AZURE_CLIENT_ID = '1ce6e35a-126f-48fd-97fb-54d143ac6d45'
 const REDIRECT = 'https://login.microsoftonline.com/common/oauth2/nativeclient'
@@ -276,6 +299,92 @@ async function fullAuthFromMs (msAccessToken) {
   const profile = await pr.json()
   return { name: profile.name, uuid: profile.id, mcToken: mc.access_token }
 }
+
+/** Jeton Minecraft frais via le refresh token (pour l'upload de skin). */
+async function getMcToken () {
+  const acc = readAccount()
+  if (!acc || !acc.refreshToken) throw new Error('Aucun compte connecte')
+  const tok = await msToken({ client_id: AZURE_CLIENT_ID, refresh_token: acc.refreshToken, grant_type: 'refresh_token', redirect_uri: REDIRECT, scope: 'XboxLive.signin offline_access' })
+  const full = await fullAuthFromMs(tok.access_token)
+  writeAccount({ name: full.name, uuid: full.uuid, refreshToken: tok.refresh_token || acc.refreshToken })
+  return full.mcToken
+}
+
+// ============ SKIN MANAGER ============
+const skinsDir = () => { const d = join(app.getPath('userData'), 'skins'); try { mkdirSync(d, { recursive: true }) } catch (_) {} ; return d }
+async function uploadSkinFile (filePath, variant) {
+  const token = await getMcToken()
+  const buf = readFileSync(filePath)
+  const fd = new FormData()
+  fd.append('variant', variant === 'slim' ? 'slim' : 'classic')
+  fd.append('file', new Blob([buf], { type: 'image/png' }), 'skin.png')
+  const res = await fetch('https://api.minecraftservices.com/minecraft/profile/skins', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd
+  })
+  if (!res.ok) { let d = ''; try { d = (await res.text()).slice(0, 140) } catch (_) {} ; throw new Error('API skin ' + res.status + ' ' + d) }
+  // copie locale pour la bibliotheque
+  try {
+    const name = 'skin-' + new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19) + '.png'
+    writeFileSync(join(skinsDir(), name), buf)
+  } catch (_) {}
+  console.log('[SKIN] skin applique (' + variant + ')')
+  return { ok: true }
+}
+ipcMain.handle('skin:upload', async (e, variant) => {
+  try {
+    const r = await dialog.showOpenDialog(win, { title: 'Choisir un skin (.png 64x64)', filters: [{ name: 'Skin PNG', extensions: ['png'] }], properties: ['openFile'] })
+    if (r.canceled || !r.filePaths.length) return { ok: false, error: 'annule' }
+    return await uploadSkinFile(r.filePaths[0], variant)
+  } catch (ex) { console.log('[SKIN] echec : ' + String(ex && ex.message || ex)); return { ok: false, error: String(ex && ex.message || ex) } }
+})
+ipcMain.handle('skin:apply', async (e, p, variant) => {
+  try {
+    if (typeof p !== 'string' || !p.startsWith(skinsDir())) return { ok: false, error: 'chemin invalide' }
+    return await uploadSkinFile(p, variant)
+  } catch (ex) { return { ok: false, error: String(ex && ex.message || ex) } }
+})
+ipcMain.handle('skins:list', () => {
+  try {
+    return readdirSync(skinsDir()).filter((f) => /\.png$/i.test(f)).map((f) => {
+      const p = join(skinsDir(), f)
+      let thumb = ''
+      try { thumb = nativeImage.createFromPath(p).resize({ width: 96 }).toDataURL() } catch (_) {}
+      return { name: f, path: p, thumb }
+    }).reverse().slice(0, 12)
+  } catch (_) { return [] }
+})
+
+// ============ GALERIE DE CAPTURES ============
+ipcMain.handle('screenshots:list', (e, dir) => {
+  try {
+    const d = join(resolveRoot(dir), 'screenshots')
+    if (!existsSync(d)) return []
+    return readdirSync(d).filter((f) => /\.(png|jpg)$/i.test(f)).map((f) => {
+      const p = join(d, f)
+      let mt = 0; try { mt = statSync(p).mtimeMs } catch (_) {}
+      return { name: f, path: p, mt }
+    }).sort((a, b) => b.mt - a.mt).slice(0, 30).map((s) => {
+      let thumb = ''
+      try { thumb = nativeImage.createFromPath(s.path).resize({ width: 384 }).toDataURL() } catch (_) {}
+      return { name: s.name, path: s.path, thumb }
+    })
+  } catch (_) { return [] }
+})
+ipcMain.handle('screenshots:full', (e, p, dir) => {
+  try {
+    if (typeof p !== 'string' || !p.startsWith(join(resolveRoot(dir), 'screenshots'))) return ''
+    return nativeImage.createFromPath(p).resize({ width: 1400 }).toDataURL()
+  } catch (_) { return '' }
+})
+ipcMain.handle('screenshots:delete', (e, p, dir) => {
+  try {
+    if (typeof p !== 'string' || !p.startsWith(join(resolveRoot(dir), 'screenshots'))) return { ok: false }
+    unlinkSync(p)
+    console.log('[UI] capture supprimee : ' + p)
+    return { ok: true }
+  } catch (ex) { return { ok: false, error: String(ex) } }
+})
+ipcMain.handle('screenshots:show', (e, p) => { try { shell.showItemInFolder(p) } catch (_) {} })
 
 ipcMain.handle('auth:get', () => { const a = readAccount(); return a ? { name: a.name, uuid: a.uuid } : null })
 ipcMain.handle('auth:logout', () => {
@@ -525,12 +634,13 @@ ipcMain.handle('mc:launch', async (event, opts = {}) => {
     const started = Date.now()
     send({ phase: 'done', text: 'Jeu lancé — initialisation…', percent: 100 })
     const watcher = core.createMinecraftProcessWatcher(proc)
-    watcher.on('minecraft-window-ready', () => { console.log('[MC] fenêtre du jeu prête -> launcher au tray'); goToTray() })
+    watcher.on('minecraft-window-ready', () => { console.log('[MC] fenêtre du jeu prête -> launcher au tray'); goToTray(); setDiscordActivity('En jeu : HEROES-WORLD') })
     watcher.on('error', (err) => { console.log('[MC] watcher error : ' + String(err)); send({ phase: 'error', text: 'Lancement : ' + String(err) }); launching = false; restoreLauncher(); stopLocalServer() })
     watcher.on('minecraft-exit', (e) => {
       launching = false
       restoreLauncher()
       stopLocalServer()
+      setDiscordActivity('Sur le launcher')
       console.log('[MC] sortie code=' + e.code + ' signal=' + e.signal)
       try { if (e.crashReport) console.log('[CRASH] rapport MC (' + e.crashReportLocation + ') :\n' + String(e.crashReport).slice(0, 1500)) } catch (_) {}
       // Rapport de crash natif JVM (hs_err_pid) — nomme la DLL qui plante

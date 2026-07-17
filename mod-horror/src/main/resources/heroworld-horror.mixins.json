@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "fr.heroesworld.horror.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "refmap": "heroworld-horror.refmap.json",
+  "client": [
+    "TorchTickMixin",
+    "TorchHudMixin"
+  ]
+}

@@ -18,6 +18,9 @@ public final class HWClientConfig {
     public static boolean highContrast = false;       // accessibilite : force le fond des widgets HUD
     public static int zoomKey = 67;                    // GLFW_KEY_C
     public static float zoomFactor = 4f;               // x2..x8
+    public static boolean titleFx = true;              // effets vivants de l'ecran titre
+    public static boolean menuSounds = true;           // sons de survol des menus
+    public static String lastSeen = "";                // derniere version vue (quoi de neuf)
     private HWClientConfig() {}
 
     private static Path file() { return FabricLoader.getInstance().getConfigDir().resolve("heroworld_client.json"); }
@@ -32,6 +35,9 @@ public final class HWClientConfig {
             if (o.has("highContrast")) highContrast = o.get("highContrast").getAsBoolean();
             if (o.has("zoomKey")) zoomKey = o.get("zoomKey").getAsInt();
             if (o.has("zoomFactor")) zoomFactor = HWZoom.clampFactor(o.get("zoomFactor").getAsFloat());
+            if (o.has("titleFx")) titleFx = o.get("titleFx").getAsBoolean();
+            if (o.has("menuSounds")) menuSounds = o.get("menuSounds").getAsBoolean();
+            if (o.has("lastSeen")) lastSeen = o.get("lastSeen").getAsString();
         } catch (Exception ignored) {}
     }
     public static void save() {
@@ -43,6 +49,9 @@ public final class HWClientConfig {
             o.addProperty("highContrast", highContrast);
             o.addProperty("zoomKey", zoomKey);
             o.addProperty("zoomFactor", zoomFactor);
+            o.addProperty("titleFx", titleFx);
+            o.addProperty("menuSounds", menuSounds);
+            o.addProperty("lastSeen", lastSeen);
             Files.writeString(file(), GSON.toJson(o), StandardCharsets.UTF_8);
         } catch (Exception ignored) {}
     }

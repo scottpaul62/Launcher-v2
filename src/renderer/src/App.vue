@@ -31,7 +31,7 @@ const settings = reactive(Object.assign(
     ram: 4, res: '1920 × 1080', dir: '%APPDATA%/.heroesworld', java: '',
     autoDownload: true, minimizeOnLaunch: true,
     notifEnabled: true, animations: true,
-    reduceMotion: false, uiScale: 100
+    reduceMotion: false, uiScale: 100, uiSounds: true
   },
   JSON.parse(localStorage.getItem('hwSettings') || '{}')
 ))
@@ -165,7 +165,18 @@ const messages = {
     'launch.support': 'Contacter le support',
     'launch.hint.perm': "Accès refusé à un fichier — un antivirus bloque peut-être le dossier du jeu. Ajoute une exception puis clique Réparer.",
     'launch.hint.disk': 'Espace disque insuffisant — libère de la place puis clique Réparer.',
-    'launch.hint.files': 'Fichier du jeu manquant ou corrompu — clique Réparer pour le retélécharger.'
+    'launch.hint.files': 'Fichier du jeu manquant ou corrompu — clique Réparer pour le retélécharger.',
+    'nav.captures': 'Captures',
+    'captures.subtitle': 'Tes captures d\u2019écran en jeu (F2).',
+    'captures.empty': 'Aucune capture pour le moment — appuie sur F2 en jeu !',
+    'captures.open': 'Ouvrir dans le dossier', 'captures.delete': 'Supprimer', 'captures.close': 'Fermer',
+    'skin.title': 'Mon skin', 'skin.upload': 'Importer un skin (.png)', 'skin.variant': 'Modèle',
+    'skin.classic': 'Classic', 'skin.slim': 'Slim', 'skin.recent': 'Skins récents',
+    'skin.applied': 'Skin appliqué ! (visible en jeu à la prochaine connexion)', 'skin.error': 'Échec du skin : ',
+    'skin.note': 'Le skin est appliqué directement sur ton compte Microsoft.',
+    'changelog.title': 'Quoi de neuf', 'changelog.close': 'Compris !',
+    'settings.uiSoundsLabel': "Sons de l'interface",
+    'discord.join': 'Rejoindre le Discord'
   },
   en: {
     'nav.accueil': 'Home', 'nav.actus': 'News', 'nav.cosmetiques': 'Cosmetics', 'nav.amis': 'Friends',
@@ -272,7 +283,18 @@ const messages = {
     'launch.support': 'Contact support',
     'launch.hint.perm': 'File access denied — an antivirus may be blocking the game folder. Add an exception then click Repair.',
     'launch.hint.disk': 'Not enough disk space — free some space then click Repair.',
-    'launch.hint.files': 'Missing or corrupted game file — click Repair to re-download it.'
+    'launch.hint.files': 'Missing or corrupted game file — click Repair to re-download it.',
+    'nav.captures': 'Screenshots',
+    'captures.subtitle': 'Your in-game screenshots (F2).',
+    'captures.empty': 'No screenshot yet — press F2 in game!',
+    'captures.open': 'Show in folder', 'captures.delete': 'Delete', 'captures.close': 'Close',
+    'skin.title': 'My skin', 'skin.upload': 'Upload a skin (.png)', 'skin.variant': 'Model',
+    'skin.classic': 'Classic', 'skin.slim': 'Slim', 'skin.recent': 'Recent skins',
+    'skin.applied': 'Skin applied! (visible in game on next login)', 'skin.error': 'Skin failed: ',
+    'skin.note': 'The skin is applied directly to your Microsoft account.',
+    'changelog.title': "What's new", 'changelog.close': 'Got it!',
+    'settings.uiSoundsLabel': 'Interface sounds',
+    'discord.join': 'Join the Discord'
   }
 }
 function t (key) {
@@ -308,6 +330,7 @@ const navItems = [
   { id: 'actus', icon: 'M4 11h9v2H4zM4 7h13v2H4zM4 15h6v2H4zM19 5H2v14h17a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z' },
   { id: 'amis', icon: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z' },
   { id: 'mods', icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
+  { id: 'captures', icon: 'M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM9 2 7.17 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3.17L15 2H9z' },
   { id: 'langues', icon: 'M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm7.94 9h-3.05a15.7 15.7 0 0 0-1.32-5.47A8.03 8.03 0 0 1 19.94 11zM12 4.06c.98 1.4 1.72 3.24 2.02 5.94H9.98c.3-2.7 1.04-4.54 2.02-5.94zM4.06 13h3.05c.16 2.05.62 3.9 1.32 5.47A8.03 8.03 0 0 1 4.06 13zm3.05-2H4.06a8.03 8.03 0 0 1 4.37-5.47A15.7 15.7 0 0 0 7.11 11zM12 19.94c-.98-1.4-1.72-3.24-2.02-5.94h4.04c-.3 2.7-1.04 4.54-2.02 5.94zm2.63-1.47c.7-1.57 1.16-3.42 1.32-5.47h3.05a8.03 8.03 0 0 1-4.37 5.47z' },
   { id: 'settings', icon: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.48.48 0 0 0 14 2h-4a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.65 8.47a.49.49 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h4c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z' }
 ]
@@ -684,6 +707,7 @@ const settingsFieldIndex = [
   { cat: 'jeu', labelKey: 'settings.folderTitle' }, { cat: 'jeu', labelKey: 'settings.javaTitle' },
   { cat: 'accessibilite', labelKey: 'settings.reduceMotionLabel' }, { cat: 'accessibilite', labelKey: 'settings.animationsLabel' },
   { cat: 'accessibilite', labelKey: 'settings.uiScaleLabel' }, { cat: 'accessibilite', labelKey: 'settings.notifEnabledLabel' },
+  { cat: 'accessibilite', labelKey: 'settings.uiSoundsLabel' },
   { cat: 'apropos', labelKey: 'settings.launcherTitle' }, { cat: 'apropos', labelKey: 'settings.checkUpdateBtn' },
   { cat: 'apropos', labelKey: 'settings.openFolderBtn' }
 ]
@@ -710,6 +734,105 @@ function fieldVisible (labelKey, catId) {
   return t(labelKey).toLowerCase().includes(settingsSearch.value.trim().toLowerCase())
 }
 function selectSettingsCat (id) { settingsSelectedCat.value = id; settingsSearch.value = '' }
+
+/* ===================== Splash / parallaxe / sons UI ===================== */
+const splash = ref(true)
+const parallax = reactive({ x: 0, y: 0 })
+const parStyle = computed(() => (settings.animations && !settings.reduceMotion)
+  ? { transform: `translate3d(${(-parallax.x * 12).toFixed(1)}px, ${(-parallax.y * 8).toFixed(1)}px, 0) scale(1.03)` }
+  : { transform: 'scale(1.03)' })
+function onMouseMovePar (e) {
+  parallax.x = e.clientX / window.innerWidth - 0.5
+  parallax.y = e.clientY / window.innerHeight - 0.5
+}
+let audioCtx = null, lastHoverEl = null
+function uiBeep (freq, dur, gain) {
+  if (!settings.uiSounds) return
+  try {
+    if (!audioCtx) audioCtx = new AudioContext()
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain()
+    o.type = 'sine'; o.frequency.value = freq
+    g.gain.setValueAtTime(gain, audioCtx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur)
+    o.connect(g); g.connect(audioCtx.destination)
+    o.start(); o.stop(audioCtx.currentTime + dur)
+  } catch (_) {}
+}
+function onUiOver (e) {
+  const b = e.target.closest && e.target.closest('button, .side-item, .acct-chip, .bell-chip, .news-card')
+  if (b && b !== lastHoverEl) { lastHoverEl = b; uiBeep(720, 0.045, 0.012) }
+  if (!b) lastHoverEl = null
+}
+function onUiClick (e) {
+  if (e.target.closest && e.target.closest('button, .side-item')) uiBeep(430, 0.07, 0.025)
+}
+
+/* ===================== Captures d'écran ===================== */
+const shots = ref([])
+const shotView = ref(null)
+const shotFull = ref('')
+async function loadShots () {
+  try { shots.value = (window.hw && window.hw.screenshotsList) ? ((await window.hw.screenshotsList(settings.dir)) || []) : [] }
+  catch (_) { shots.value = [] }
+}
+async function openShot (sh) {
+  shotView.value = sh; shotFull.value = ''
+  try { shotFull.value = (await window.hw.screenshotFull(sh.path, settings.dir)) || sh.thumb } catch (_) { shotFull.value = sh.thumb }
+}
+async function delShot (sh) {
+  try { await window.hw.screenshotDelete(sh.path, settings.dir) } catch (_) {}
+  shotView.value = null
+  loadShots()
+  ulog('capture supprimee')
+}
+function showShotInFolder (sh) { try { window.hw.screenshotShow(sh.path) } catch (_) {} }
+
+/* ===================== Skin manager ===================== */
+const mySkins = ref([])
+const skinVariant = ref(localStorage.getItem('hwSkinVariant') || 'classic')
+watch(skinVariant, (v) => localStorage.setItem('hwSkinVariant', v))
+const skinBusy = ref(false)
+async function loadSkins () { try { mySkins.value = (window.hw && window.hw.skinsList) ? ((await window.hw.skinsList()) || []) : [] } catch (_) {} }
+async function uploadSkin () {
+  if (skinBusy.value || !(window.hw && window.hw.skinUpload)) return
+  skinBusy.value = true
+  try {
+    const r = await window.hw.skinUpload(skinVariant.value)
+    if (r && r.ok) { toast(t('skin.applied')); ulog('skin upload ok') }
+    else if (r && r.error !== 'annule') toast(t('skin.error') + (r && r.error || ''))
+  } catch (e) { toast(t('skin.error') + e) }
+  skinBusy.value = false
+  loadSkins()
+}
+async function applySkin (sk) {
+  if (skinBusy.value) return
+  skinBusy.value = true
+  try {
+    const r = await window.hw.skinApply(sk.path, skinVariant.value)
+    toast(r && r.ok ? t('skin.applied') : t('skin.error') + (r && r.error || ''))
+  } catch (e) { toast(t('skin.error') + e) }
+  skinBusy.value = false
+}
+watch(page, (p) => { if (p === 'captures') loadShots(); if (p === 'cosmetiques') loadSkins() })
+
+/* ===================== Quoi de neuf / Discord ===================== */
+const CHANGELOG = [
+  { v: '2.26.0', items: [
+    'Nouvelle page Captures : revois, ouvre et supprime tes screenshots',
+    'Skin manager : change ton skin Minecraft sans quitter le launcher',
+    'Fond en parallaxe, écran de démarrage, sons d\u2019interface discrets',
+    'Discord Rich Presence (« En jeu : HEROES-WORLD »)',
+    'Client : écran titre vivant, perso 3D, statut serveur en direct, vestiaire 3D'
+  ] }
+]
+const changelogOpen = ref(false)
+watch(APP_VERSION, (v) => {
+  if (v && v !== '…') {
+    const seen = localStorage.getItem('hwSeenVer')
+    if (seen !== v) { changelogOpen.value = true; localStorage.setItem('hwSeenVer', v) }
+  }
+})
+const discord = reactive({ invite: '' })
 
 /* ===================== Ambiance (ciel / météores) ===================== */
 function starField (n, tile, r, op) {
@@ -815,6 +938,11 @@ onMounted(() => {
   addNotif('event', t('notif.event1.title'), t('notif.event1.text'))
   addNotif('cosmetic', t('notif.cosmetic1.title'), t('notif.cosmetic1.text'))
   if (window.hw && window.hw.checkUpdate) { window.hw.checkUpdate() }
+  window.addEventListener('mousemove', onMouseMovePar)
+  document.addEventListener('mouseover', onUiOver)
+  document.addEventListener('mousedown', onUiClick)
+  try { if (window.hw && window.hw.discordInfo) window.hw.discordInfo().then((d) => { if (d) Object.assign(discord, d) }) } catch (_) {}
+  setTimeout(() => { splash.value = false }, 1200)
   ulog('App.vue monté')
 })
 onUnmounted(() => {
@@ -826,6 +954,9 @@ onUnmounted(() => {
   clearInterval(srvTimer)
   window.removeEventListener('blur', onWinBlur)
   window.removeEventListener('focus', onWinFocus)
+  window.removeEventListener('mousemove', onMouseMovePar)
+  document.removeEventListener('mouseover', onUiOver)
+  document.removeEventListener('mousedown', onUiClick)
 })
 </script>
 
@@ -840,6 +971,7 @@ onUnmounted(() => {
   </div>
 
   <div class="bg" :class="['theme-' + theme, { switching: themeSwitching, 'anim-off': !settings.animations }]">
+    <div class="bg-par" :style="parStyle">
     <div class="sky" :style="{ backgroundImage: `url(${sky})` }"></div>
     <div class="stars" :style="stars1"></div>
     <div class="stars s2" :style="stars2"></div>
@@ -848,6 +980,7 @@ onUnmounted(() => {
     <div class="planet-glow"></div>
     <img class="planet" :src="planet" alt="" />
     <div class="planet-veil"></div>
+    </div>
     <div class="scrim"></div>
   </div>
 
@@ -860,6 +993,10 @@ onUnmounted(() => {
           <span class="side-label">{{ t('nav.' + n.id) }}</span>
         </button>
       </nav>
+      <button v-if="discord.invite" class="side-discord" @click="ext(discord.invite)">
+        <svg viewBox="0 0 24 24" class="side-ic"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.9 3l-.2.4a13.3 13.3 0 0 1 4 2A16.2 16.2 0 0 0 12 3.8c-2.7 0-5.3.6-7.7 1.7a13.3 13.3 0 0 1 4-2L8.1 3a19.8 19.8 0 0 0-4.4 1.4A20.3 20.3 0 0 0 .5 18.1a20 20 0 0 0 6 3l.5-.7a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 13 0l.5.4c-.6.4-1.3.7-2 1l.5.7a20 20 0 0 0 6-3 20.3 20.3 0 0 0-3.2-12.7zM8.5 15.6c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm7 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>
+        <span class="side-label">{{ t('discord.join') }}</span>
+      </button>
       <div class="side-foot">
         <span class="sf-dot" :class="{ on: serverOnline }"></span>
         <span class="side-label sf-txt">Fabric {{ LOADER_VER }} · MC {{ MC_VER }}</span>
@@ -996,6 +1133,21 @@ onUnmounted(() => {
         <section v-else-if="page === 'cosmetiques'" class="pg pg-cos">
           <div class="pg-head"><h1>{{ t('nav.cosmetiques') }}</h1><p>{{ t('cosmetics.subtitle') }}</p></div>
           <div class="cos-notice panel">{{ t('cosmetics.notice') }}</div>
+          <div class="skin-bar panel">
+            <b class="skin-title">{{ t('skin.title') }}</b>
+            <button class="btn-sm" :disabled="skinBusy" @click="uploadSkin">{{ t('skin.upload') }}</button>
+            <label class="skin-variant">{{ t('skin.variant') }}
+              <select class="ipt" v-model="skinVariant">
+                <option value="classic">{{ t('skin.classic') }}</option>
+                <option value="slim">{{ t('skin.slim') }}</option>
+              </select>
+            </label>
+            <span v-if="mySkins.length" class="skin-recent-label">{{ t('skin.recent') }} :</span>
+            <button v-for="sk in mySkins" :key="sk.path" class="skin-chip" :disabled="skinBusy" @click="applySkin(sk)" :title="sk.name">
+              <img :src="sk.thumb" alt="" draggable="false" />
+            </button>
+            <span class="skin-note">{{ t('skin.note') }}</span>
+          </div>
           <div class="cos-body">
             <aside class="cos-cats panel">
               <div class="cos-cats-title">{{ t('cosmetics.categories') }}</div>
@@ -1135,6 +1287,18 @@ onUnmounted(() => {
           </div>
         </section>
 
+        <!-- CAPTURES -->
+        <section v-else-if="page === 'captures'" class="pg">
+          <div class="pg-head"><h1>{{ t('nav.captures') }}</h1><p>{{ t('captures.subtitle') }}</p></div>
+          <div class="shots-grid">
+            <div v-for="sh in shots" :key="sh.path" class="shot" role="button" tabindex="0" @click="openShot(sh)" @keydown.enter.self.prevent="openShot(sh)">
+              <img :src="sh.thumb" :alt="sh.name" draggable="false" />
+              <div class="shot-name">{{ sh.name }}</div>
+            </div>
+          </div>
+          <p v-if="!shots.length" class="shots-empty panel">{{ t('captures.empty') }}</p>
+        </section>
+
         <!-- LANGUES -->
         <section v-else-if="page === 'langues'" class="pg">
           <div class="pg-head"><h1>{{ t('nav.langues') }}</h1><p>{{ t('langues.subtitle') }}</p></div>
@@ -1203,6 +1367,10 @@ onUnmounted(() => {
                       <option :value="125">125 %</option>
                     </select>
                   </div>
+                </div>
+                <div v-show="fieldVisible('settings.uiSoundsLabel', 'accessibilite')" class="set-row">
+                  <label>{{ t('settings.uiSoundsLabel') }}</label>
+                  <div class="set-control"><label class="switch"><input type="checkbox" v-model="settings.uiSounds" :aria-label="t('settings.uiSoundsLabel')" /><span class="switch-track"></span></label></div>
                 </div>
                 <div v-show="fieldVisible('settings.notifEnabledLabel', 'accessibilite')" class="set-row">
                   <label>{{ t('settings.notifEnabledLabel') }}</label>
@@ -1281,6 +1449,35 @@ onUnmounted(() => {
     <span class="upd-ic">⬇</span>
     <span v-if="upd.state === 'downloading'">{{ t('update.updating').replace('{percent}', upd.percent) }}</span>
     <template v-else><span>{{ t('update.ready').replace('{version}', upd.version) }}</span><button @click="installUpdate">{{ t('update.installBtn') }}</button></template>
+  </div>
+
+  <!-- Viewer de capture -->
+  <div v-if="shotView" class="modal-ov" @click.self="shotView = null">
+    <div class="shot-modal panel">
+      <img v-if="shotFull" :src="shotFull" :alt="shotView.name" draggable="false" />
+      <div class="shot-modal-bar">
+        <b>{{ shotView.name }}</b>
+        <span class="sp"></span>
+        <button class="btn-sm ghost" @click="showShotInFolder(shotView)">{{ t('captures.open') }}</button>
+        <button class="btn-sm danger" @click="delShot(shotView)">{{ t('captures.delete') }}</button>
+        <button class="btn-sm ghost" @click="shotView = null">{{ t('captures.close') }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quoi de neuf -->
+  <div v-if="changelogOpen" class="modal-ov" @click.self="changelogOpen = false">
+    <div class="clog panel">
+      <h2>{{ t('changelog.title') }} <span class="clog-v">v{{ CHANGELOG[0].v }}</span></h2>
+      <ul><li v-for="(it, i) in CHANGELOG[0].items" :key="i">{{ it }}</li></ul>
+      <button class="btn-sm" @click="changelogOpen = false">{{ t('changelog.close') }}</button>
+    </div>
+  </div>
+
+  <!-- Splash de démarrage -->
+  <div v-if="splash" class="splash">
+    <img :src="logo" alt="HEROES-WORLD" draggable="false" />
+    <div class="splash-bar"><i></i></div>
   </div>
 
   <div class="toast" :class="{ show: toastMsg }">{{ toastMsg }}</div>
@@ -1674,6 +1871,44 @@ button:focus-visible, .side-item:focus-visible, .acct-chip:focus-visible, .bell-
 /* ===== Accessibilité / perf : exceptions et pause hors focus ===== */
 body.hw-reduce-motion .lo-spinner { animation: spin 1s linear infinite !important; }
 body.hw-paused .sky, body.hw-paused .planet, body.hw-paused .lightning, body.hw-paused .meteor { animation-play-state: paused !important; }
+
+/* ===== Parallaxe / splash / captures / skin / changelog / discord ===== */
+.bg-par { position: absolute; inset: -2.5%; transition: transform .25s ease-out; will-change: transform; }
+.splash { position: fixed; inset: 0; z-index: 900; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; background: #07070C; animation: splashOut .35s ease .95s forwards; }
+.splash img { width: 190px; filter: drop-shadow(0 14px 34px rgba(0,0,0,.6)); animation: splashIn .5s ease; }
+.splash-bar { width: 190px; height: 3px; border-radius: 999px; background: rgba(255,255,255,.09); overflow: hidden; }
+.splash-bar i { display: block; height: 100%; width: 40%; background: linear-gradient(90deg, transparent, var(--gold, #E8C56A), transparent); animation: splashSweep .9s linear infinite; }
+@keyframes splashIn { from { opacity: 0; transform: scale(.94) } to { opacity: 1; transform: scale(1) } }
+@keyframes splashSweep { from { transform: translateX(-120%) } to { transform: translateX(320%) } }
+@keyframes splashOut { to { opacity: 0; visibility: hidden } }
+.shots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; max-height: calc(100vh - 260px); overflow-y: auto; padding-right: 4px; }
+.shot { border-radius: 12px; overflow: hidden; background: rgba(9,10,16,.7); border: 1px solid rgba(255,255,255,.07); cursor: pointer; transition: border-color .15s, transform .15s; contain: content; }
+.shot:hover { border-color: rgba(232,197,106,.45); transform: translateY(-2px); }
+.shot img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+.shot-name { padding: 7px 10px; font-size: 11px; color: #A9AFBA; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shots-empty { padding: 26px; text-align: center; color: #8b8b98; font-size: 13px; }
+.modal-ov { position: fixed; inset: 0; z-index: 700; display: grid; place-items: center; background: rgba(4,5,9,.78); }
+.shot-modal { max-width: min(1100px, 92vw); max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; }
+.shot-modal img { max-width: 100%; max-height: calc(88vh - 60px); object-fit: contain; display: block; background: #07070C; }
+.shot-modal-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+.shot-modal-bar b { font-size: 12.5px; color: #EDE8DA; }
+.shot-modal-bar .sp { flex: 1; }
+.clog { width: min(480px, 92vw); padding: 26px 30px; }
+.clog h2 { font-family: var(--serif, Georgia, serif); color: var(--gold, #E8C56A); font-size: 20px; margin-bottom: 14px; }
+.clog-v { font-size: 12px; color: #8b8b98; margin-left: 6px; }
+.clog ul { margin: 0 0 18px 18px; display: flex; flex-direction: column; gap: 8px; }
+.clog li { font-size: 13px; color: #D8D3E0; line-height: 1.5; }
+.skin-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; margin-bottom: 16px; }
+.skin-title { font-family: var(--serif, Georgia, serif); font-size: 13px; letter-spacing: 1px; color: #CFC7B2; }
+.skin-variant { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #A9AFBA; }
+.skin-recent-label { font-size: 11.5px; color: #8b8b98; }
+.skin-chip { width: 40px; height: 40px; padding: 0; border-radius: 9px; overflow: hidden; border: 1px solid rgba(255,255,255,.14); background: #0A0B11; cursor: pointer; transition: border-color .15s, transform .12s; }
+.skin-chip:hover { border-color: rgba(232,197,106,.55); transform: translateY(-1px); }
+.skin-chip img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.skin-note { flex-basis: 100%; font-size: 11px; color: #8b8b98; }
+.side-discord { display: flex; align-items: center; gap: 12px; margin: 6px 10px 0; padding: 10px 12px; border: none; border-radius: 10px; background: rgba(88,101,242,.14); color: #B9C4FF; cursor: pointer; font-size: 12.5px; transition: background .15s; }
+.side-discord:hover { background: rgba(88,101,242,.26); color: #fff; }
+.side-discord .side-ic path { fill: currentColor; }
 
 /* ===== Responsive ===== */
 @media (max-width: 980px) {

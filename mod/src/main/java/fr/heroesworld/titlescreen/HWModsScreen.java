@@ -198,6 +198,10 @@ public class HWModsScreen extends Screen {
             case 2: { // Interface
                 this.addDrawableChild(toggle(x, y, w, "Fond des widgets HUD", HWClientConfig.hudBackground,
                     () -> { HWClientConfig.hudBackground = !HWClientConfig.hudBackground; })); y += 28;
+                this.addDrawableChild(toggle(x, y, w, "Sons des menus", HWClientConfig.menuSounds,
+                    () -> { HWClientConfig.menuSounds = !HWClientConfig.menuSounds; })); y += 28;
+                this.addDrawableChild(toggle(x, y, w, "Effets de l'ecran titre", HWClientConfig.titleFx,
+                    () -> { HWClientConfig.titleFx = !HWClientConfig.titleFx; })); y += 28;
                 this.addDrawableChild(new HWButton(x, y, w, 24, Text.literal("Editer le HUD"), HWButton.SECONDARY, 0,
                     b -> this.client.setScreen(new HWHudEditScreen(this)))); y += 28;
                 break;

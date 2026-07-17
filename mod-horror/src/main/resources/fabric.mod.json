@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "heroworld-horror",
+  "version": "${version}",
+  "name": "HeroesWorld Horror",
+  "description": "Expérience horreur HEROES-WORLD : lampe torche (touche + HUD + faisceau), ambiance des Failles de l'Hadès.",
+  "authors": ["Scott Paul (HEROES-WORLD)"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["fr.heroesworld.horror.HWHorrorClient"]
+  },
+  "mixins": ["heroworld-horror.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "1.20.6"
+  }
+}
