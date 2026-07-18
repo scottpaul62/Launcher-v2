@@ -107,13 +107,9 @@ public class HWCosmeticsScreen extends Screen {
         long t = System.currentTimeMillis();
         int s = selected();
 
-        // apercu cosmetique : particules "derriere" le perso
-        if (cat == 1 && s > 0) drawWingsPreview(ctx, s, ccx, ccy - vh / 8, vh, t);
-        if (cat == 0 && s > 0) drawAuraPreview(ctx, s, ccx, ccy, vw, vh, t, true);
-
         // personnage 3D : modele anime (glisser gauche/droite pour tourner), ailes 3D si selectionnees
         int wings3d = (cat == 1) ? s : HWCosmetics.wings;
-        boolean entity = HWPlayerPreview.draw(ctx, mc, ccx, ccy + vh / 12, (int) (vh * 0.72f), mouseX, mouseY, userYaw, wings3d);
+        boolean entity = HWPlayerPreview.draw(ctx, mc, ccx, ccy + vh / 24, (int) (vh * 0.86f), mouseX, mouseY, userYaw, wings3d);
         if (!entity) {
             try {
                 net.minecraft.util.Identifier skin = HWSkin.texture(mc);
@@ -124,9 +120,6 @@ public class HWCosmeticsScreen extends Screen {
         }
 
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8glisser pour tourner"), ccx, vy + vh - 14, 0xFF6E7480);
-
-        // apercu cosmetique : particules "devant" le perso
-        if (cat == 0 && s > 0) drawAuraPreview(ctx, s, ccx, ccy, vw, vh, t, false);
 
         // fiche (droite ou bas)
         String[] names = names(); String[] descs = descs();

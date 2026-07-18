@@ -76,6 +76,11 @@ public final class HWGekCosmetic {
 
     /** Applique la machine a etats + les canaux au squelette, puis rend le modele dans la matrice courante. */
     public void render(DrawContext ctx, MatrixStack ms, HWGekCond.Ctx qctx, int light) {
+        render(ctx, ms, qctx, light, 1f, 1f, 1f);
+    }
+
+    /** Variante teintee (preview des ailes non-gek : modele generique colore). */
+    public void render(DrawContext ctx, MatrixStack ms, HWGekCond.Ctx qctx, int light, float r, float g, float b) {
         try {
             String target = pickState(qctx);
             long now = System.currentTimeMillis();
@@ -89,7 +94,7 @@ public final class HWGekCosmetic {
             ms.translate(offset[0] / 16f, offset[1] / 16f, offset[2] / 16f);
             if (scale != 1f) ms.scale(scale, scale, scale);
             VertexConsumer vc = ctx.getVertexConsumers().getBuffer(RenderLayer.getEntityCutoutNoCull(model.texture));
-            model.root.render(ms, vc, light, OverlayTexture.DEFAULT_UV, 1f, 1f, 1f, 1f);
+            model.root.render(ms, vc, light, OverlayTexture.DEFAULT_UV, r, g, b, 1f);
             ctx.draw();
             ms.pop();
         } catch (Throwable t) {

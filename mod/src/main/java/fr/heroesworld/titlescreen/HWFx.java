@@ -6,11 +6,10 @@ import java.util.Random;
 
 /** Effets vivants de l'ecran titre : braises, brume, etoiles filantes, eclairs periodiques. */
 public final class HWFx {
-    private static long stormUntil = 0;
     private HWFx() {}
 
-    /** Pluie d'eclairs pendant 5 s (easter egg). */
-    public static void storm() { stormUntil = System.currentTimeMillis() + 5000; }
+    /** Conserve pour compatibilite (easter egg) : sans effet depuis le retrait des eclairs. */
+    public static void storm() {}
 
     public static void draw(DrawContext ctx, int w, int h) {
         if (!HWClientConfig.titleFx) return;
@@ -39,23 +38,5 @@ public final class HWFx {
             }
         }
 
-        // eclair periodique au-dessus du temple (flash + branche) ; tempete = cadence rapide
-        boolean storm = t < stormUntil;
-        long every = storm ? 650 : 9000;
-        long fc = t % every;
-        if (fc < 140) {
-            int fa = (int) ((storm ? 70 : 48) * (1f - fc / 140f));
-            if (fa > 4) ctx.fill(0, 0, w, h, (fa << 24) | 0xFFF3C0);
-            long s2 = (t / every) * 31L;
-            Random r = new Random(s2);
-            int lx = (int) (w * (0.30f + r.nextFloat() * 0.40f)), ly = 0;
-            int la = (int) (230 * (1f - fc / 140f));
-            for (int seg = 0; seg < 10 && ly < h * 0.34f; seg++) {
-                int nx = lx + r.nextInt(27) - 13, ny = ly + 8 + r.nextInt(15);
-                int x1 = Math.min(lx, nx), x2 = Math.max(lx, nx) + 2;
-                ctx.fill(x1, ly, x2, ny, (la << 24) | 0xFFEFB0);
-                lx = nx; ly = ny;
-            }
-        }
     }
 }

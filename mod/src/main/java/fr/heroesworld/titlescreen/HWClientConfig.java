@@ -18,7 +18,7 @@ public final class HWClientConfig {
     public static boolean highContrast = false;       // accessibilite : force le fond des widgets HUD
     public static int zoomKey = 67;                    // GLFW_KEY_C
     public static float zoomFactor = 4f;               // x2..x8
-    public static boolean titleFx = false;             // effets vivants de l'ecran titre (opt-in)
+    public static boolean titleFx = false;             // effets discrets de l'ecran titre (opt-in ; cle v2)
     public static boolean menuSounds = true;           // sons de survol des menus
     public static String lastSeen = "";                // derniere version vue (quoi de neuf)
     private HWClientConfig() {}
@@ -35,7 +35,7 @@ public final class HWClientConfig {
             if (o.has("highContrast")) highContrast = o.get("highContrast").getAsBoolean();
             if (o.has("zoomKey")) zoomKey = o.get("zoomKey").getAsInt();
             if (o.has("zoomFactor")) zoomFactor = HWZoom.clampFactor(o.get("zoomFactor").getAsFloat());
-            if (o.has("titleFx")) titleFx = o.get("titleFx").getAsBoolean();
+            if (o.has("titleFx2")) titleFx = o.get("titleFx2").getAsBoolean(); // ancienne cle "titleFx" ignoree volontairement
             if (o.has("menuSounds")) menuSounds = o.get("menuSounds").getAsBoolean();
             if (o.has("lastSeen")) lastSeen = o.get("lastSeen").getAsString();
         } catch (Exception ignored) {}
@@ -49,7 +49,7 @@ public final class HWClientConfig {
             o.addProperty("highContrast", highContrast);
             o.addProperty("zoomKey", zoomKey);
             o.addProperty("zoomFactor", zoomFactor);
-            o.addProperty("titleFx", titleFx);
+            o.addProperty("titleFx2", titleFx);
             o.addProperty("menuSounds", menuSounds);
             o.addProperty("lastSeen", lastSeen);
             Files.writeString(file(), GSON.toJson(o), StandardCharsets.UTF_8);

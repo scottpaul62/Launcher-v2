@@ -145,6 +145,7 @@ const messages = {
     'toast.folderOpened': 'Dossier ouvert', 'toast.modsFolderOpened': 'Dossier des mods ouvert',
     'toast.folderOpenFailed': "Impossible d'ouvrir le dossier", 'toast.logCopied': 'Journal copié',
     'toast.logCopyFailed': 'Copie impossible', 'toast.updateChecking': 'Recherche de mise à jour…',
+    'toast.upToDate': 'Tu es à jour ({v}) — rien à installer.',
     'launch.repair': 'Réparer', 'launch.copyLogs': 'Copier les logs',
     'launch.hint.cancelled': 'Lancement annulé par toi.', 'launch.hint.java': "Java introuvable — vérifie l'installation de Java 21.",
     'launch.hint.network': 'Problème réseau — vérifie ta connexion.', 'launch.hint.crash': 'Le jeu a planté — ouvre la console pour le détail.',
@@ -263,6 +264,7 @@ const messages = {
     'toast.folderOpened': 'Folder opened', 'toast.modsFolderOpened': 'Mods folder opened',
     'toast.folderOpenFailed': 'Could not open the folder', 'toast.logCopied': 'Log copied',
     'toast.logCopyFailed': 'Copy failed', 'toast.updateChecking': 'Checking for updates…',
+    'toast.upToDate': 'You are up to date ({v}) — nothing to install.',
     'launch.repair': 'Repair', 'launch.copyLogs': 'Copy logs',
     'launch.hint.cancelled': 'Launch cancelled by you.', 'launch.hint.java': 'Java not found — check your Java 21 installation.',
     'launch.hint.network': 'Network issue — check your connection.', 'launch.hint.crash': 'The game crashed — open the console for details.',
@@ -863,16 +865,18 @@ function scheduleMeteor () { meteorTimer = setTimeout(() => { if (!document.hidd
 
 /* ===================== Mise à jour / toast ===================== */
 const upd = reactive({ state: null, percent: 0, version: '' })
+let manualCheck = false
 if (typeof window !== 'undefined' && window.hw && window.hw.onUpdate) {
   window.hw.onUpdate((d) => {
-    if (d.type === 'available') { upd.state = 'downloading'; upd.version = d.version || '' }
+    if (d.type === 'available') { upd.state = 'downloading'; upd.version = d.version || ''; manualCheck = false }
     else if (d.type === 'progress') { upd.state = 'downloading'; upd.percent = d.percent || 0 }
     else if (d.type === 'ready') { upd.state = 'ready'; upd.version = d.version || '' }
-    else if (d.type === 'error') { upd.state = null }
+    else if (d.type === 'none') { if (manualCheck) { manualCheck = false; toast(t('toast.upToDate').replace('{v}', d.version || APP_VERSION.value)) } }
+    else if (d.type === 'error') { upd.state = null; if (manualCheck) manualCheck = false }
   })
 }
 function installUpdate () { if (window.hw && window.hw.installUpdate) { window.hw.installUpdate(); ulog('install update') } }
-function checkUpdate () { if (window.hw && window.hw.checkUpdate) { window.hw.checkUpdate(); toast(t('toast.updateChecking')); ulog('check update') } }
+function checkUpdate () { if (window.hw && window.hw.checkUpdate) { manualCheck = true; window.hw.checkUpdate(); toast(t('toast.updateChecking')); ulog('check update') } }
 
 /* ===================== Notifications ===================== */
 const notifications = reactive([])

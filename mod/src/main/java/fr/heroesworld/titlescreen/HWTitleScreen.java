@@ -51,15 +51,17 @@ public class HWTitleScreen extends Screen {
         dockY = this.height - (compact ? 42 : 74);
 
         // ---- pile centrale bornee : jamais de chevauchement avec le dock ----
-        int stackH = 36 + 6 + 22 + 4 + 22 + 8 + 20;
-        ry = Math.max(34, Math.min((int) (this.height * 0.42), dockY - stackH - 10));
+        int stackH = 36 + 6 + 22 + 4 + 22 + 4 + 22 + 8 + 20;
+        ry = Math.max(30, Math.min((int) (this.height * 0.40), dockY - stackH - 10));
         int joinW = Math.min(340, this.width - 60);
         this.addDrawableChild(new HWButton(cx - joinW / 2, ry, joinW, 36, Text.literal("Rejoindre"), HWButton.PRIMARY, 0, b -> this.connect()));
-        this.addDrawableChild(new HWButton(cx - joinW / 2, ry + 42, joinW, 22, Text.literal("Solo"), HWButton.SECONDARY, 0,
+        this.addDrawableChild(new HWButton(cx - joinW / 2, ry + 42, joinW, 22, Text.literal("Multijoueur"), HWButton.SECONDARY, 0,
+            b -> this.openMultiplayer()));
+        this.addDrawableChild(new HWButton(cx - joinW / 2, ry + 68, joinW, 22, Text.literal("Solo"), HWButton.SECONDARY, 0,
             b -> this.client.setScreen(new HWSoonScreen(this, "Solo", "Le mode Solo personnalise HERO WORLD arrivera bientot."))));
-        this.addDrawableChild(new HWButton(cx - joinW / 2, ry + 68, joinW, 22, Text.literal("Boutique"), HWButton.SECONDARY, 0,
+        this.addDrawableChild(new HWButton(cx - joinW / 2, ry + 94, joinW, 22, Text.literal("Boutique"), HWButton.SECONDARY, 0,
             b -> this.client.setScreen(new HWSoonScreen(this, "Boutique", "La boutique HERO WORLD arrivera bientot."))));
-        this.addDrawableChild(new HWButton(cx - 70, ry + 96, 140, 20, Text.literal("Quitter"), HWButton.SECONDARY, 0, b -> this.client.scheduleStop()));
+        this.addDrawableChild(new HWButton(cx - 70, ry + 122, 140, 20, Text.literal("Quitter"), HWButton.SECONDARY, 0, b -> this.client.scheduleStop()));
 
         this.addDrawableChild(new HWButton(dockX, dockY, itemW, dockH, Text.literal("Amis"), HWButton.DOCK, 1,
             b -> this.client.setScreen(new HWSoonScreen(this, "Amis", "La liste d'amis arrivera avec l'hebergement du serveur HEROES-WORLD."))));
@@ -86,6 +88,25 @@ public class HWTitleScreen extends Screen {
                 b -> this.client.setScreen(new HWSoonScreen(this, "Compte",
                     "Le changement de compte se fait dans le launcher HeroesWorld (puce compte, en haut a droite)."))));
         }
+    }
+
+    /** Ouvre l'ecran Multijoueur vanilla avec le serveur HEROES-WORLD epingle en tete de liste. */
+    private void openMultiplayer() {
+        try {
+            net.minecraft.client.option.ServerList list = new net.minecraft.client.option.ServerList(this.client);
+            list.loadFile();
+            String addr = HWConfig.address();
+            ServerInfo existing = null;
+            for (int i = 0; i < list.size(); i++) {
+                if (addr.equals(list.get(i).address)) { existing = list.get(i); break; }
+            }
+            ServerInfo pin = existing != null ? existing : new ServerInfo("\u2605 HEROES-WORLD", addr, ServerInfo.ServerType.OTHER);
+            if (existing != null) list.remove(existing);
+            list.add(pin, false);
+            for (int i = list.size() - 1; i > 0; i--) list.swapEntries(i, i - 1); // remonte en position 1
+            list.saveFile();
+        } catch (Throwable t) { HWHudManager.LOG.warn("[TITRE] epinglage serveur impossible", t); }
+        this.client.setScreen(new net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen(this));
     }
 
     private void connect() {
@@ -144,8 +165,13 @@ public class HWTitleScreen extends Screen {
             ctx.drawTextWithShadow(this.textRenderer, Text.literal(txt), 34, 16, 0xFFFFFFFF);
         }
 
-        // astuce rotative au-dessus du dock
-        ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8" + HWTips.current()), cx, dockY - 12, 0xFF8B8B98);
+        // astuce rotative : pilule sombre lisible au-dessus du dock
+        {
+            String tip = HWTips.current();
+            int tw2 = this.textRenderer.getWidth(tip);
+            HWDraw.panel(ctx, cx - tw2 / 2 - 10, dockY - 20, tw2 + 20, 16, 8, 0x8A101318, 0x22FFFFFF);
+            ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§7" + tip), cx, dockY - 16, 0xFFB9C2CC);
+        }
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§6◆ §eL'OLYMPE VOUS ATTEND §6◆"),
             cx, ry - 22, 0xFFE8C56A);
 
