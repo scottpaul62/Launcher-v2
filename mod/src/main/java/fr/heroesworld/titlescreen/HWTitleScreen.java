@@ -42,13 +42,14 @@ public class HWTitleScreen extends Screen {
         int cx = this.width / 2;
         compact = this.height < 360 || this.width < 720;
 
-        // ---- dock adaptatif (compact en petite fenetre) ----
-        int gap = 6, n = 5;
-        dockH = compact ? 30 : 44;
-        int itemW = Math.min(compact ? 88 : 122, (this.width - 24 - (n - 1) * gap) / n);
+        // ---- dock adaptatif : cluster compact d'icones (labels au survol) ----
+        int n = 5;
+        int gap = compact ? 8 : 14;
+        dockH = compact ? 26 : 38;
+        int itemW = compact ? 34 : 46;
         dockW = n * itemW + (n - 1) * gap;
         dockX = cx - dockW / 2;
-        dockY = this.height - (compact ? 42 : 74);
+        dockY = this.height - (compact ? 40 : 62);
 
         // ---- pile centrale bornee : jamais de chevauchement avec le dock ----
         int stackH = 36 + 6 + 22 + 4 + 22 + 4 + 22 + 8 + 20;
@@ -143,16 +144,13 @@ public class HWTitleScreen extends Screen {
             } catch (Throwable ignored) {}
         }
         HWScene.draw(ctx, this.width, this.height);
-        HWFx.draw(ctx, this.width, this.height);            // effets vivants (braises, brume, eclairs)
+        HWFx.draw(ctx, this.width, this.height);            // effets vivants discrets (braises, etoile filante)
         HWServerStatus.tick();                               // ping serveur asynchrone
 
         int cx = this.width / 2;
 
-        // personnage 3D avec ta skin (a droite, si la place le permet)
-        if (!compact && this.width >= 760) {
-            HWPlayerPreview.draw(ctx, this.client, (int) (this.width * 0.86f), (int) (this.height * 0.55f),
-                (int) (this.height * 0.34f), mouseX, mouseY, 0f, HWCosmetics.wings);
-        }
+        // fond du dock : une seule pilule translucide, propre
+        HWDraw.panel(ctx, dockX - 12, dockY - 6, dockW + 24, dockH + 12, compact ? 10 : 14, 0x7A0E1118, 0x2CFFFFFF);
 
         // panneau serveur en direct (haut-gauche)
         {
@@ -165,12 +163,12 @@ public class HWTitleScreen extends Screen {
             ctx.drawTextWithShadow(this.textRenderer, Text.literal(txt), 34, 16, 0xFFFFFFFF);
         }
 
-        // astuce rotative : pilule sombre lisible au-dessus du dock
+        // astuce rotative : pilule sombre lisible, assez haute pour laisser la place aux labels du dock
         {
             String tip = HWTips.current();
             int tw2 = this.textRenderer.getWidth(tip);
-            HWDraw.panel(ctx, cx - tw2 / 2 - 10, dockY - 20, tw2 + 20, 16, 8, 0x8A101318, 0x22FFFFFF);
-            ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§7" + tip), cx, dockY - 16, 0xFFB9C2CC);
+            HWDraw.panel(ctx, cx - tw2 / 2 - 10, dockY - 42, tw2 + 20, 16, 8, 0x8A101318, 0x22FFFFFF);
+            ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§7" + tip), cx, dockY - 38, 0xFFB9C2CC);
         }
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§6◆ §eL'OLYMPE VOUS ATTEND §6◆"),
             cx, ry - 22, 0xFFE8C56A);

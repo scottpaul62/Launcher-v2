@@ -231,7 +231,7 @@ public class HWModsScreen extends Screen {
         HWDraw.panel(ctx, px, py, pw, ph, 8, SURF, BORDER);
         ctx.fill(px, py + 32, px + pw, py + 33, 0x33D6B85B);
         ctx.drawTextWithShadow(this.textRenderer, Text.literal("§6HEROES-WORLD"), px + 14, py + 13, GOLD);
-        ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8v1.1.6"), px + 14 + this.textRenderer.getWidth("HEROES-WORLD") + 8, py + 14, TXT2);
+        ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8v1.1.7"), px + 14 + this.textRenderer.getWidth("HEROES-WORLD") + 8, py + 14, TXT2);
 
         if (showProfiles) {
             HWDraw.panel(ctx, px + 8, py + 40, 144, ph - 48, 6, RAISED, BORDER);

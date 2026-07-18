@@ -19,17 +19,7 @@ public class HWCosmeticsScreen extends Screen {
         "Des ames sombres tourbillonnent autour de toi.",
         "Des petales celestes tombent doucement du ciel."
     };
-    private static final String[] WING_DESC = {
-        "Aucun cosmetique equipe.",
-        "Des ailes de lumiere blanche battent dans ton dos.",
-        "Des ailes d'energie electrique crepitent derriere toi.",
-        "Des ailes de feu embrasent ton dos.",
-        "Des ailes d'ames bleutees ondulent derriere toi.",
-        "Des ailes dorees benies par le dieu du soleil.",
-        "Des ailes de petales celestes portees par la brise.",
-        "Des ailes d'energie du Vide, sombres et hypnotiques.",
-        "Des ailes 3D forgees dans l'or de l'Olympe. (moteur data-driven)"
-    };
+    private static final String[] WING_DESC = { "Aucun cosmetique equipe." };
 
     private int px, py, pw, ph;
     private boolean wide;
@@ -107,9 +97,12 @@ public class HWCosmeticsScreen extends Screen {
         long t = System.currentTimeMillis();
         int s = selected();
 
-        // personnage 3D : modele anime (glisser gauche/droite pour tourner), ailes 3D si selectionnees
+        // personnage 3D : modele anime (glisser gauche/droite pour tourner), toujours DECOUPE au viewport
         int wings3d = (cat == 1) ? s : HWCosmetics.wings;
-        boolean entity = HWPlayerPreview.draw(ctx, mc, ccx, ccy + vh / 24, (int) (vh * 0.86f), mouseX, mouseY, userYaw, wings3d);
+        int previewH = Math.min((int) (vh * 0.86f), (int) (vw * 1.35f)); // jamais plus large que la vitrine
+        ctx.enableScissor(vx + 1, vy + 1, vx + vw - 1, vy + vh - 1);
+        boolean entity = HWPlayerPreview.draw(ctx, mc, ccx, ccy + vh / 24, previewH, mouseX, mouseY, userYaw, wings3d);
+        ctx.disableScissor();
         if (!entity) {
             try {
                 net.minecraft.util.Identifier skin = HWSkin.texture(mc);
@@ -120,6 +113,13 @@ public class HWCosmeticsScreen extends Screen {
         }
 
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8glisser pour tourner"), ccx, vy + vh - 14, 0xFF6E7480);
+
+        // onglet Ailes : les modeles factices ont ete retires, les vrais modeles 3D arrivent
+        if (cat == 1) {
+            ctx.drawTextWrapped(this.textRenderer,
+                Text.literal("§6◆ §7De vraies ailes 3D (modeles Blockbench) sont en cours d'import. Elles arriveront ici tres bientot."),
+                px + 12, py + 96, 176, 0xFFA9AFBA);
+        }
 
         // fiche (droite ou bas)
         String[] names = names(); String[] descs = descs();

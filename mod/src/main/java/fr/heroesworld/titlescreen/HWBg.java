@@ -7,59 +7,93 @@ import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.util.Identifier;
 
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * Fond du menu adaptatif. On peut fournir jusqu'a 2 images :
- *  - background.png       (principale, ex. 16:9)
- *  - background_wide.png  (optionnelle, ex. ultrawide 21:9)
- * A l'affichage, on choisit AUTOMATIQUEMENT celle dont le ratio est le plus proche
- * de l'ecran, puis on remplit bord-a-bord (COVER, ratio preserve). -> parfait sur
- * ecran normal ET ultrawide (si les 2 images sont fournies).
+ * Fond du menu adaptatif et NET a toutes les tailles de fenetre.
+ * Deux familles d'images (normale 16:9 et ultrawide), chacune declinee en plusieurs
+ * resolutions pre-reduites en haute qualite (Lanczos + accentuation) au build :
+ *   background.png (3840x2160) / background_2560.png / background_1920.png
+ *   background_wide.png (5160x2160) / background_wide_3440.png / background_wide_2580.png
+ * A l'affichage : famille choisie par ratio d'ecran, puis la PLUS PETITE variante qui couvre
+ * la resolution PHYSIQUE de la fenetre -> le GPU ne reduit presque pas, l'image reste nette
+ * (la reduction forte a la volee ecrasait les details type fumee/brume).
+ * Chargement paresseux : seule la variante utilisee est decodee (memoire maitrisee).
  */
 public final class HWBg {
-    private static boolean tried = false;
-    private static final Identifier[] ids = new Identifier[2];
-    private static final int[] tws = new int[2];
-    private static final int[] ths = new int[2];
-    private static int count = 0;
+    private static final String DIR = "/assets/heroworld/textures/gui/";
+    // {nom, largeur, hauteur} — triees de la plus petite a la plus grande
+    private static final Object[][] MAIN_DEF = {
+        {"background_1920", 1920, 1080}, {"background_2560", 2560, 1440}, {"background", 3840, 2160}
+    };
+    private static final Object[][] WIDE_DEF = {
+        {"background_wide_2580", 2580, 1080}, {"background_wide_3440", 3440, 1440}, {"background_wide", 5160, 2160}
+    };
+
+    private static final Map<String, Identifier> LOADED = new HashMap<>();
+    private static final Set<String> FAILED = new HashSet<>();
     private HWBg() {}
 
-    private static void loadOne(String path, String key) {
-        try (InputStream in = HWBg.class.getResourceAsStream(path)) {
-            if (in == null) return;
+    private static Identifier texture(String name) {
+        Identifier cached = LOADED.get(name);
+        if (cached != null) return cached;
+        if (FAILED.contains(name)) return null;
+        try (InputStream in = HWBg.class.getResourceAsStream(DIR + name + ".png")) {
+            if (in == null) { FAILED.add(name); return null; }
             NativeImage img = NativeImage.read(in);
             NativeImageBackedTexture tex = new NativeImageBackedTexture(img);
-            tex.setFilter(true, false);
-            Identifier id = new Identifier("heroworld", key);
+            tex.setFilter(true, false); // lissage bilineaire
+            Identifier id = new Identifier("heroworld", "hw_bg_" + name);
             MinecraftClient.getInstance().getTextureManager().registerTexture(id, tex);
-            ids[count] = id; tws[count] = img.getWidth(); ths[count] = img.getHeight(); count++;
-            System.out.println("[HWBG] " + key + " -> " + img.getWidth() + "x" + img.getHeight());
+            LOADED.put(name, id);
+            System.out.println("[HWBG] charge " + name + " (" + img.getWidth() + "x" + img.getHeight() + ")");
+            return id;
         } catch (Throwable t) {
-            System.out.println("[HWBG] echec " + key + " : " + t);
+            System.out.println("[HWBG] echec " + name + " : " + t);
+            FAILED.add(name);
+            return null;
         }
-    }
-
-    private static void ensure() {
-        if (tried) return;
-        tried = true;
-        loadOne("/assets/heroworld/textures/gui/background.png", "hw_bg_main");
-        loadOne("/assets/heroworld/textures/gui/background_wide.png", "hw_bg_wide");
-        if (count == 0) System.out.println("[HWBG] aucune image de fond trouvee");
     }
 
     public static boolean draw(DrawContext ctx, int w, int h) {
-        ensure();
-        if (count == 0) return false;
-        ctx.fill(0, 0, w, h, 0xFF0A0E1A); // matte sobre : jamais de bord gris/noir, quelle que soit la resolution
         float screen = (float) w / h;
-        int best = 0; float bestDiff = Float.MAX_VALUE;
-        for (int i = 0; i < count; i++) {
-            float diff = Math.abs(((float) tws[i] / ths[i]) - screen);
-            if (diff < bestDiff) { bestDiff = diff; best = i; }
+        float rMain = 3840f / 2160f, rWide = 5160f / 2160f;
+        Object[][] fam = Math.abs(rMain - screen) <= Math.abs(rWide - screen) ? MAIN_DEF : WIDE_DEF;
+
+        // resolution physique reelle de la fenetre (pas les coordonnees GUI)
+        int fbW = w, fbH = h;
+        try {
+            fbW = MinecraftClient.getInstance().getWindow().getFramebufferWidth();
+            fbH = MinecraftClient.getInstance().getWindow().getFramebufferHeight();
+        } catch (Throwable ignored) {}
+
+        // plus petite variante qui couvre l'ecran ; sinon on monte ; repli : l'autre famille
+        Object[] chosen = null;
+        for (Object[] v : fam) {
+            if (FAILED.contains((String) v[0])) continue;
+            chosen = v;
+            if ((Integer) v[1] >= fbW * 1.02f && (Integer) v[2] >= fbH * 1.02f) break;
         }
-        float scale = Math.max((float) w / tws[best], (float) h / ths[best]) * 1.06f; // COVER + leger recadrage (coupe les bords sombres)
-        int dw = Math.round(tws[best] * scale), dh = Math.round(ths[best] * scale);
-        ctx.drawTexture(ids[best], (w - dw) / 2, (h - dh) / 2, dw, dh, 0f, 0f, tws[best], ths[best], tws[best], ths[best]);
+        Identifier id = chosen != null ? texture((String) chosen[0]) : null;
+        if (id == null) {
+            Object[][] other = fam == MAIN_DEF ? WIDE_DEF : MAIN_DEF;
+            for (Object[] v : other) {
+                if (FAILED.contains((String) v[0])) continue;
+                chosen = v;
+                if ((Integer) v[1] >= fbW * 1.02f && (Integer) v[2] >= fbH * 1.02f) break;
+            }
+            id = chosen != null ? texture((String) chosen[0]) : null;
+        }
+        if (id == null) return false;
+
+        int tw = (Integer) chosen[1], th = (Integer) chosen[2];
+        ctx.fill(0, 0, w, h, 0xFF0A0E1A); // matte sobre : jamais de bord gris, quelle que soit la resolution
+        float scale = Math.max((float) w / tw, (float) h / th) * 1.04f; // COVER + tres leger recadrage
+        int dw = Math.round(tw * scale), dh = Math.round(th * scale);
+        ctx.drawTexture(id, (w - dw) / 2, (h - dh) / 2, dw, dh, 0f, 0f, tw, th, tw, th);
         return true;
     }
 }

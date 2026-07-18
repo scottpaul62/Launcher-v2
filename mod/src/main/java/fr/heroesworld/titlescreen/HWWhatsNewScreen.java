@@ -8,9 +8,9 @@ import net.minecraft.text.Text;
 public class HWWhatsNewScreen extends Screen {
     private final Screen parent;
     private static final String[] NEWS = {
-        "§6◆ §fPersonnage 3D anime dans le vestiaire (apercu avant d'equiper)",
-        "§6◆ §f3 nouvelles ailes : Apollon, Celestes, Vide",
-        "§6◆ §fEcran titre vivant : eclairs, braises, etoiles filantes",
+        "§6◆ §fMenu titre epure : nouveau dock, fond plus net en grand ecran",
+        "§6◆ §fBouton Multijoueur : serveur ★ HEROES-WORLD epingle en tete",
+        "§6◆ §fVestiaire nettoye : les vraies ailes 3D arrivent tres bientot",
         "§6◆ §fStatut du serveur en direct sur le menu",
         "§6◆ §fZoom (touche C), Toggle Sprint/Sneak, Crosshair personnalise",
         "§6◆ §fScoreboard deplacable, waypoints, reglages du tchat",

@@ -14,10 +14,9 @@ public final class HWCosmetics {
     public static final String[] AURA_NAMES = {
         "Aucune", "Éclairs de Zeus", "Halo d'Apollon", "Flammes d'Héphaïstos", "Ombre d'Hadès", "Pétales d'Olympe"
     };
-    public static final String[] WING_NAMES = {
-        "Aucune", "Ailes d'Hermès", "Ailes de foudre", "Ailes de flammes", "Ailes d'Hadès",
-        "Ailes d'Apollon", "Ailes célestes", "Ailes du Vide", "Ailes de Zeus"
-    };
+    // Les ailes "particules" et l'aile cube ont ete retirees : de VRAIS modeles 3D
+    // (Blockbench, importes via le moteur gek) les remplaceront en phase 2.
+    public static final String[] WING_NAMES = { "Aucune" };
     public static int aura = 0;
     public static int wings = 0;
 

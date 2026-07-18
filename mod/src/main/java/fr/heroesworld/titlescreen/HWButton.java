@@ -59,20 +59,25 @@ public class HWButton extends ButtonWidget {
     }
 
     private void renderDock(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
-        // pas de fond au survol : l'icone zoome legerement et le label apparait en fondu
+        // icone seule, centree ; zoom leger au survol ; label dans une bulle au-dessus du dock
+        int cx = x + w / 2, cy = y + h / 2;
         int iconCol = lerp(0xFFCBB98A, 0xFFF3D889, hover);
-        boolean small = h < 36; // dock compact (petite fenetre)
-        int iconSize = (small ? 13 : 20) + Math.round(hover * 3f);
-        int iconCy = small ? y + 9 : y + h / 2 - 5;
-        if (!HWIcons.draw(ctx, icon, x + w / 2, iconCy, iconSize)) drawIcon(ctx, icon, x + w / 2, iconCy - 1, iconCol);
-        int la = (int) (hover * 255f);
-        if (la > 12) {
-            ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + h - (small ? 9 : 11), (la << 24) | 0xFFFFFF);
+        boolean small = h < 32; // dock compact (petite fenetre)
+        int iconSize = (small ? 14 : 20) + Math.round(hover * 3f);
+        if (!HWIcons.draw(ctx, icon, cx, cy, iconSize)) drawIcon(ctx, icon, cx, cy, iconCol);
+        // point dore discret sous l'icone survolee (remplace la barre pleine largeur)
+        if (hover > 0.15f) {
+            int da = (int) (hover * 255f);
+            ctx.fill(cx - 1, y + h - 2, cx + 1, y + h, (da << 24) | 0xE8C56A);
         }
-        int uw = (int) ((w - 18) * hover);
-        if (uw > 1) {
-            ctx.fill(x + w / 2 - uw / 2, y + h - 3, x + w / 2 + uw / 2, y + h - 1, 0xFFE8C56A);
-            ctx.fill(x + w / 2 - uw / 2, y + h - 1, x + w / 2 + uw / 2, y + h, 0x66E8C56A);
+        // label : bulle sombre au-dessus, en fondu
+        int la = (int) (hover * 255f);
+        if (la > 40) {
+            String label = getMessage().getString();
+            int lw2 = tr.getWidth(label);
+            int bx = cx - lw2 / 2 - 7, by = y - 22, bw = lw2 + 14, bh = 16;
+            HWDraw.panel(ctx, bx, by, bw, bh, 8, ((int) (hover * 0xE0) << 24) | 0x101318, ((int) (hover * 0x38) << 24) | 0xFFFFFF);
+            ctx.drawCenteredTextWithShadow(tr, getMessage(), cx, by + 4, (la << 24) | 0xFFF4E9C8);
         }
     }
 
