@@ -8,13 +8,12 @@ import net.minecraft.text.Text;
 public class HWWhatsNewScreen extends Screen {
     private final Screen parent;
     private static final String[] NEWS = {
-        "§6◆ §fMenu titre epure : nouveau dock, fond plus net en grand ecran",
+        "§6◆ §fInterface refaite : fonds en images lisses partout, nouvelles icones",
+        "§6◆ §fCosmetiques 3D rendus EN JEU sur ton personnage (F5)",
+        "§6◆ §fContenu dynamique : astuces et cosmetiques mis a jour sans reinstaller",
+        "§6◆ §fFond du menu plus net en grand ecran",
         "§6◆ §fBouton Multijoueur : serveur ★ HEROES-WORLD epingle en tete",
-        "§6◆ §fVestiaire nettoye : les vraies ailes 3D arrivent tres bientot",
-        "§6◆ §fStatut du serveur en direct sur le menu",
-        "§6◆ §fZoom (touche C), Toggle Sprint/Sneak, Crosshair personnalise",
-        "§6◆ §fScoreboard deplacable, waypoints, reglages du tchat",
-        "§6◆ §fRecherche instantanee + reglages profonds par mod",
+        "§6◆ §fZoom (C), Toggle Sprint/Sneak, HUD deplaçable, waypoints",
     };
 
     public HWWhatsNewScreen(Screen parent) { super(Text.literal("Quoi de neuf")); this.parent = parent; }

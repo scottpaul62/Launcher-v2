@@ -10,6 +10,7 @@ public class HeroworldClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        HWRemote.start(); // synchro contenu R2 en arriere-plan (jamais bloquant)
         HWConfig.load();
         HWCosmetics.load();
         HWClientConfig.load();

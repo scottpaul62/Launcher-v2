@@ -14,6 +14,7 @@
     "CrosshairMixin",
     "ScoreboardMixin",
     "HudMixin",
-    "MouseClickMixin"
+    "MouseClickMixin",
+    "PlayerFeatureMixin"
   ]
 }

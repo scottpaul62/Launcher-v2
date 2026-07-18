@@ -102,6 +102,29 @@ public final class HWGekCosmetic {
         }
     }
 
+    /** Rendu EN JEU (FeatureRenderer) : meme machine a etats, mais via le VertexConsumerProvider du monde. */
+    public void renderWorld(MatrixStack ms, net.minecraft.client.render.VertexConsumerProvider vcp,
+                            HWGekCond.Ctx qctx, int light) {
+        try {
+            String target = pickState(qctx);
+            long now = System.currentTimeMillis();
+            if (!target.equals(curState)) { prevState = curState; curState = target; switchAt = now; }
+            float alpha = transitionTicks <= 0 ? 1f
+                : Math.min(1f, (now - switchAt) / (transitionTicks * 50f));
+
+            applyClip(curState, prevState, alpha, qctx.lifeTime);
+
+            ms.push();
+            ms.translate(offset[0] / 16f, offset[1] / 16f, offset[2] / 16f);
+            if (scale != 1f) ms.scale(scale, scale, scale);
+            VertexConsumer vc = vcp.getBuffer(RenderLayer.getEntityCutoutNoCull(model.texture));
+            model.root.render(ms, vc, light, OverlayTexture.DEFAULT_UV, 1f, 1f, 1f, 1f);
+            ms.pop();
+        } catch (Throwable t) {
+            HWGekRegistry.LOG.warn("[GEK] rendu monde '{}' en echec", key, t);
+        }
+    }
+
     private void applyClip(String cur, String prev, float alpha, float lifeTime) {
         Map<String, HWGekExpr[][]> a = clips.getOrDefault(cur, Map.of());
         Map<String, HWGekExpr[][]> b = (prev != null && alpha < 1f) ? clips.getOrDefault(prev, Map.of()) : null;

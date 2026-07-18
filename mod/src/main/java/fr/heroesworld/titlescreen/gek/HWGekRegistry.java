@@ -35,6 +35,8 @@ public final class HWGekRegistry {
     private HWGekRegistry() {}
 
     public static InputStream stream(String rel) {
+        InputStream remote = fr.heroesworld.titlescreen.HWRemote.open("cosmetics/" + rel);
+        if (remote != null) return remote;
         InputStream in = HWGekRegistry.class.getResourceAsStream(BASE + rel);
         if (in == null) throw new IllegalStateException("resource absente : " + BASE + rel);
         return in;

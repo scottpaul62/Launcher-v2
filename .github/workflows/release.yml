@@ -70,3 +70,26 @@ jobs:
         run: npm run release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generer le manifest (hash sha1 par fichier)
+        run: python3 scripts/make-manifest.py
+
+      - name: Publier data/ vers Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT: https://883972267fd9e125b3d89186ff61bca1.r2.cloudflarestorage.com
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+            echo "::notice::secrets R2 absents -> publication data/ ignoree"
+            exit 0
+          fi
+          aws s3 sync data/ "s3://heroworld-data/" --endpoint-url "$R2_ENDPOINT" --delete \
+            --cache-control "public, max-age=300"
+          echo "✅ data/ publie sur R2 (les clients le recevront a leur prochain demarrage)"

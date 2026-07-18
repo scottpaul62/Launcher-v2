@@ -1,0 +1,29 @@
+{
+ "version": 1,
+ "type": "wings",
+ "attached_bone": "body",
+ "geometry": "ailes_zeus.geo.json",
+ "animation": "ailes_zeus.anim.json",
+ "texture": "ailes_zeus.png",
+ "scale": 1.0,
+ "offset": [
+  0,
+  0,
+  0
+ ],
+ "states": [
+  {
+   "anim": "gui",
+   "when": "in_gui"
+  },
+  {
+   "anim": "flight",
+   "when": "is_flying || is_elytra || !on_ground"
+  },
+  {
+   "anim": "idle",
+   "when": "always"
+  }
+ ],
+ "transition_ticks": 8
+}

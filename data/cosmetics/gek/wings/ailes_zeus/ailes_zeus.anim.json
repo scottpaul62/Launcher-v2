@@ -1,0 +1,62 @@
+{
+ "format_version": "1.8.0",
+ "animations": {
+  "gui": {
+   "loop": true,
+   "bones": {
+    "wing_r": {
+     "rotation": [
+      "0",
+      "-14",
+      "math.sin(q.life_time*1.8)*5-20"
+     ]
+    },
+    "wing_l": {
+     "rotation": [
+      "0",
+      "14",
+      "math.sin(q.life_time*1.8)*-5+20"
+     ]
+    }
+   }
+  },
+  "flight": {
+   "loop": true,
+   "bones": {
+    "wing_r": {
+     "rotation": [
+      "0",
+      "-10",
+      "math.sin(q.life_time*8)*24-34"
+     ]
+    },
+    "wing_l": {
+     "rotation": [
+      "0",
+      "10",
+      "math.sin(q.life_time*8)*-24+34"
+     ]
+    }
+   }
+  },
+  "idle": {
+   "loop": true,
+   "bones": {
+    "wing_r": {
+     "rotation": [
+      "0",
+      "-18",
+      "math.sin(q.life_time*1.2)*3-12"
+     ]
+    },
+    "wing_l": {
+     "rotation": [
+      "0",
+      "18",
+      "math.sin(q.life_time*1.2)*-3+12"
+     ]
+    }
+   }
+  }
+ }
+}

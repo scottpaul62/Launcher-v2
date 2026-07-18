@@ -1,0 +1,80 @@
+{
+ "version": 1,
+ "items": [
+  {
+   "id": 101,
+   "key": "aura_zeus",
+   "name": "Éclairs de Zeus",
+   "category": "aura",
+   "renderer": "particle",
+   "particle": 1,
+   "rarity": "epic",
+   "colors": [
+    "GOLD"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 102,
+   "key": "aura_apollon",
+   "name": "Halo d'Apollon",
+   "category": "aura",
+   "renderer": "particle",
+   "particle": 2,
+   "rarity": "rare",
+   "colors": [
+    "WHITE"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 103,
+   "key": "aura_hephaistos",
+   "name": "Flammes d'Héphaïstos",
+   "category": "aura",
+   "renderer": "particle",
+   "particle": 3,
+   "rarity": "rare",
+   "colors": [
+    "ORANGE"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 104,
+   "key": "aura_hades",
+   "name": "Ombre d'Hadès",
+   "category": "aura",
+   "renderer": "particle",
+   "particle": 4,
+   "rarity": "epic",
+   "colors": [
+    "PURPLE"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  },
+  {
+   "id": 105,
+   "key": "aura_petales",
+   "name": "Pétales d'Olympe",
+   "category": "aura",
+   "renderer": "particle",
+   "particle": 5,
+   "rarity": "common",
+   "colors": [
+    "PINK"
+   ],
+   "tags": [
+    "OLYMPE"
+   ]
+  }
+ ]
+}

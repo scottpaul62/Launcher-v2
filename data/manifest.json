@@ -1,0 +1,40 @@
+{
+ "version": 1,
+ "files": [
+  {
+   "path": "tips.json",
+   "sha1": "e4a891c7d44ded45e07f10eb831a25480ef71a0f",
+   "size": 605
+  },
+  {
+   "path": "cosmetics/catalog.json",
+   "sha1": "935325cf0933ffd8125267a69fcaa8d700cd5457",
+   "size": 1200
+  },
+  {
+   "path": "cosmetics/compat.json",
+   "sha1": "89bb21016299f442db84a7db9f83f4cabade66d3",
+   "size": 264
+  },
+  {
+   "path": "cosmetics/gek/wings/ailes_zeus/ailes_zeus.anim.json",
+   "sha1": "f3a0ee18524fa685e15df7ee56a7f6d2ecf1cbc1",
+   "size": 877
+  },
+  {
+   "path": "cosmetics/gek/wings/ailes_zeus/ailes_zeus.geo.json",
+   "sha1": "0014e2c0629da05a7cb4f3b744ecf977ba421f6b",
+   "size": 2835
+  },
+  {
+   "path": "cosmetics/gek/wings/ailes_zeus/ailes_zeus.hw.json",
+   "sha1": "476cfedce9cba351785cd75191d48ab33c37ca3a",
+   "size": 426
+  },
+  {
+   "path": "cosmetics/gek/wings/ailes_zeus/ailes_zeus.png",
+   "sha1": "d4b67dc809777edc1eb0be102e8a6715c5f9969b",
+   "size": 200
+  }
+ ]
+}
