@@ -74,20 +74,8 @@ public class HWTitleScreen extends Screen {
         // ---- pile centrale : logee dans le cadre premium si disponible ----
         int stackH = 36 + 6 + 22 + 4 + 22 + 4 + 22 + 8 + 20;
         int joinW = Math.min(340, this.width - 60);
-        frameOn = false;
-        int[] fd = HWTex.dims("menu_frame");
-        if (fd != null && !compact && this.height >= 320) {
-            frameH = Math.min(dockY - 54, (int) (this.height * 0.66));
-            frameW = Math.round(frameH * fd[0] / (float) fd[1]);
-            if (frameW >= 200 && frameW <= this.width - 60) {
-                frameOn = true;
-                frameX = cx - frameW / 2;
-                frameY = Math.max(22, (dockY - frameH) / 2 - 4);
-                joinW = Math.min(frameW - 64, 300);
-                ry = frameY + (frameH - stackH) / 2 + 4;
-            }
-        }
-        if (!frameOn) ry = Math.max(30, Math.min((int) (this.height * 0.40), dockY - stackH - 10));
+        frameOn = false; // cadre central retire a la demande de Scott (18/07) — boutons libres
+        ry = Math.max(30, Math.min((int) (this.height * 0.40), dockY - stackH - 10));
         this.addDrawableChild(new HWButton(cx - joinW / 2, ry, joinW, 36, Text.literal("Rejoindre"), HWButton.PRIMARY, 0, b -> this.connect()));
         this.addDrawableChild(new HWButton(cx - joinW / 2, ry + 42, joinW, 22, Text.literal("Multijoueur"), HWButton.SECONDARY, 0,
             b -> this.openMultiplayer()));
@@ -185,8 +173,6 @@ public class HWTitleScreen extends Screen {
         // fond du dock : image premium (5 logements) sinon pilule translucide
         if (dockAsset) HWTex.drawFit(ctx, "dock", dockX + dockW / 2, dockY + dockH / 2, dockH);
         else HWDraw.panel(ctx, dockX - 12, dockY - 6, dockW + 24, dockH + 12, compact ? 10 : 14, 0x7A0E1118, 0x2CFFFFFF);
-        // cadre du menu central (frise grecque) : echelle uniforme, jamais deforme
-        if (frameOn) HWTex.drawFit(ctx, "menu_frame", frameX + frameW / 2, frameY + frameH / 2, frameH);
 
         // panneau serveur en direct (haut-gauche)
         {
@@ -200,13 +186,17 @@ public class HWTitleScreen extends Screen {
             ctx.drawTextWithShadow(this.textRenderer, Text.literal(txt), 34, 16, 0xFFFFFFFF);
         }
 
-        // astuce rotative : pilule sombre lisible, assez haute pour laisser la place aux labels du dock
+        // astuce rotative : seulement s'il y a VRAIMENT la place (jamais par-dessus les boutons)
         {
-            String tip = HWTips.current();
-            int tw2 = this.textRenderer.getWidth(tip);
-            if (!HWTex.drawH3(ctx, "tooltip", cx - tw2 / 2 - 10, dockY - 42, tw2 + 20, 16, 0))
-                HWDraw.panel(ctx, cx - tw2 / 2 - 10, dockY - 42, tw2 + 20, 16, 8, 0x8A101318, 0x22FFFFFF);
-            ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§7" + tip), cx, dockY - 38, 0xFFB9C2CC);
+            int stackBottom = frameOn ? frameY + frameH : ry + 148;
+            int tipY = dockY - 42;
+            if (tipY > stackBottom + 4) {
+                String tip = HWTips.current();
+                int tw2 = this.textRenderer.getWidth(tip);
+                if (!HWTex.drawH3(ctx, "tooltip", cx - tw2 / 2 - 10, tipY, tw2 + 20, 16, 0))
+                    HWDraw.panel(ctx, cx - tw2 / 2 - 10, tipY, tw2 + 20, 16, 8, 0x8A101318, 0x22FFFFFF);
+                ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§7" + tip), cx, tipY + 4, 0xFFB9C2CC);
+            }
         }
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§6◆ §eL'OLYMPE VOUS ATTEND §6◆"),
             cx, frameOn ? frameY - 12 : ry - 22, 0xFFE8C56A);
@@ -224,18 +214,24 @@ public class HWTitleScreen extends Screen {
                 net.minecraft.util.Identifier skin = HWSkin.texture(this.client);
                 ctx.drawTexture(skin, chipX + 6, chipY + 3, 14, 14, 8f, 8f, 8, 8, 64, 64);
                 ctx.drawTexture(skin, chipX + 6, chipY + 3, 14, 14, 40f, 8f, 8, 8, 64, 64);
+                ctx.fill(chipX + 17, chipY + 13, chipX + 21, chipY + 17, 0xFF0B0F14); // liseret
+                ctx.fill(chipX + 18, chipY + 14, chipX + 20, chipY + 16, 0xFF48D36B); // en ligne
                 head = true;
             } catch (Throwable ignored) {}
             if (!head) ctx.fill(chipX + 8, chipY + chipH / 2 - 3, chipX + 14, chipY + chipH / 2 + 3, 0xFF7CCB6E);
             ctx.drawTextWithShadow(this.textRenderer, Text.literal("§f" + who + (acctOpen ? " §7▴" : " §7▾")), chipX + 24, chipY + 6, 0xFFFFFFFF);
             if (acctOpen) {
                 int mw = 156, mx = this.width - mw - 12, my = chipY + chipH + 6;
-                if (!HWTex.draw9n(ctx, "dropdown", mx - 4, my - 4, mw + 8, 3 * 24 + 4, 60))
-                    HWDraw.panel(ctx, mx - 4, my - 4, mw + 8, 3 * 24 + 4, 6, 0xF2111318, 0xFF323844);
+                if (!HWTex.draw9n(ctx, "dropdown", mx - 8, my - 8, mw + 16, 3 * 24 + 12, 130))
+                    HWDraw.panel(ctx, mx - 8, my - 8, mw + 16, 3 * 24 + 12, 6, 0xF2111318, 0xFF323844);
             }
         }
 
-        // Version discrete (bas-gauche)
+        // Resolution reelle + version (bas-gauche)
+        try {
+            int fw = this.client.getWindow().getFramebufferWidth(), fh = this.client.getWindow().getFramebufferHeight();
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8" + fw + " × " + fh), 8, this.height - 24, 0xFF6E7480);
+        } catch (Throwable ignored) {}
         ctx.drawTextWithShadow(this.textRenderer, Text.literal("§eHERO WORLD §7" + HWBrand.VERSION + " §8· Minecraft " + HWBrand.MC),
             8, this.height - 12, GOLD);
 

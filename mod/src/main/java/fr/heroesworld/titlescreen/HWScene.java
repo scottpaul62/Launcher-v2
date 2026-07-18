@@ -8,7 +8,8 @@ public final class HWScene {
     private HWScene() {}
 
     public static void draw(DrawContext ctx, int w, int h) {
-        if (HWBg.draw(ctx, w, h)) return; // image utilisateur -> on l'utilise telle quelle
+        if (HWBg2.draw(ctx, w, h)) return; // fond « Cosmic Olympus » du kit (temple retire temporairement)
+        if (HWBg.draw(ctx, w, h)) return;
         fallback(ctx, w, h);
     }
 

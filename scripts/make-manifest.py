@@ -6,6 +6,9 @@ root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
 files = []
 for base, _, names in os.walk(root):
     for n in sorted(names):
+        rel_dir = os.path.relpath(base, root).replace(os.sep, "/")
+        if rel_dir.startswith("pack"):  # pack serveur vanilla : distribue par server.properties, pas par le mod
+            continue
         if n == "manifest.json" or n.endswith(".tmp"):
             continue
         p = os.path.join(base, n)

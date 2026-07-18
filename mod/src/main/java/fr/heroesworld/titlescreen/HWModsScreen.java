@@ -58,20 +58,20 @@ public class HWModsScreen extends Screen {
                 i == tab ? HWButton.PRIMARY : HWButton.SECONDARY, 0, b -> { tab = t; reopen(); }));
         }
         // fermer
-        this.addDrawableChild(new HWButton(px + pw - 30, py + 8, 20, 20, Text.literal("X"), HWButton.SECONDARY, 0, b -> back()));
+        this.addDrawableChild(new HWButton(px + pw - 40, py + 12, 20, 20, Text.literal("X"), HWButton.SECONDARY, 0, b -> back()));
 
         // colonne profils
         if (showProfiles) {
-            int y = py + 62;
+            int y = py + 68;
             for (String name : HWProfiles.names) {
                 final String n = name;
                 boolean act = n.equals(HWProfiles.active);
-                this.addDrawableChild(new HWButton(px + 12, y, 138, 22,
+                this.addDrawableChild(new HWButton(px + 22, y, 118, 22,
                     Text.literal(profColor(n) + "\u25cf " + (act ? "§f" : "§7") + n),
                     act ? HWButton.PRIMARY : HWButton.SECONDARY, 0, b -> { HWProfiles.switchTo(n); reopen(); }));
                 y += 26;
             }
-            this.addDrawableChild(new HWButton(px + 12, y + 2, 138, 20, Text.literal("+ Nouveau profil"), HWButton.SECONDARY, 0,
+            this.addDrawableChild(new HWButton(px + 22, y + 2, 118, 20, Text.literal("+ Nouveau profil"), HWButton.SECONDARY, 0,
                 b -> { HWProfiles.create("Profil " + (HWProfiles.names.size() + 1)); reopen(); }));
         }
 
@@ -80,12 +80,12 @@ public class HWModsScreen extends Screen {
         else initWaypoints();
 
         // fermer (bas)
-        this.addDrawableChild(new HWButton(px + pw - 110, py + ph - 30, 96, 22, Text.literal("Fermer"), HWButton.SECONDARY, 0, b -> back()));
+        this.addDrawableChild(new HWButton(px + pw - 126, py + ph - 40, 96, 22, Text.literal("Fermer"), HWButton.SECONDARY, 0, b -> back()));
     }
 
     private void initMods() {
         // recherche instantanee
-        searchField = new TextFieldWidget(this.textRenderer, mainX, py + 40, mainW, 16, Text.literal("Rechercher"));
+        searchField = new TextFieldWidget(this.textRenderer, mainX, py + 42, Math.min(300, mainW), 14, Text.literal("Rechercher"));
         searchField.setMaxLength(40);
         searchField.setText(search);
         searchField.setChangedListener(s -> { search = s; rebuildGrid(); });
@@ -103,7 +103,7 @@ public class HWModsScreen extends Screen {
         buildGrid();
 
         // editer le HUD
-        this.addDrawableChild(new HWButton(mainX, py + ph - 30, 150, 22, Text.literal("Editer le HUD"), HWButton.PRIMARY, 0,
+        this.addDrawableChild(new HWButton(mainX, py + ph - 40, 150, 22, Text.literal("Editer le HUD"), HWButton.PRIMARY, 0,
             b -> this.client.setScreen(new HWHudEditScreen(this))));
     }
 
@@ -229,13 +229,10 @@ public class HWModsScreen extends Screen {
         else { if (!HWBg2.draw(ctx, this.width, this.height)) HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0x70000000); }
 
         HWDraw.panel(ctx, px, py, pw, ph, 8, SURF, BORDER);
-        ctx.fill(px, py + 32, px + pw, py + 33, 0x33D6B85B);
-        ctx.drawTextWithShadow(this.textRenderer, Text.literal("§6HEROES-WORLD"), px + 14, py + 13, GOLD);
-        ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8v1.1.8"), px + 14 + this.textRenderer.getWidth("HEROES-WORLD") + 8, py + 14, TXT2);
 
         if (showProfiles) {
-            HWDraw.panel(ctx, px + 8, py + 40, 144, ph - 48, 6, RAISED, BORDER);
-            ctx.drawTextWithShadow(this.textRenderer, Text.literal("§7PROFILS"), px + 14, py + 48, TXT2);
+            HWDraw.panel(ctx, px + 14, py + 44, 134, ph - 92, 6, RAISED, BORDER);
+            ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§7PROFILS"), px + 81, py + 54, TXT2);
         }
 
         if (tab == 2 && HWWaypoints.LIST.isEmpty()) {
@@ -243,11 +240,11 @@ public class HWModsScreen extends Screen {
             ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8Clique « + Waypoint a ma position » en jeu pour en creer un."), mainX + mainW / 2, py + ph / 2 + 6, TXT2);
         }
         if (tab == 2 && !HWWaypoints.LIST.isEmpty()) {
-            ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8pastille = couleur · clic = afficher/masquer · X = supprimer"), mainX, py + ph - 26, TXT2);
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8pastille = couleur · clic = afficher/masquer · X = supprimer"), mainX, py + ph - 34, TXT2);
         }
         super.render(ctx, mouseX, mouseY, delta);
         if (tab == 0 && searchField != null && searchField.getText().isEmpty() && !searchField.isFocused()) {
-            ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8Rechercher un mod..."), mainX + 5, py + 44, TXT2);
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8Rechercher un mod..."), mainX + 5, py + 46, TXT2);
         }
     }
 

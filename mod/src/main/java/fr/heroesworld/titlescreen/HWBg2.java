@@ -13,7 +13,10 @@ import java.io.InputStream;
  * Variante choisie selon la resolution PHYSIQUE, rendu cover, chargement paresseux.
  */
 public final class HWBg2 {
-    private static final Object[][] DEF = { {"bg2_1920", 1920, 1080}, {"bg2_2560", 2560, 1440} };
+    private static final Object[][] DEF = {
+        {"bg2_1280", 1280, 720}, {"bg2_1600", 1600, 900}, {"bg2_1920", 1920, 1080},
+        {"bg2_2560", 2560, 1440}, {"bg2_3840", 3840, 2160}
+    };
     private static final Identifier[] IDS = new Identifier[DEF.length];
     private static final boolean[] FAILED = new boolean[DEF.length];
     private HWBg2() {}
@@ -34,14 +37,21 @@ public final class HWBg2 {
     }
 
     public static boolean draw(DrawContext ctx, int w, int h) {
-        int fbW = w;
-        try { fbW = MinecraftClient.getInstance().getWindow().getFramebufferWidth(); } catch (Throwable ignored) {}
-        int pick = fbW > (Integer) DEF[0][1] ? 1 : 0;
-        Identifier id = tex(pick);
-        if (id == null && (id = tex(1 - pick)) == null) return false;
-        int i = IDS[0] == id ? 0 : 1;
+        int fbW = w, fbH = h;
+        try {
+            fbW = MinecraftClient.getInstance().getWindow().getFramebufferWidth();
+            fbH = MinecraftClient.getInstance().getWindow().getFramebufferHeight();
+        } catch (Throwable ignored) {}
+        // plus PETITE variante couvrant la fenetre -> le GPU n'agrandit jamais, nettete constante
+        int i = DEF.length - 1;
+        for (int k = 0; k < DEF.length; k++) {
+            if ((Integer) DEF[k][1] >= fbW && (Integer) DEF[k][2] >= fbH) { i = k; break; }
+        }
+        Identifier id = tex(i);
+        for (int k = 0; id == null && k < DEF.length; k++) { i = k; id = tex(k); }
+        if (id == null) return false;
         int tw = (Integer) DEF[i][1], th = (Integer) DEF[i][2];
-        float scale = Math.max((float) w / tw, (float) h / th) * 1.02f;
+        float scale = Math.max((float) w / tw, (float) h / th); // cover exact, aucun zoom ajoute
         int dw = Math.round(tw * scale), dh = Math.round(th * scale);
         ctx.fill(0, 0, w, h, 0xFF020712);
         ctx.drawTexture(id, (w - dw) / 2, (h - dh) / 2, dw, dh, 0f, 0f, tw, th, tw, th);

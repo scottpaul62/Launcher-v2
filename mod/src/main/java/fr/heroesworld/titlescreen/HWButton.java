@@ -54,10 +54,9 @@ public class HWButton extends ButtonWidget {
     }
 
     private void renderSecondary(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
-        if (hover > 0.02f && !HWClientConfig.reduceMotion) HWDraw.glow(ctx, x, y, w, h, 4, 0x49BDF2, hover * 0.4f);
         if (w < 170 && HWTex.drawH3(ctx, "control_neutral", x, y, w, h, 150)) {
             if (hover > 0.03f) HWDraw.roundRect(ctx, x + 1, y + 1, w - 2, h - 2, 5, ((int) (hover * 0x12) << 24) | 0xFFFFFF);
-        } else if (HWTex.draw9n(ctx, "btn_secondary", x, y, w, h, 44)) {
+        } else if (HWTex.drawH3(ctx, "btn_secondary", x, y, w, h, 0)) {
             if (hover > 0.03f) HWDraw.roundRect(ctx, x + 1, y + 1, w - 2, h - 2, 5, ((int) (hover * 0x14) << 24) | 0xFFFFFF);
         } else if (!HWTex.button(ctx, HWTex.GLASS, HWTex.GLASS_HOVER, hover, x, y, w, h, 7))
             HWDraw.panelRaw(ctx, x, y, w, h, 4, lerp(0x9014121C, 0xC0221D2A, hover), lerp(0x33FFFFFF, 0xB049BDF2, hover));
