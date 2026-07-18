@@ -44,14 +44,22 @@ public class HWButton extends ButtonWidget {
 
     private void renderPrimary(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
         if (hover > 0.02f && !HWClientConfig.reduceMotion) HWDraw.glow(ctx, x, y, w, h, 5, 0xE8C56A, hover);
-        if (!HWTex.button(ctx, HWTex.GOLD, HWTex.GOLD_HOVER, hover, x, y, w, h, 8))
+        if (w < 170 && HWTex.drawH3(ctx, "control_active", x, y, w, h, 150)) {
+            if (hover > 0.03f) HWDraw.roundRect(ctx, x + 1, y + 1, w - 2, h - 2, 6, ((int) (hover * 0x1C) << 24) | 0xFFE8B0);
+        } else if (HWTex.drawH3(ctx, "btn_primary", x, y, w, h, 0)) {
+            if (hover > 0.03f) HWDraw.roundRect(ctx, x + 1, y + 1, w - 2, h - 2, 6, ((int) (hover * 0x20) << 24) | 0xFFE8B0);
+        } else if (!HWTex.button(ctx, HWTex.GOLD, HWTex.GOLD_HOVER, hover, x, y, w, h, 8))
             HWDraw.panelRaw(ctx, x, y, w, h, 5, lerp(0xE01E1710, 0xE02C2114, hover), lerp(0xFFCBA24E, 0xFFE8C56A, hover));
         ctx.drawCenteredTextWithShadow(tr, getMessage(), x + w / 2, y + (h - 8) / 2, lerp(0xFFE9D4A0, 0xFFFFEFC6, hover));
     }
 
     private void renderSecondary(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h) {
         if (hover > 0.02f && !HWClientConfig.reduceMotion) HWDraw.glow(ctx, x, y, w, h, 4, 0x49BDF2, hover * 0.4f);
-        if (!HWTex.button(ctx, HWTex.GLASS, HWTex.GLASS_HOVER, hover, x, y, w, h, 7))
+        if (w < 170 && HWTex.drawH3(ctx, "control_neutral", x, y, w, h, 150)) {
+            if (hover > 0.03f) HWDraw.roundRect(ctx, x + 1, y + 1, w - 2, h - 2, 5, ((int) (hover * 0x12) << 24) | 0xFFFFFF);
+        } else if (HWTex.draw9n(ctx, "btn_secondary", x, y, w, h, 44)) {
+            if (hover > 0.03f) HWDraw.roundRect(ctx, x + 1, y + 1, w - 2, h - 2, 5, ((int) (hover * 0x14) << 24) | 0xFFFFFF);
+        } else if (!HWTex.button(ctx, HWTex.GLASS, HWTex.GLASS_HOVER, hover, x, y, w, h, 7))
             HWDraw.panelRaw(ctx, x, y, w, h, 4, lerp(0x9014121C, 0xC0221D2A, hover), lerp(0x33FFFFFF, 0xB049BDF2, hover));
         boolean hasText = !getMessage().getString().isEmpty();
         if (icon > 0) HWIcons.draw(ctx, icon, hasText ? x + 15 : x + w / 2, y + h / 2, 16);

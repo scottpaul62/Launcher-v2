@@ -25,7 +25,7 @@ public class HWSoonScreen extends Screen {
         if (this.client.world != null) {
             super.renderBackground(ctx, mouseX, mouseY, delta); // en jeu : flou du monde (comme le menu pause)
         } else {
-            HWScene.draw(ctx, this.width, this.height);
+            if (!HWBg2.draw(ctx, this.width, this.height)) HWScene.draw(ctx, this.width, this.height);
             ctx.fill(0, 0, this.width, this.height, 0xA6000000);
         } // assombrissement du décor
         int cx = this.width / 2, cy = this.height / 2;

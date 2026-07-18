@@ -161,7 +161,7 @@ public class HWModSettingsScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         if (this.client.world != null) super.renderBackground(ctx, mouseX, mouseY, delta);
-        else { HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0xB0000000); }
+        else { if (!HWBg2.draw(ctx, this.width, this.height)) HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0x70000000); }
         int y0 = Math.max(56, (int) (this.height * 0.20));
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§e" + el.name), this.width / 2, y0 - 40, 0xFFE8C56A);
         super.render(ctx, mouseX, mouseY, delta);

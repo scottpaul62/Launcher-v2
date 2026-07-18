@@ -31,7 +31,7 @@ public class HWWhatsNewScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         if (this.client.world != null) super.renderBackground(ctx, mouseX, mouseY, delta);
-        else { HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0xB0000000); }
+        else { if (!HWBg2.draw(ctx, this.width, this.height)) HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0x70000000); }
         int pw = Math.min(420, this.width - 40), ph = 120 + NEWS.length * 14;
         int px = (this.width - pw) / 2, py = (this.height - ph) / 2;
         HWDraw.panel(ctx, px, py, pw, ph, 8, 0xF2111318, 0xFF323844);

@@ -226,7 +226,7 @@ public class HWModsScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         if (this.client.world != null) ctx.fill(0, 0, this.width, this.height, OVERLAY); // voile sombre leger uniforme
-        else { HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0xB0000000); }
+        else { if (!HWBg2.draw(ctx, this.width, this.height)) HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0x70000000); }
 
         HWDraw.panel(ctx, px, py, pw, ph, 8, SURF, BORDER);
         ctx.fill(px, py + 32, px + pw, py + 33, 0x33D6B85B);

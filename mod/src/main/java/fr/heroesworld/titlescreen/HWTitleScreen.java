@@ -15,6 +15,9 @@ public class HWTitleScreen extends Screen {
     private int dockX, dockY, dockW, dockH;
     private int ry; // haut de la pile centrale
     private boolean compact;
+    // assets premium (PNG fournis) : cadre central + dock a logements
+    private boolean dockAsset, frameOn;
+    private int frameX, frameY, frameW, frameH;
 
     // puce compte + menu deroulant
     private boolean acctOpen = false;
@@ -42,19 +45,49 @@ public class HWTitleScreen extends Screen {
         int cx = this.width / 2;
         compact = this.height < 360 || this.width < 720;
 
-        // ---- dock adaptatif : cluster compact d'icones (labels au survol) ----
+        // ---- dock : image premium (5 logements) si disponible, sinon cluster d'icones ----
         int n = 5;
-        int gap = compact ? 8 : 14;
-        dockH = compact ? 26 : 38;
-        int itemW = compact ? 34 : 46;
-        dockW = n * itemW + (n - 1) * gap;
-        dockX = cx - dockW / 2;
-        dockY = this.height - (compact ? 40 : 62);
+        int[] dd = HWTex.dims("dock");
+        dockAsset = dd != null;
+        int[] bx = new int[n];
+        int bw2, bh2, by2;
+        if (dockAsset) {
+            dockW = compact ? 216 : 262;
+            dockH = Math.round(dockW * dd[1] / (float) dd[0]);
+            dockX = cx - dockW / 2;
+            dockY = this.height - dockH - (compact ? 6 : 10);
+            bw2 = bh2 = Math.round(dockH * 0.55f);
+            by2 = Math.round(dockY + dockH * 0.648f - bh2 / 2f);
+            float[] fx = {0.127f, 0.308f, 0.499f, 0.690f, 0.873f}; // centres MESURES des 5 logements
+            for (int i = 0; i < n; i++) bx[i] = Math.round(dockX + fx[i] * dockW - bw2 / 2f);
+        } else {
+            int gap = compact ? 8 : 14;
+            dockH = compact ? 26 : 38;
+            bw2 = compact ? 34 : 46; bh2 = dockH;
+            dockW = n * bw2 + (n - 1) * gap;
+            dockX = cx - dockW / 2;
+            dockY = this.height - (compact ? 40 : 62);
+            by2 = dockY;
+            for (int i = 0; i < n; i++) bx[i] = dockX + i * (bw2 + gap);
+        }
 
-        // ---- pile centrale bornee : jamais de chevauchement avec le dock ----
+        // ---- pile centrale : logee dans le cadre premium si disponible ----
         int stackH = 36 + 6 + 22 + 4 + 22 + 4 + 22 + 8 + 20;
-        ry = Math.max(30, Math.min((int) (this.height * 0.40), dockY - stackH - 10));
         int joinW = Math.min(340, this.width - 60);
+        frameOn = false;
+        int[] fd = HWTex.dims("menu_frame");
+        if (fd != null && !compact && this.height >= 320) {
+            frameH = Math.min(dockY - 54, (int) (this.height * 0.66));
+            frameW = Math.round(frameH * fd[0] / (float) fd[1]);
+            if (frameW >= 200 && frameW <= this.width - 60) {
+                frameOn = true;
+                frameX = cx - frameW / 2;
+                frameY = Math.max(22, (dockY - frameH) / 2 - 4);
+                joinW = Math.min(frameW - 64, 300);
+                ry = frameY + (frameH - stackH) / 2 + 4;
+            }
+        }
+        if (!frameOn) ry = Math.max(30, Math.min((int) (this.height * 0.40), dockY - stackH - 10));
         this.addDrawableChild(new HWButton(cx - joinW / 2, ry, joinW, 36, Text.literal("Rejoindre"), HWButton.PRIMARY, 0, b -> this.connect()));
         this.addDrawableChild(new HWButton(cx - joinW / 2, ry + 42, joinW, 22, Text.literal("Multijoueur"), HWButton.SECONDARY, 0,
             b -> this.openMultiplayer()));
@@ -64,15 +97,15 @@ public class HWTitleScreen extends Screen {
             b -> this.client.setScreen(new HWSoonScreen(this, "Boutique", "La boutique HERO WORLD arrivera bientot."))));
         this.addDrawableChild(new HWButton(cx - 70, ry + 122, 140, 20, Text.literal("Quitter"), HWButton.SECONDARY, 0, b -> this.client.scheduleStop()));
 
-        this.addDrawableChild(new HWButton(dockX, dockY, itemW, dockH, Text.literal("Amis"), HWButton.DOCK, 1,
+        this.addDrawableChild(new HWButton(bx[0], by2, bw2, bh2, Text.literal("Amis"), HWButton.DOCK, 1,
             b -> this.client.setScreen(new HWSoonScreen(this, "Amis", "La liste d'amis arrivera avec l'hebergement du serveur HEROES-WORLD."))));
-        this.addDrawableChild(new HWButton(dockX + (itemW + gap), dockY, itemW, dockH, Text.literal("Thèmes"), HWButton.DOCK, 2,
+        this.addDrawableChild(new HWButton(bx[1], by2, bw2, bh2, Text.literal("Thèmes"), HWButton.DOCK, 2,
             b -> this.client.setScreen(new HWThemeScreen(this))));
-        this.addDrawableChild(new HWButton(dockX + 2 * (itemW + gap), dockY, itemW, dockH, Text.literal("Personnalisation"), HWButton.DOCK, 3,
+        this.addDrawableChild(new HWButton(bx[2], by2, bw2, bh2, Text.literal("Personnalisation"), HWButton.DOCK, 3,
             b -> this.client.setScreen(new HWCosmeticsScreen(this))));
-        this.addDrawableChild(new HWButton(dockX + 3 * (itemW + gap), dockY, itemW, dockH, Text.literal("Options"), HWButton.DOCK, 4,
+        this.addDrawableChild(new HWButton(bx[3], by2, bw2, bh2, Text.literal("Options"), HWButton.DOCK, 4,
             b -> this.client.setScreen(new OptionsScreen(this, this.client.options))));
-        this.addDrawableChild(new HWButton(dockX + 4 * (itemW + gap), dockY, itemW, dockH, Text.literal("Paramètres"), HWButton.DOCK, 5,
+        this.addDrawableChild(new HWButton(bx[4], by2, bw2, bh2, Text.literal("Paramètres"), HWButton.DOCK, 5,
             b -> this.client.setScreen(new HWModsScreen(this))));
 
         // ---- puce compte (haut-droite) + menu deroulant ----
@@ -149,8 +182,11 @@ public class HWTitleScreen extends Screen {
 
         int cx = this.width / 2;
 
-        // fond du dock : une seule pilule translucide, propre
-        HWDraw.panel(ctx, dockX - 12, dockY - 6, dockW + 24, dockH + 12, compact ? 10 : 14, 0x7A0E1118, 0x2CFFFFFF);
+        // fond du dock : image premium (5 logements) sinon pilule translucide
+        if (dockAsset) HWTex.drawFit(ctx, "dock", dockX + dockW / 2, dockY + dockH / 2, dockH);
+        else HWDraw.panel(ctx, dockX - 12, dockY - 6, dockW + 24, dockH + 12, compact ? 10 : 14, 0x7A0E1118, 0x2CFFFFFF);
+        // cadre du menu central (frise grecque) : echelle uniforme, jamais deforme
+        if (frameOn) HWTex.drawFit(ctx, "menu_frame", frameX + frameW / 2, frameY + frameH / 2, frameH);
 
         // panneau serveur en direct (haut-gauche)
         {
@@ -158,7 +194,8 @@ public class HWTitleScreen extends Screen {
                 ? "§a● §f" + HWServerStatus.playersOn + "§7/" + HWServerStatus.playersMax + " en ligne"
                 : "§c● §7hors ligne";
             int tw2 = this.textRenderer.getWidth(txt.replaceAll("§.", "")) + 40;
-            HWDraw.panel(ctx, 10, 10, tw2, 20, 10, 0x66101318, 0x26FFFFFF);
+            if (!HWTex.drawH3(ctx, "status", 10, 10, tw2, 20, 0))
+                HWDraw.panel(ctx, 10, 10, tw2, 20, 10, 0x66101318, 0x26FFFFFF);
             ctx.drawTextWithShadow(this.textRenderer, Text.literal("§6HW"), 18, 16, 0xFFE8C56A);
             ctx.drawTextWithShadow(this.textRenderer, Text.literal(txt), 34, 16, 0xFFFFFFFF);
         }
@@ -167,18 +204,21 @@ public class HWTitleScreen extends Screen {
         {
             String tip = HWTips.current();
             int tw2 = this.textRenderer.getWidth(tip);
-            HWDraw.panel(ctx, cx - tw2 / 2 - 10, dockY - 42, tw2 + 20, 16, 8, 0x8A101318, 0x22FFFFFF);
+            if (!HWTex.drawH3(ctx, "tooltip", cx - tw2 / 2 - 10, dockY - 42, tw2 + 20, 16, 0))
+                HWDraw.panel(ctx, cx - tw2 / 2 - 10, dockY - 42, tw2 + 20, 16, 8, 0x8A101318, 0x22FFFFFF);
             ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§7" + tip), cx, dockY - 38, 0xFFB9C2CC);
         }
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§6◆ §eL'OLYMPE VOUS ATTEND §6◆"),
-            cx, ry - 22, 0xFFE8C56A);
+            cx, frameOn ? frameY - 12 : ry - 22, 0xFFE8C56A);
 
         // ---- puce compte (cliquable) ----
         String who = (this.client.getSession() != null) ? this.client.getSession().getUsername() : "";
         if (who != null && !who.isEmpty()) {
             boolean over = acctOpen || (mouseX >= chipX && mouseX <= chipX + chipW && mouseY >= chipY && mouseY <= chipY + chipH);
             // bulle arrondie epuree (pas de traits dores)
-            HWDraw.panel(ctx, chipX, chipY, chipW, chipH, 10, over ? 0x9A14121C : 0x66101318, over ? 0x55FFFFFF : 0x26FFFFFF);
+            if (HWTex.drawH3(ctx, "chip", chipX, chipY, chipW, chipH, 0)) {
+                if (over) HWDraw.roundRect(ctx, chipX + 2, chipY + 2, chipW - 4, chipH - 4, 8, 0x14FFFFFF);
+            } else HWDraw.panel(ctx, chipX, chipY, chipW, chipH, 10, over ? 0x9A14121C : 0x66101318, over ? 0x55FFFFFF : 0x26FFFFFF);
             boolean head = false;
             try {
                 net.minecraft.util.Identifier skin = HWSkin.texture(this.client);
@@ -190,7 +230,8 @@ public class HWTitleScreen extends Screen {
             ctx.drawTextWithShadow(this.textRenderer, Text.literal("§f" + who + (acctOpen ? " §7▴" : " §7▾")), chipX + 24, chipY + 6, 0xFFFFFFFF);
             if (acctOpen) {
                 int mw = 156, mx = this.width - mw - 12, my = chipY + chipH + 6;
-                HWDraw.panel(ctx, mx - 4, my - 4, mw + 8, 3 * 24 + 4, 6, 0xF2111318, 0xFF323844);
+                if (!HWTex.draw9n(ctx, "dropdown", mx - 4, my - 4, mw + 8, 3 * 24 + 4, 60))
+                    HWDraw.panel(ctx, mx - 4, my - 4, mw + 8, 3 * 24 + 4, 6, 0xF2111318, 0xFF323844);
             }
         }
 

@@ -45,7 +45,7 @@ public class HWThemeScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         if (this.client.world != null) super.renderBackground(ctx, mouseX, mouseY, delta);
-        else { HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0xB0000000); }
+        else { if (!HWBg2.draw(ctx, this.width, this.height)) HWScene.draw(ctx, this.width, this.height); ctx.fill(0, 0, this.width, this.height, 0x70000000); }
 
         HWDraw.panel(ctx, px, py, pw, ph, 8, 0xE60E0C14, 0xFFE8C56A);
         ctx.fill(px, py + 34, px + pw, py + 35, 0x66E8C56A);

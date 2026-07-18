@@ -29,6 +29,8 @@ public final class HWDraw {
     public static void panel(DrawContext ctx, int x, int y, int w, int h, int r, int fill, int border) {
         int a = fill >>> 24;
         int lum = ((fill >> 16) & 0xFF) + ((fill >> 8) & 0xFF) + (fill & 0xFF);
+        if (a >= 0xEE && HWTex.draw9n(ctx, "panel_universal", x, y, w, h, 96)) return;
+        if (a >= 0xEE && HWTex.draw9n(ctx, "panel_marble", x, y, w, h, 52)) return;
         int style = a >= 0xEE ? (lum >= 75 ? HWTex.RAISED : HWTex.SOLID) : HWTex.GLASS;
         if (HWTex.draw9(ctx, style, x, y, w, h, Math.max(4, r + 2))) return;
         panelRaw(ctx, x, y, w, h, r, fill, border);
